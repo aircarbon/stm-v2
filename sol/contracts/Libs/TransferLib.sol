@@ -8,6 +8,8 @@ import "../Interfaces/StructLib.sol";
 import "../StMaster/StMaster.sol";
 
 library TransferLib {
+
+    uint256 constant MAX_BATCHES_PREVIEW = 128; // for fee previews: max distinct batch IDs that can participate in one side of a trade fee preview
 	struct TransferVars {
 		// misc. working vars for transfer() fn - struct packed to preserve stack slots
 		TransferSplitPreviewReturn[2] ts_previews; // [0] = A->B, [1] = B->A
@@ -49,8 +51,6 @@ library TransferLib {
 		bool mergedExisting;
 		int64 stQty;
 	}
-
-	uint256 constant MAX_BATCHES_PREVIEW = 128; // for fee previews: max distinct batch IDs that can participate in one side of a trade fee preview
 
 	event TransferedFullSecToken(
 		address indexed from,
