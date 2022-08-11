@@ -107,6 +107,13 @@ module.exports = {
     logTestAccountUsage: false,
 
     nullAddr: "0x0000000000000000000000000000000000000000",
+    testAddr1: "0x0000000000000000000000000000000000000001",
+    testAddr2: "0x0000000000000000000000000000000000000002",
+    testAddr3: "0x0000000000000000000000000000000000000003",
+
+    testId1: 1,
+    testId2: 2,
+    testId3: 3,
 
     blocksFromSecs: (secs) => blocksFromSecs(secs),
     blocksFromMins: (mins) => blocksFromMins(mins),

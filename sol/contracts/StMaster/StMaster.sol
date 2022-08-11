@@ -67,6 +67,9 @@ contract StMaster is
 	string public version;
 	string public unit; // the smallest (integer, non-divisible) security token unit, e.g. "KGs" or "TONS"
 
+	mapping(address => uint) private entities;
+	mapping(uint => bool) private idUsed;
+
 	// events -- (hack: see: https://ethereum.stackexchange.com/questions/11137/watching-events-defined-in-libraries)
 	// need to be defined (duplicated) here - web3 can't see event signatures in libraries
 	// CcyLib events
@@ -306,11 +309,32 @@ contract StMaster is
 	}
 
 	/**
+	 * @dev permanenty seals the contract; once sealed, no further addresses can be whitelisted
+	 */
+	function sealContract() external {
+		ld._contractSealed = true;
+	}
+
+	function setEntity(address addr, uint entityId) external onlyOwner {
+		require(entityId > 0, "setEntity: wrong entity id");
+		require(addr != address(0), "setEntity: wrong entity address");
+		require(entities[addr] == 0, "setEntity: entity already exists");
+		require(!idUsed[entityId], "setEntity: entity id already exists");
+		
+		entities[addr] = entityId;
+		idUsed[entityId] = true;
+	}
+
+	function getEntity(address addr) external view returns(uint) {
+		return entities[addr];
+	}
+
+	/**
 	 * @dev returns the contract type
 	 * @return contractType
 	 * @param contractType returns the contract type<br/>0: commodity token<br/>1: cashflow token<br/>2: cashflow controller
 	 */
-	function getContractType() external view returns (StructLib.ContractType contractType) {
+	 function getContractType() external view returns (StructLib.ContractType contractType) {
 		return ld.contractType;
 	}
 
@@ -321,12 +345,5 @@ contract StMaster is
 	 */
 	function getContractSeal() external view returns (bool isSealed) {
 		return ld._contractSealed;
-	}
-
-	/**
-	 * @dev permanenty seals the contract; once sealed, no further addresses can be whitelisted
-	 */
-	function sealContract() external {
-		ld._contractSealed = true;
 	}
 }
