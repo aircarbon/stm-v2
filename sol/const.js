@@ -110,6 +110,7 @@ module.exports = {
     testAddr1: "0x0000000000000000000000000000000000000001",
     testAddr2: "0x0000000000000000000000000000000000000002",
     testAddr3: "0x0000000000000000000000000000000000000003",
+    testAddr4: "0x0000000000000000000000000000000000000004",
 
     testId1: 1,
     testId2: 2,
@@ -120,6 +121,26 @@ module.exports = {
     blocksFromHours: (hours) => blocksFromHours(hours),
     blocksFromDays: (days) => blocksFromDays(days),
     blocksFromMonths: (months) => blocksFromMonths(months),
+
+    expectRevertFromCall: async(func, params, err) => {
+        try {
+            await func(...params);
+        } catch (ex) { 
+            assert(ex.toString().includes(err), `unexpected: ${ex.reason}`);
+            return; 
+        }
+        assert.fail('expected contract exception');
+    },
+
+    expectRevert: async(func, params, err) => {
+        try {
+            await func(...params);
+        } catch (ex) { 
+            assert(ex.reason == err, `unexpected: ${ex.reason}`);
+            return; 
+        }
+        assert.fail('expected contract exception');
+    },
 
     // https://docs.chain.link/docs/using-chainlink-reference-contracts
     chainlinkAggregators: {

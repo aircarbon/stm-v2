@@ -2,9 +2,6 @@
 
 // Re: StMintable.sol => LedgerLib.sol, SpotFeeLib.sol
 const st = artifacts.require('StMaster');
-const truffleAssert = require('truffle-assertions');
-//const _ = require('lodash');
-const Big = require('big.js');
 const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('./testSetupContract.js');
@@ -20,8 +17,10 @@ contract("StMaster", accounts => {
         if (!global.TaddrNdx) global.TaddrNdx = 0;
     });
 
+    // setEntity()
     it(`should set entity from an owner`, async () => {
         await stm.setEntity(CONST.testAddr1, CONST.testId1);
+        await stm.setEntity(CONST.testAddr4, CONST.testId1);
     });
 
     it(`should set entity from another owner`, async () => {
@@ -29,64 +28,58 @@ contract("StMaster", accounts => {
     });
 
     it(`should fail to set entity from a non-owner`, async () => {
-        try {
-            await stm.setEntity(CONST.testAddr1, CONST.testId3, {from: accounts[10]});
-        } catch (ex) { 
-            assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
-            return; 
-        }
-        assert.fail('expected contract exception');
+        await CONST.expectRevert(stm.setEntity, [CONST.testAddr1, CONST.testId3, {from: accounts[10]}], 'Restricted');
     });
 
+    it(`should fail to set entity with zero address`, async () => {
+        await CONST.expectRevert(stm.setEntity, [CONST.nullAddr, CONST.testId3], 'setEntity: wrong entity address');
+    });
+
+    it(`should fail to set entity with zero entity id`, async () => {
+        await CONST.expectRevert(stm.setEntity, [CONST.testAddr3, 0], 'setEntity: wrong entity id');
+    });
+
+    it(`should fail to set entity twice`, async () => {
+        await CONST.expectRevert(stm.setEntity, [CONST.testAddr1, CONST.testId3], 'setEntity: address already assigned to an entity');
+    });
+
+    // getEntity()
     it(`should get existing entities`, async () => {
         let result = await stm.getEntity(CONST.testAddr1);
+        assert(result.toNumber() == CONST.testId1, 'unexpected entity id');
+        result = await stm.getEntity(CONST.testAddr4);
         assert(result.toNumber() == CONST.testId1, 'unexpected entity id');
         result = await stm.getEntity(CONST.testAddr2);
         assert(result.toNumber() == CONST.testId2, 'unexpected entity id');
     });
 
-    it(`should get zero as an entity id from a non-existing entity`, async () => {
+    it(`should get zero as an entity id from a non-assigned address`, async () => {
         let result = await stm.getEntity(CONST.testAddr3);
         assert(result.toNumber() == 0, 'unexpected entity id');
     });
 
-    it(`should fail to set entity with zero address`, async () => {
-        try {
-            await stm.setEntity(CONST.nullAddr, CONST.testId3);
-        } catch (ex) { 
-            assert(ex.reason == 'setEntity: wrong entity address', `unexpected: ${ex.reason}`);
-            return; 
-        }
-        assert.fail('expected contract exception');
+    it(`should fail to get entity id when passing zero address`, async () => {
+        await CONST.expectRevertFromCall(stm.getEntity, [CONST.nullAddr], 'getEntity: wrong address');
     });
 
-    it(`should fail to set entity with zero entity id`, async () => {
-        try {
-            await stm.setEntity(CONST.testAddr3, 0);
-        } catch (ex) { 
-            assert(ex.reason == 'setEntity: wrong entity id', `unexpected: ${ex.reason}`);
-            return; 
-        }
-        assert.fail('expected contract exception');
+    // getEntityAddresses()
+    it(`should get correct array of addresses for existing entities`, async () => {
+        let result = await stm.getEntityAddresses(CONST.testId1);
+        assert(result.length == 2, 'unexpected array length');
+        assert(result[0] == CONST.testAddr1, 'unexpected adress');
+        assert(result[1] == CONST.testAddr4, 'unexpected adress');
+
+        result = await stm.getEntityAddresses(CONST.testId2);
+        assert(result.length == 1, 'unexpected array length');
+        assert(result[0] == CONST.testAddr2, 'unexpected adress');
     });
 
-    it(`should fail to set entity with an existing entity address`, async () => {
-        try {
-            await stm.setEntity(CONST.testAddr1, CONST.testId3);
-        } catch (ex) { 
-            assert(ex.reason == 'setEntity: entity already exists', `unexpected: ${ex.reason}`);
-            return; 
-        }
-        assert.fail('expected contract exception');
+    it(`should get empty array of addresses for non-existing entity`, async () => {
+        const result = await stm.getEntityAddresses(CONST.testId3);
+        assert(result.length == 0, 'unexpected array length');
     });
 
-    it(`should fail to set entity with an existing entity id`, async () => {
-        try {
-            await stm.setEntity(CONST.testAddr3, CONST.testId1);
-        } catch (ex) { 
-            assert(ex.reason == 'setEntity: entity id already exists', `unexpected: ${ex.reason}`);
-            return; 
-        }
-        assert.fail('expected contract exception');
+    it(`should fail to get entity addresses when passing wrong entity id`, async () => {
+        await CONST.expectRevertFromCall(stm.getEntityAddresses, [0], 'getEntityAddresses: wrong entity id');
     });
 });
