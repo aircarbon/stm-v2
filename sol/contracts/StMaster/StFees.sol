@@ -44,7 +44,7 @@ abstract contract StFees is StLedger {
 		GetFeeType feeType,
 		uint256 typeId,
 		address ledgerOwner
-	) external view onlyOwner returns (StructLib.SetFeeArgs memory fee) {
+	) external view returns (StructLib.SetFeeArgs memory fee) {
 		StructLib.FeeStruct storage fs = ledgerOwner == address(0x0)
 			? globalFees
 			: ld._ledger[ledgerOwner].spot_customFees;
