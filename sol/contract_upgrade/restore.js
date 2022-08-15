@@ -199,6 +199,8 @@ module.exports = async (callback) => {
       });
 
     // load ledgers data to new contract
+    const whitelistedAddresses = await newContract.getWhitelist();
+
     const ledgersPromises = data.ledgers.map(
       (ledger, index, allLedgers) =>
         function createLedgerEntry(cb) {
@@ -209,6 +211,16 @@ module.exports = async (callback) => {
           } else {
             console.log(`Creating ledger entry #${index} - currency`, owner, ledger.ccys);
             console.log(`Processing ledger - currency: ${index + 1}/${allLedgers.length}`);
+
+            if(!whitelistedAddresses.includes(owner)) {
+              newContract
+              .whitelistMany([owner])
+              .then((result) => cb(null, result))
+              .catch((error) => cb(error));
+            }
+
+            
+
             newContract
               .createLedgerEntry(owner, ledger.ccys, ledger.spot_sumQtyMinted, ledger.spot_sumQtyBurned, 1)
               .then((result) => cb(null, result))
