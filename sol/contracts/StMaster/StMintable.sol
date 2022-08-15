@@ -92,7 +92,9 @@ abstract contract StMintable is StLedger {
 		uint16 origCcyFee_percBips_ExFee,
 		string[] memory metaKeys,
 		string[] memory metaValues
-	) public onlyOwner onlyWhenReadWrite {
+	) public onlyOwner onlyWhenReadWrite 
+		// hasEntity(batchOwner) 
+	{
 		TokenLib.MintSecTokenBatchArgs memory args = TokenLib.MintSecTokenBatchArgs({
 			tokTypeId: tokTypeId,
 			mintQty: mintQty,

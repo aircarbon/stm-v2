@@ -22,7 +22,7 @@ import "../Libs/SpotFeeLib.sol";
  * <pre>   - uses StructLib interface library</pre>
  * <pre>   - uses SpotFeeLib runtime library</pre>
  */
-
+// v2.TODO remake the fees fully - one set of global fees per entity
 abstract contract StFees is StLedger {
 	enum GetFeeType {
 		CCY,
@@ -77,7 +77,9 @@ abstract contract StFees is StLedger {
 		uint256 tokTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
-	) public onlyOwner onlyWhenReadWrite {
+	) public onlyOwner onlyWhenReadWrite 
+		// hasEntity(ledgerOwner) 
+	{
 		SpotFeeLib.setFee_TokType(ld, std, globalFees, tokTypeId, ledgerOwner, feeArgs);
 	}
 
@@ -97,7 +99,9 @@ abstract contract StFees is StLedger {
 		uint256 ccyTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
-	) public onlyOwner onlyWhenReadWrite {
+	) public onlyOwner onlyWhenReadWrite 
+		// hasEntity(ledgerOwner) 
+	{
 		SpotFeeLib.setFee_CcyType(ld, ctd, globalFees, ccyTypeId, ledgerOwner, feeArgs);
 	}
 	//#endif

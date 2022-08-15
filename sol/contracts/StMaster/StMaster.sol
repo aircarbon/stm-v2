@@ -67,9 +67,6 @@ contract StMaster is
 	string public version;
 	string public unit; // the smallest (integer, non-divisible) security token unit, e.g. "KGs" or "TONS"
 
-	mapping(address => uint) private entities;
-	mapping(uint => address[]) private addressesPerEntity;
-
 	// events -- (hack: see: https://ethereum.stackexchange.com/questions/11137/watching-events-defined-in-libraries)
 	// need to be defined (duplicated) here - web3 can't see event signatures in libraries
 	// CcyLib events
@@ -313,25 +310,6 @@ contract StMaster is
 	 */
 	function sealContract() external {
 		ld._contractSealed = true;
-	}
-
-	function setEntity(address addr, uint entityId) external onlyOwner {
-		require(addr != address(0), "setEntity: wrong entity address");
-		require(entityId > 0, "setEntity: wrong entity id");
-		require(entities[addr] == 0, "setEntity: address already assigned to an entity");
-		
-		entities[addr] = entityId;
-		addressesPerEntity[entityId].push(addr);
-	}
-
-	function getEntity(address addr) external view returns(uint) {
-		require(addr != address(0), "getEntity: wrong address");
-		return entities[addr];
-	}
-
-	function getEntityAddresses(uint entityId) external view returns(address[] memory) {
-		require(entityId > 0, "getEntityAddresses: wrong entity id");
-		return addressesPerEntity[entityId];
 	}
 
 	/**

@@ -34,6 +34,19 @@ abstract contract StErc20 is StFees {
 	//     Erc20Lib.whitelist(ld, erc20d, addr);
 	// }
 
+	function setEntityBatch(address[] calldata addr, uint[] calldata entityId) external onlyOwner {
+		uint len = addr.length;
+		require(len == entityId.length, "setEntityBatch: arrays are not the same length");
+
+		for(uint i=0; i < len; i++) {
+			_setEntity(addr[i], entityId[i]);
+		}
+	}
+
+	function setEntity(address addr, uint entityId) public onlyOwner {
+		_setEntity(addr, entityId);
+	}
+
 	/**
 	 * @dev add multiple whitelist account addresses by deployment owners only
 	 * @param addr list of account addresses to be whitelisted
@@ -192,6 +205,16 @@ abstract contract StErc20 is StFees {
 		returns (uint256 spendAllowance)
 	{
 		spendAllowance = erc20d._allowances[sender][spender];
+	}
+
+	function _setEntity(address addr, uint entityId) internal {
+		require(addr != address(0), "setEntity: invalid entity address");
+		require(entityId > 0, "setEntity: invalid entity id");
+		require(erc20d._whitelisted[addr], "setEntity: address is not white listed");
+		require(entities[addr] == 0, "setEntity: address already assigned to an entity");
+		
+		entities[addr] = entityId;
+		addressesPerEntity[entityId].push(addr);
 	}
 	//#endif
 }

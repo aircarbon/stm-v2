@@ -11,6 +11,7 @@ contract("StMaster", accounts => {
 
     before(async function () {
         stm = await st.deployed();
+        await stm.whitelistMany([CONST.testAddr1, CONST.testAddr2, CONST.testAddr3, CONST.testAddr4]);
         if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
         await stm.sealContract();
         await setupHelper.setDefaults({ stm, accounts });
@@ -32,15 +33,19 @@ contract("StMaster", accounts => {
     });
 
     it(`should fail to set entity with zero address`, async () => {
-        await CONST.expectRevert(stm.setEntity, [CONST.nullAddr, CONST.testId3], 'setEntity: wrong entity address');
+        await CONST.expectRevert(stm.setEntity, [CONST.nullAddr, CONST.testId3], 'setEntity: invalid entity address');
     });
 
     it(`should fail to set entity with zero entity id`, async () => {
-        await CONST.expectRevert(stm.setEntity, [CONST.testAddr3, 0], 'setEntity: wrong entity id');
+        await CONST.expectRevert(stm.setEntity, [CONST.testAddr3, 0], 'setEntity: invalid entity id');
     });
 
     it(`should fail to set entity twice`, async () => {
         await CONST.expectRevert(stm.setEntity, [CONST.testAddr1, CONST.testId3], 'setEntity: address already assigned to an entity');
+    });
+
+    it(`should fail to set entity that is not white listed`, async () => {
+        await CONST.expectRevert(stm.setEntity, [CONST.testAddr5, CONST.testId1], 'setEntity: address is not white listed');
     });
 
     // getEntity()
@@ -59,7 +64,7 @@ contract("StMaster", accounts => {
     });
 
     it(`should fail to get entity id when passing zero address`, async () => {
-        await CONST.expectRevertFromCall(stm.getEntity, [CONST.nullAddr], 'getEntity: wrong address');
+        await CONST.expectRevertFromCall(stm.getEntity, [CONST.nullAddr], 'getEntity: invalid address');
     });
 
     // getEntityAddresses()

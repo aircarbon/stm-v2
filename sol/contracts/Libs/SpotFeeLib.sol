@@ -37,7 +37,7 @@ library SpotFeeLib {
 		require(a.ccy_perMillion == 0, "ccy_perMillion unsupported for token-type fee");
 		require(a.ccy_mirrorFee == false, "ccy_mirrorFee unsupported for token-type fee");
 
-		StructLib.FeeStruct storage feeStruct = globalFees;
+		StructLib.FeeStruct storage feeStruct = globalFees; // v2.TODO 
 		if (ledgerOwner != address(0x0)) {
 			StructLib.initLedgerIfNew(ld, ledgerOwner);
 

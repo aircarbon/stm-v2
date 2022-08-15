@@ -112,6 +112,8 @@ abstract contract StTransferable is Owned, StErc20, StPayable {
 		public
 		onlyCustodian
 		onlyWhenReadWrite
+		// hasEntity(transferArgs.ledger_A)
+		// hasEntity(transferArgs.ledger_B)
 	{
 		// abort if sending tokens from a non-whitelist account
 		require(
@@ -123,7 +125,9 @@ abstract contract StTransferable is Owned, StErc20, StPayable {
 			"Not whitelisted (B)"
 		);
 
-		transferArgs.feeAddrOwner = deploymentOwner;
+		transferArgs.feeAddrOwner = deploymentOwner; // v2.TODO (at first all the fees are accrued to one acc, later should be in diff ones)
+		// v2.TODO when setEntityFeeAddr() function is ready, replace the addr here
+		// v2.TODO split the fees if both ledgers are from diff entities
 		TransferLib.transferOrTrade(ld, std, ctd, globalFees, transferArgs);
 	}
 

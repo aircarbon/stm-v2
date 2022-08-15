@@ -39,7 +39,9 @@ abstract contract StBurnable is StLedger {
 		uint256 tokTypeId,
 		int256 burnQty,
 		uint256[] memory stIds // IFF supplied (len > 0): sum of supplied STs current qty must == supplied burnQty
-	) public onlyOwner onlyWhenReadWrite {
+	) public onlyOwner onlyWhenReadWrite 
+		// hasEntity(ledgerOwner) 
+	{
 		TokenLib.burnTokens(
 			ld,
 			std,

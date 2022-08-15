@@ -25,6 +25,14 @@ abstract contract StLedger is Owned {
 	StructLib.StTypesStruct std;
 	StructLib.CcyTypesStruct ctd;
 
+	mapping(address => uint) internal entities;
+	mapping(uint => address[]) internal addressesPerEntity;
+
+	modifier hasEntity(address addr) {
+		require(addr == address(0) || getEntity(addr) != 0, "The address is not assigned to any entity");
+		_;
+	}
+
 	/**
 	 * @dev returns all security token types
 	 * @return secTokenTypes
@@ -36,6 +44,11 @@ abstract contract StLedger is Owned {
 		returns (StructLib.GetSecTokenTypesReturn memory secTokenTypes)
 	{
 		secTokenTypes = TokenLib.getSecTokenTypes(std);
+	}
+
+	function getEntityAddresses(uint entityId) external view returns(address[] memory) {
+		require(entityId > 0, "getEntityAddresses: wrong entity id");
+		return addressesPerEntity[entityId];
 	}
 
 	/**
@@ -153,5 +166,10 @@ abstract contract StLedger is Owned {
 		address payable cashflowBaseAddr
 	) public onlyOwner onlyWhenReadWrite {
 		TokenLib.addSecTokenType(ld, std, ctd, name, settlementType, ft, cashflowBaseAddr);
+	}
+
+	function getEntity(address addr) public view returns(uint) {
+		require(addr != address(0), "getEntity: invalid address");
+		return entities[addr];
 	}
 }

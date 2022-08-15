@@ -17,18 +17,23 @@ library LoadLib {
 		ld._batches_currentMax_id = _batches_currentMax_id;
 	}
 
+
+	// Add another param "entity ID"
 	function createLedgerEntry(
 		StructLib.LedgerStruct storage ld,
 		address ledgerEntryOwner,
 		StructLib.LedgerCcyReturn[] memory ccys,
 		uint256 spot_sumQtyMinted,
 		uint256 spot_sumQtyBurned
+		// uint entityId
 	) public {
 		require(!ld._contractSealed, "Contract is sealed");
 
 		if (!ld._ledger[ledgerEntryOwner].exists) {
 			ld._ledgerOwners.push(ledgerEntryOwner);
 		}
+
+		// setEntity(ledgerEntryOwner, entityId);
 
 		StructLib.Ledger storage entry = ld._ledger[ledgerEntryOwner];
 
