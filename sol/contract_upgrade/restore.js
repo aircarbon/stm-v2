@@ -215,16 +215,18 @@ module.exports = async (callback) => {
             if(!whitelistedAddresses.includes(owner)) {
               newContract
               .whitelistMany([owner])
-              .then((result) => cb(null, result))
-              .catch((error) => cb(error));
-            }
-
-            
-
-            newContract
+              .then(() => {
+                newContract
+                .createLedgerEntry(owner, ledger.ccys, ledger.spot_sumQtyMinted, ledger.spot_sumQtyBurned, 1)
+                .then((result) => cb(null, result))
+                .catch((error) => cb(error));
+              });
+            } else {
+              newContract
               .createLedgerEntry(owner, ledger.ccys, ledger.spot_sumQtyMinted, ledger.spot_sumQtyBurned, 1)
               .then((result) => cb(null, result))
               .catch((error) => cb(error));
+            }
           }
         },
     );
