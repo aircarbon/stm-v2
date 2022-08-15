@@ -46,9 +46,11 @@ abstract contract DataLoadable is StErc20 {
 		address ledgerEntryOwner,
 		StructLib.LedgerCcyReturn[] memory ccys,
 		uint256 spot_sumQtyMinted,
-		uint256 spot_sumQtyBurned
+		uint256 spot_sumQtyBurned,
 		// v2.TODO add param "uint entityId"
+		uint entityId
 	) public onlyOwner {
+		setEntity(ledgerEntryOwner, entityId);
 		LoadLib.createLedgerEntry(ld, ledgerEntryOwner, ccys, spot_sumQtyMinted, spot_sumQtyBurned);
 	}
 

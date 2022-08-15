@@ -210,7 +210,7 @@ module.exports = async (callback) => {
             console.log(`Creating ledger entry #${index} - currency`, owner, ledger.ccys);
             console.log(`Processing ledger - currency: ${index + 1}/${allLedgers.length}`);
             newContract
-              .createLedgerEntry(owner, ledger.ccys, ledger.spot_sumQtyMinted, ledger.spot_sumQtyBurned)
+              .createLedgerEntry(owner, ledger.ccys, ledger.spot_sumQtyMinted, ledger.spot_sumQtyBurned, 1)
               .then((result) => cb(null, result))
               .catch((error) => cb(error));
           }
