@@ -143,6 +143,36 @@ module.exports = {
         assert.fail('expected contract exception');
     },
 
+    // If the address is not whitelisted, it will be whitelisted.
+    // If an address does not have entity, it will be assigned the one passed.
+    whitelistAndSetEntities: async(addresses = [], entityIds = [], OWNER, OWNER_privKey) => {
+        if(addresses.length !== entityIds.length) {
+            throw Error("whitelistAndSetEntities: arrays' lengths don't match");
+        }
+
+        // whitelisting
+        let allWLAddresses = await web3_call('getWhitelist', []);
+        allWLAddresses = allWLAddresses.map(addr => addr.toString().toLowerCase());
+        
+        let shouldBeWL = [];
+
+        for(let addr of addresses) {
+            if(!allWLAddresses.includes(addr)) {
+                shouldBeWL.push(addr);
+            }
+        }
+
+        await web3_tx('whitelistMany', [shouldBeWL], OWNER, OWNER_privKey);
+
+        // setting entities
+        const entitiesOfTheAddresses = await web3_call('getEntityBatch', [addresses]);
+
+        const addr = addresses.filter((_, indx) => entitiesOfTheAddresses[indx] === 0);
+        const entIds = entityIds.filter((_, indx) => entitiesOfTheAddresses[indx] === 0);
+
+        await web3_tx('setEntityBatch', [addr, entIds], OWNER, OWNER_privKey);
+    },
+
     // https://docs.chain.link/docs/using-chainlink-reference-contracts
     chainlinkAggregators: {
         "1": { // ETH mainnet

@@ -66,6 +66,9 @@ describe(`Contract Web3 Interface`, async () => {
             //if (ex.toString().includes("Already whitelisted")) console.log('(already whitelisted - nop)');
             //else throw(ex);
         }
+        
+        // await CONST.whitelistAndSetEntities([WHITE, GRAY_1], [1, 1], OWNER, OWNER_privKey);
+
         const sealedStatus = await CONST.web3_call('getContractSeal', []);
         if (!sealedStatus) {
             await CONST.web3_tx('sealContract', [], OWNER, OWNER_privKey);

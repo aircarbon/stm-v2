@@ -151,6 +151,15 @@ abstract contract StLedger is Owned {
 		secToken = TokenLib.getSecToken(ld, std, id);
 	}
 
+	function getEntityBatch(address[] calldata addr) external view returns(uint[] memory results) {
+		uint len = addr.length;
+		results = new uint[](len);
+
+		for(uint i = 0; i < len; i++) {
+			results[i] = getEntity(addr[i]);
+		}
+	}
+
 	// add token type: direct (by name) or cashflow base (by address)
 	/**
 	 * @dev add a new security token type
