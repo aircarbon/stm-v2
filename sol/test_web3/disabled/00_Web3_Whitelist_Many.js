@@ -6,9 +6,9 @@ const assert = require('assert');
 //const abi = acmJson['abi'];
 const EthereumJsTx = require('ethereumjs-tx');
 const BN = require('bn.js');
-const  db  = require('../../orm/build');
+const  db  = require('../../../orm/build');
 
-const CONST = require('../const.js');
+const CONST = require('../../const.js');
 process.env.WEB3_NETWORK_ID = Number(process.env.NETWORK_ID || 888);
 
 const OWNER_NDX = 0;
@@ -33,7 +33,7 @@ describe(`Contract Web3 Interface`, async () => {
     const CHUNKS = 100;
 
     before(async function () {
-        await require('../devSetupContract.js').setDefaults();
+        await require('../../devSetupContract.js').setDefaults();
 
         const sealedStatus = await CONST.web3_call('getContractSeal', []);
         if (sealedStatus) {
