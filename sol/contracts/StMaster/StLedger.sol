@@ -33,6 +33,23 @@ abstract contract StLedger is Owned {
 		_;
 	}
 
+	function addSecTokenTypeBatch(
+		string[] calldata name,
+		StructLib.SettlementType[] calldata settlementType,
+		StructLib.FutureTokenTypeArgs[] calldata ft,
+		address payable[] calldata cashflowBaseAddr
+	) external onlyOwner onlyWhenReadWrite {
+		// uint len = name.length; // stack too deep
+		require(
+			name.length == settlementType.length && name.length == ft.length && name.length == cashflowBaseAddr.length, 
+			"addSecTokenTypeBatch: arrays' lengths don't match"
+		);
+
+		for(uint i = 0; i < name.length; i++) {
+			TokenLib.addSecTokenType(ld, std, ctd, name[i], settlementType[i], ft[i], cashflowBaseAddr[i]);
+		}
+	}
+
 	/**
 	 * @dev returns all security token types
 	 * @return secTokenTypes

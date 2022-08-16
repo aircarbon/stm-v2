@@ -23,6 +23,51 @@ import "../Libs/LoadLib.sol";
  */
 
 abstract contract DataLoadable is StErc20 {
+
+	function createLedgerEntryBatch(
+		address[] calldata ledgerEntryOwner,
+		StructLib.LedgerCcyReturn[][] calldata ccys,
+		uint256[] calldata spot_sumQtyMinted,
+		uint256[] calldata spot_sumQtyBurned,
+		uint[] calldata entityId
+	) external onlyOwner {
+		// uint len = ledgerEntryOwner.length; // stack too deep
+		require(
+			ledgerEntryOwner.length == ccys.length 
+			&& ledgerEntryOwner.length == spot_sumQtyMinted.length 
+			&& ledgerEntryOwner.length == spot_sumQtyBurned.length 
+			&& ledgerEntryOwner.length == entityId.length,
+			"createLedgerEntryBatch: arrays' lengths don't match"
+		);
+
+		for(uint i = 0; i < ledgerEntryOwner.length; i++) {
+			setEntity(ledgerEntryOwner[i], entityId[i]);
+			LoadLib.createLedgerEntry(ld, ledgerEntryOwner[i], ccys[i], spot_sumQtyMinted[i], spot_sumQtyBurned[i]);
+		}
+	}
+
+	function addSecTokenBatch(StructLib.AddSecTokenBatchParam[] calldata params) external onlyOwner {
+		uint len = params.length;
+
+		for(uint i = 0; i < len; i++) {
+			StructLib.AddSecTokenBatchParam memory currParam = params[i];
+
+			LoadLib.addSecToken(
+				ld,
+				currParam.ledgerEntryOwner,
+				currParam.batchId,
+				currParam.stId,
+				currParam.tokTypeId,
+				currParam.mintedQty,
+				currParam.currentQty,
+				currParam.ft_price,
+				currParam.ft_lastMarkPrice,
+				currParam.ft_ledgerOwner,
+				currParam.ft_PL
+			);
+		}
+	}
+
 	/**
 	 * @dev load a single or multiple security token batch(es)
 	 * @param batches takes an array of security token batches

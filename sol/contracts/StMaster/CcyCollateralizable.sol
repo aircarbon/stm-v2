@@ -20,6 +20,20 @@ import "../Libs/CcyLib.sol";
  */
 abstract contract Collateralizable is StLedger {
 	//#if process.env.CONTRACT_TYPE !== 'CASHFLOW_BASE'
+
+	function addCcyTypeBatch(
+		string[] calldata name,
+		string[] calldata unit,
+		uint16[] calldata decimals
+	) external onlyOwner onlyWhenReadWrite {
+		uint len = name.length;
+		require(len == unit.length && len == decimals.length, "addCcyTypeBatch: arrays' lengths don't match");
+
+		for(uint i = 0; i < len; i++) {
+			CcyLib.addCcyType(ld, ctd, name[i], unit[i], decimals[i]);
+		}
+	}
+
 	/**
 	 * @dev returns the current supporting currencies
 	 * @return ccyTypes

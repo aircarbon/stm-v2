@@ -60,6 +60,19 @@ library StructLib {
 		FUTURE
 	}
 
+	struct AddSecTokenBatchParam {
+		address ledgerEntryOwner;
+		uint64 batchId;
+		uint256 stId;
+		uint256 tokTypeId;
+		int64 mintedQty;
+		int64 currentQty;
+		int128 ft_price;
+		int128 ft_lastMarkPrice;
+		address ft_ledgerOwner;
+		int128 ft_PL;
+	}
+
 	/**
 	 * @notice Transfers currency across ledger entries
 	 * @param a Transfer arguments
