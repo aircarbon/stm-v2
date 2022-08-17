@@ -79,6 +79,20 @@ library SpotFeeLib {
 		}
 	}
 
+	// function setFee_CcyTypeBatch(
+	// 	StructLib.LedgerStruct storage ld,
+	// 	StructLib.CcyTypesStruct storage ctd,
+	// 	StructLib.FeeStruct storage globalFees,
+	// 	StructLib.SetFeeCcyTypeBatchArgs[] calldata params
+	// ) public {
+	// 	uint len = params.length;
+
+	// 	for(uint i = 0; i < len; i++) {
+	// 		StructLib.SetFeeCcyTypeBatchArgs calldata param = params[i];
+	// 		setFee_CcyType(ld, ctd, globalFees, param.ccyTypeId, param.ledgerOwner, param.feeArgs);
+	// 	}
+	// }
+
 	function setFee_CcyType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.CcyTypesStruct storage ctd,

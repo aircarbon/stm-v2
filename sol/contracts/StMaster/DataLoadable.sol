@@ -24,17 +24,17 @@ import "../Libs/LoadLib.sol";
 
 abstract contract DataLoadable is StErc20 {
 
-	function createLedgerEntryBatch(StructLib.CreateLedgerEntryParam[] calldata params) external onlyOwner {
+	function createLedgerEntryBatch(StructLib.CreateLedgerEntryArgs[] calldata params) external onlyOwner {
 		uint len = params.length;
 
 		for(uint i = 0; i < len; i++) {
-			StructLib.CreateLedgerEntryParam memory currParam = params[i];
+			StructLib.CreateLedgerEntryArgs memory currParam = params[i];
 			setEntity(currParam.ledgerEntryOwner, currParam.entityId);
 			LoadLib.createLedgerEntry(ld, currParam.ledgerEntryOwner, currParam.ccys, currParam.spot_sumQtyMinted, currParam.spot_sumQtyBurned);
 		}
 	}
 
-	function addSecTokenBatch(StructLib.AddSecTokenBatchParam[] calldata params) external onlyOwner {
+	function addSecTokenBatch(StructLib.AddSecTokenBatchArgs[] calldata params) external onlyOwner {
 		LoadLib.addSecTokenBatch(ld, params);
 	}
 

@@ -10,7 +10,7 @@ const argv = require('yargs-parser')(process.argv.slice(2));
 const StMaster = artifacts.require('StMaster');
 const series = require('async/series');
 
-const { getLedgerHashOffChain, createBackupData } = require('./utils');
+const { getLedgerHashOffChain, createBackupData, createBatches } = require('./utils');
 const CONST = require('../const');
 const { helpers } = require('../../orm/build');
 
@@ -105,21 +105,12 @@ module.exports = async (callback) => {
   // await series(whitelistPromises);
 
   // add ccy data to new contract
-  const batchSize_ccyType = 20;
   const ccyTypes = await newContract.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
   const currencyNames = currencyTypes.map((type) => type.name);
 
   const filteredCcyTypes = data.ccyTypes.filter((ccyType) => currencyNames.includes(ccyType.name));
-
-  let ccyTypesBatches = [];
-  for(let i = 0; i < Math.ceil(filteredCcyTypes.length / batchSize_ccyType); i++) {
-    const start = batchSize_ccyType * i;
-    const finish = batchSize_ccyType * (i + 1); // not including
-
-    const currentCcyTypes = filteredCcyTypes.slice(start, finish);
-    ccyTypesBatches.push(currentCcyTypes);
-  }
+  let ccyTypesBatches = createBatches(filteredCcyTypes, 20);
 
   const ccyTypesPromises = ccyTypesBatches.map((ccyBatch) => 
     function addCcyTypeBatch(cb) {
@@ -141,21 +132,12 @@ module.exports = async (callback) => {
   await sleep(1000);
 
   // add token types to new contract
-  const batchSize_tokenType = 20;
   const tokTypes = await newContract.getSecTokenTypes();
   const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
   const tokenNames = tokenTypes.map((type) => type.name);
 
   const filteredTokenTypes = data.tokenTypes.filter((tokenType) => tokenNames.includes(tokenType.name));
-
-  let tokenTypesBatches = [];
-  for(let i = 0; i < Math.ceil(filteredTokenTypes.length / batchSize_tokenType); i++) {
-    const start = batchSize_tokenType * i;
-    const finish = batchSize_tokenType * (i + 1); // not including
-
-    const currentTokenTypes = filteredTokenTypes.slice(start, finish);
-    tokenTypesBatches.push(currentTokenTypes);
-  }
+  let tokenTypesBatches = createBatches(filteredTokenTypes, 20);
 
   const tokenTypesPromises = tokenTypesBatches.map((tokenTypeBatch) => 
     function addCcyTypeBatch(cb) {
@@ -232,18 +214,9 @@ module.exports = async (callback) => {
 
     // whitelisting owners
     const toBeWhitelisted = data.ledgerOwners.filter((owner) => (ledgerOwners.includes(owner) && !whitelistedAddresses.includes(owner)));
+    let whitelistingAddrBatches = createBatches(toBeWhitelisted, 500);
 
-    const batchSize_wl = 500;
-    let whitelistingAddrBatches = [];
-    for(let i = 0; i < Math.ceil(toBeWhitelisted.length / batchSize_wl); i++) {
-      const start = batchSize_wl * i;
-      const finish = batchSize_wl * (i + 1); // not including
-
-      const currentWLAddrs = toBeWhitelisted.slice(start, finish);
-      whitelistingAddrBatches.push(currentWLAddrs);
-    }
-
-    const whiteListingPrimises = whitelistingAddrBatches.map((wlBatch) => 
+    const whiteListingPromises = whitelistingAddrBatches.map((wlBatch) => 
       function whitelistMany(cb) {
         console.log(`Adding addresses to whitelist`);
 
@@ -255,9 +228,10 @@ module.exports = async (callback) => {
             .catch((error) => cb(error));
             },
           );
+    });
 
   console.log('\n\n\n\n======= CHANGES 3 INCOMING ========');
-  await series(whiteListingPrimises);
+  await series(whiteListingPromises);
   await sleep(1000);
   
   // load ledgers data to new contract
@@ -273,21 +247,14 @@ module.exports = async (callback) => {
     }
   }
 
-  let ledgersBatches = [];
-  for(let i = 0; i < Math.ceil(filteredLedgersWithOwners.length / batchSize_ledgers); i++) {
-    const start = batchSize_ledgers * i;
-    const finish = batchSize_ledgers * (i + 1); // not including
+  let ledgersBatches = createBatches(filteredLedgersWithOwners, 20);
 
-    const currLedgers = filteredLedgersWithOwners.slice(start, finish);
-    ledgersBatches.push(currLedgers);
-  }
-
-  const ledgersPromises = ledgersBatches.map((ledger, index, allBatches) => 
+  const ledgersPromises = ledgersBatches.map((ledgerBatch, index, allBatches) => 
     function createLedgerEntryBatch(cb) {
       console.log(`Creating ledger batch entry #${index}/${allBatches.length} - currency`);
 
       newContract
-        .createLedgerEntryBatch(ledgersBatches.map((obj) => {
+        .createLedgerEntryBatch(ledgerBatch.map((obj) => {
           return {
             ledgerEntryOwner: obj.owner,
             ccys: obj.ledger.ccys,
@@ -306,8 +273,6 @@ module.exports = async (callback) => {
   await sleep(1000);
   
   // adding sec tokens
-  //////////////////////////////////////////////////////
-  const batchSize_tokens = 20; 
   let filteredTokens = [];
 
   for(let i = 0; i < data.ledgers.length; i++) {
@@ -333,14 +298,7 @@ module.exports = async (callback) => {
     });
   }
 
-  let tokensWithOwnersBatches = [];
-  for(let i = 0; i < Math.ceil(filteredTokens.length / batchSize_tokens); i++) {
-    const start = batchSize_tokens * i;
-    const finish = batchSize_tokens * (i + 1); // not including
-
-    const currentTokens = filteredTokens.slice(start, finish);
-    tokensWithOwnersBatches.push(currentTokens);
-  }
+  let tokensWithOwnersBatches = createBatches(filteredTokens, 20);
 
   const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch) => 
     function addSecTokenBatch(cb) {
@@ -371,48 +329,58 @@ module.exports = async (callback) => {
   await series(tokensPromises);
   await sleep(1000);
 
-  ////////////////////////// Stopped here
+  // getSecToken for all tokens
+  // addSecTokenBatch
+  // add globalSecTokens to new contract
+  let allTokens = [];
 
-    // add globalSecTokens to new contract
-    const globalSecTokensPromises = data.globalSecTokens.map(
-      (token, index, tokens) =>
-        function addGlobalSecToken(cb) {
-          
-          const { stId, mintedQty, currentQty } = token;
-          const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
-            (event) => Number(event.stId) === Number(stId),
-          );
-          if (transferedFullSecTokensEvent) {
-            console.log(`Found transferedFullSecTokensEvent for ${stId}`, transferedFullSecTokensEvent);
-          }
-          newContract
-            .getSecToken(stId)
-            .then((result) => helpers.decodeWeb3Object(result))
-            .then((existToken) => {
-              console.log(`Processing ${index + 1}/${tokens.length}`);
-              if (existToken.exists)
-                return existToken;
-              
-              console.log('Add global sec token', token);
-              return newContract.addSecTokenBatch([{
-                ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
-                batchId: token.batchId,
-                stId: stId,
-                tokTypeId: token.tokTypeId,
-                mintedQty: Number(mintedQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
-                currentQty: Number(currentQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
-                ft_price: token.ft_price,
-                ft_lastMarkPrice: token.ft_lastMarkPrice,
-                ft_ledgerOwner: token.ft_ledgerOwner,
-                ft_PL: token.ft_PL,
-              }]);
-              })
-            .then((result) => cb(null, result))
-            .catch((error) => cb(error));
-        },
+  for(let i = 0; i < data.globalSecTokens.length; i++) {
+    const token = data.globalSecTokens[i]
+
+    const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
+      (event) => Number(event.stId) === Number(token.stId),
     );
-    await series(globalSecTokensPromises);
-    await sleep(1000);
+
+    if (transferedFullSecTokensEvent) {
+      console.log(`Found transferedFullSecTokensEvent for ${token.stId}`, transferedFullSecTokensEvent);
+    }
+
+    let exists = await newContract.getSecToken(token.stId);
+    exists = helpers.decodeWeb3Object(exists).exists;
+
+    allTokens.push({token, transferedFullSecTokensEvent, exists});
+  }
+  allTokens = allTokens.filter((tokenObj) => !tokenObj.exists);
+  let tokensBatches = createBatches(allTokens, 20);
+
+  const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
+    function addGlobalSecToken(cb) {
+      console.log(`Creating ledger batch entry #${index}/${allBatches.length} - currency`);
+
+        newContract.addSecTokenBatch(
+          tokenBatch.map((tokenObj) => {
+            return {
+              ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
+              batchId: tokenObj.token.batchId,
+              stId: tokenObj.token.stId,
+              tokTypeId: tokenObj.token.tokTypeId,
+              mintedQty: Number(tokenObj.token.mintedQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
+              currentQty: Number(tokenObj.token.currentQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
+              ft_price: tokenObj.token.ft_price,
+              ft_lastMarkPrice: tokenObj.token.ft_lastMarkPrice,
+              ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,
+              ft_PL: tokenObj.token.ft_PL,
+            }
+          })
+        )
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
+
+  console.log('\n\n\n\n======= CHANGES 6 INCOMING ========');
+  await series(promises);
+  await sleep(1000);
 
     await newContract.setTokenTotals(
       data.secTokenBaseId,
@@ -420,6 +388,60 @@ module.exports = async (callback) => {
       toBN(data.secTokenMintedQty),
       toBN(data.secTokenBurnedQty),
     );
+
+    //////////////////////////////////////////
+
+    let allCcyTypesWithFees = data.ccyTypes.map((ccyType, index) => {
+      return {
+        ccyType,
+        fee: data.ccyFees[index]
+      }
+    });
+
+    allCcyTypesWithFees = allCcyTypesWithFees.filter((ccyTypeObj) => {
+      return Number(ccyTypeObj.fee?.fee_fixed) ||
+        Number(ccyTypeObj.fee?.fee_percBips) ||
+        Number(ccyTypeObj.fee?.fee_min) ||
+        Number(ccyTypeObj.fee?.fee_max) ||
+        Number(ccyTypeObj.fee?.ccy_perMillion) ||
+        Boolean(ccyTypeObj.fee?.ccy_mirrorFee)
+    });
+
+    let ccyTypesBatches = createBatches(allCcyTypesWithFees, 20);
+    
+    
+
+    const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
+    function setCcyTypesBatches(cb) {
+      console.log(`Setting fee for ccyTypes`);
+
+        newContract.addSecTokenBatch(
+          tokenBatch.map((tokenObj) => {
+            return {
+              ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
+              batchId: tokenObj.token.batchId,
+              stId: tokenObj.token.stId,
+              tokTypeId: tokenObj.token.tokTypeId,
+              mintedQty: Number(tokenObj.token.mintedQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
+              currentQty: Number(tokenObj.token.currentQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
+              ft_price: tokenObj.token.ft_price,
+              ft_lastMarkPrice: tokenObj.token.ft_lastMarkPrice,
+              ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,
+              ft_PL: tokenObj.token.ft_PL,
+            }
+          })
+        )
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
+
+  console.log('\n\n\n\n======= CHANGES 6 INCOMING ========');
+  await series(promises);
+  await sleep(1000);
+
+    //////////////////////////////////////////
+
 
     // set fee for currency and token types
     const ccyFeePromises = data.ccyTypes.map((ccyType, index) => {

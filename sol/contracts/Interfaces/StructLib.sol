@@ -60,7 +60,7 @@ library StructLib {
 		FUTURE
 	}
 
-	struct CreateLedgerEntryParam {
+	struct CreateLedgerEntryArgs {
 		address ledgerEntryOwner;
 		LedgerCcyReturn[] ccys;
 		uint256 spot_sumQtyMinted;
@@ -68,7 +68,7 @@ library StructLib {
 		uint entityId;
 	}
 
-	struct AddSecTokenBatchParam {
+	struct AddSecTokenBatchArgs {
 		address ledgerEntryOwner;
 		uint64 batchId;
 		uint256 stId;
@@ -81,12 +81,18 @@ library StructLib {
 		int128 ft_PL;
 	}
 
-	struct AddSecTokenTypeBatchParam {
+	struct AddSecTokenTypeBatchArgs {
 		string name;
 		SettlementType settlementType;
 		FutureTokenTypeArgs ft;
 		address payable cashflowBaseAddr;
 	}
+
+	// struct SetFeeCcyTypeBatchArgs {
+	// 	uint256 ccyTypeId;
+	// 	address ledgerOwner;
+	// 	SetFeeArgs feeArgs;
+	// }
 
 	/**
 	 * @notice Transfers currency across ledger entries

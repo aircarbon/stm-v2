@@ -33,7 +33,7 @@ abstract contract StLedger is Owned {
 		_;
 	}
 
-	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchParam[] calldata params) 
+	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) 
 		external 
 		onlyOwner 
 		onlyWhenReadWrite 

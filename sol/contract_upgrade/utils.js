@@ -504,5 +504,20 @@ async function createBackupData(contract, contractAddress, contractType, getTran
   return backup;
 }
 
+const createBatches = (arr, batchSize = 1) => {
+  let result = [];
+
+  for(let i = 0; i < Math.ceil(arr.length / batchSize); i++) {
+    const start = batchSize * i;
+    const finish = batchSize * (i + 1); // not including
+
+    const currLedgers = arr.slice(start, finish);
+    result.push(currLedgers);
+  }
+
+  return result;
+}
+
 exports.getLedgerHashOffChain = getLedgerHashOffChain;
 exports.createBackupData = createBackupData;
+exports.createBatches = createBatches;

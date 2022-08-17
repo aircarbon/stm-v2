@@ -48,11 +48,11 @@ library LoadLib {
 		}
 	}
 
-	function addSecTokenBatch(StructLib.LedgerStruct storage ld, StructLib.AddSecTokenBatchParam[] memory params) public {
+	function addSecTokenBatch(StructLib.LedgerStruct storage ld, StructLib.AddSecTokenBatchArgs[] memory params) public {
 		uint len = params.length;
 
 		for(uint i = 0; i < len; i++) {
-			StructLib.AddSecTokenBatchParam memory currParam = params[i];
+			StructLib.AddSecTokenBatchArgs memory currParam = params[i];
 
 			addSecToken(
 				ld,
