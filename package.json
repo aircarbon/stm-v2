@@ -7,6 +7,8 @@
   ],
   "scripts": {
     "postinstall": "cd orm && npm run build",
+    "dev:ganache": "cd sol && npm run ganache",
+    "dev:stm": "cd sol && export INSTANCE_ID=local && node process_sol_js && truffle migrate --network development --reset",
     "prepare": "husky install"
   },
   "devDependencies": {
