@@ -33,21 +33,12 @@ abstract contract StLedger is Owned {
 		_;
 	}
 
-	function addSecTokenTypeBatch(
-		string[] calldata name,
-		StructLib.SettlementType[] calldata settlementType,
-		StructLib.FutureTokenTypeArgs[] calldata ft,
-		address payable[] calldata cashflowBaseAddr
-	) external onlyOwner onlyWhenReadWrite {
-		// uint len = name.length; // stack too deep
-		require(
-			name.length == settlementType.length && name.length == ft.length && name.length == cashflowBaseAddr.length, 
-			"addSecTokenTypeBatch: arrays' lengths don't match"
-		);
-
-		for(uint i = 0; i < name.length; i++) {
-			TokenLib.addSecTokenType(ld, std, ctd, name[i], settlementType[i], ft[i], cashflowBaseAddr[i]);
-		}
+	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchParam[] calldata params) 
+		external 
+		onlyOwner 
+		onlyWhenReadWrite 
+	{
+		TokenLib.addSecTokenTypeBatch(ld, std, ctd, params);
 	}
 
 	/**
@@ -177,22 +168,23 @@ abstract contract StLedger is Owned {
 		}
 	}
 
+	// commented out due to the smart contract size limit. Using addSecTokenTypeBatch() method instead
 	// add token type: direct (by name) or cashflow base (by address)
-	/**
-	 * @dev add a new security token type
-	 * @param name security token name
-	 * @param settlementType 0: undefined<br/>1: spot<br/>2: future
-	 * @param ft future token
-	 * @param cashflowBaseAddr account address of the cashflow base token (CFT)
-	 */
-	function addSecTokenType(
-		string memory name,
-		StructLib.SettlementType settlementType,
-		StructLib.FutureTokenTypeArgs memory ft,
-		address payable cashflowBaseAddr
-	) public onlyOwner onlyWhenReadWrite {
-		TokenLib.addSecTokenType(ld, std, ctd, name, settlementType, ft, cashflowBaseAddr);
-	}
+	// /**
+	//  * @dev add a new security token type
+	//  * @param name security token name
+	//  * @param settlementType 0: undefined<br/>1: spot<br/>2: future
+	//  * @param ft future token
+	//  * @param cashflowBaseAddr account address of the cashflow base token (CFT)
+	//  */
+	// function addSecTokenType(
+	// 	string memory name,
+	// 	StructLib.SettlementType settlementType,
+	// 	StructLib.FutureTokenTypeArgs memory ft,
+	// 	address payable cashflowBaseAddr
+	// ) public onlyOwner onlyWhenReadWrite {
+	// 	TokenLib.addSecTokenType(ld, std, ctd, name, settlementType, ft, cashflowBaseAddr);
+	// }
 
 	function getEntity(address addr) public view returns(uint) {
 		require(addr != address(0), "getEntity: invalid address");

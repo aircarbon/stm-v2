@@ -93,8 +93,22 @@ module.exports = {
 };
 
 async function addSecTokenIfNotPresent(spotTypes, name, O, nameOverride) {
-    if (!spotTypes.some(p => p.name == name)) { await CONST.web3_tx('addSecTokenType',
-        [ name, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr ], O.addr, O.privKey, nameOverride); }
+    if (!spotTypes.some(p => p.name == name)) { 
+        await CONST.web3_tx(
+            'addSecTokenTypeBatch',
+            [ 
+                [
+                    {
+                        name: name, 
+                        settlementType: CONST.settlementType.SPOT, 
+                        ft: CONST.nullFutureArgs, 
+                        cashflowBaseAddr: CONST.nullAddr
+                    }
+                ]
+            ], 
+            O.addr, 
+            O.privKey, nameOverride); 
+    }
     else console.log(chalk.gray(`${name} already present; nop.`));
 }
 async function addCcyIfNotPresent(ccyTypes, name, unit, decimals, O, nameOverride) {

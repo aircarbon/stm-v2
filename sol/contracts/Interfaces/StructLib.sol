@@ -60,6 +60,14 @@ library StructLib {
 		FUTURE
 	}
 
+	struct CreateLedgerEntryParam {
+		address ledgerEntryOwner;
+		LedgerCcyReturn[] ccys;
+		uint256 spot_sumQtyMinted;
+		uint256 spot_sumQtyBurned;
+		uint entityId;
+	}
+
 	struct AddSecTokenBatchParam {
 		address ledgerEntryOwner;
 		uint64 batchId;
@@ -71,6 +79,13 @@ library StructLib {
 		int128 ft_lastMarkPrice;
 		address ft_ledgerOwner;
 		int128 ft_PL;
+	}
+
+	struct AddSecTokenTypeBatchParam {
+		string name;
+		SettlementType settlementType;
+		FutureTokenTypeArgs ft;
+		address payable cashflowBaseAddr;
 	}
 
 	/**

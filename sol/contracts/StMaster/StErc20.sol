@@ -43,9 +43,9 @@ abstract contract StErc20 is StFees {
 		}
 	}
 
-	function setEntity(address addr, uint entityId) public onlyOwner {
-		_setEntity(addr, entityId);
-	}
+	// function setEntity(address addr, uint entityId) public onlyOwner {
+	// 	_setEntity(addr, entityId);
+	// }
 
 	/**
 	 * @dev add multiple whitelist account addresses by deployment owners only

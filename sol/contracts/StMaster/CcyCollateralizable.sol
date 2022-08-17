@@ -26,12 +26,7 @@ abstract contract Collateralizable is StLedger {
 		string[] calldata unit,
 		uint16[] calldata decimals
 	) external onlyOwner onlyWhenReadWrite {
-		uint len = name.length;
-		require(len == unit.length && len == decimals.length, "addCcyTypeBatch: arrays' lengths don't match");
-
-		for(uint i = 0; i < len; i++) {
-			CcyLib.addCcyType(ld, ctd, name[i], unit[i], decimals[i]);
-		}
+		CcyLib.addCcyTypeBatch(ld, ctd, name, unit, decimals);
 	}
 
 	/**
@@ -43,19 +38,20 @@ abstract contract Collateralizable is StLedger {
 		return CcyLib.getCcyTypes(ctd);
 	}
 
+	// commented out due to the smart contract size limit. Using addCcyTypeBatch() method instead
 	/**
 	 * @dev add supporting currency types
 	 * @param name name of the currency
 	 * @param unit unit of the currency
 	 * @param decimals level of precision of the currency
 	 */
-	function addCcyType(
-		string memory name,
-		string memory unit,
-		uint16 decimals
-	) public onlyOwner onlyWhenReadWrite {
-		CcyLib.addCcyType(ld, ctd, name, unit, decimals);
-	}
+	// function addCcyType(
+	// 	string memory name,
+	// 	string memory unit,
+	// 	uint16 decimals
+	// ) public onlyOwner onlyWhenReadWrite {
+	// 	CcyLib.addCcyType(ld, ctd, name, unit, decimals);
+	// }
 
 	/**
 	 * @dev fund or withdraw currency type collaterised tokens from a ledger owner address

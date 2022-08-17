@@ -24,48 +24,18 @@ import "../Libs/LoadLib.sol";
 
 abstract contract DataLoadable is StErc20 {
 
-	function createLedgerEntryBatch(
-		address[] calldata ledgerEntryOwner,
-		StructLib.LedgerCcyReturn[][] calldata ccys,
-		uint256[] calldata spot_sumQtyMinted,
-		uint256[] calldata spot_sumQtyBurned,
-		uint[] calldata entityId
-	) external onlyOwner {
-		// uint len = ledgerEntryOwner.length; // stack too deep
-		require(
-			ledgerEntryOwner.length == ccys.length 
-			&& ledgerEntryOwner.length == spot_sumQtyMinted.length 
-			&& ledgerEntryOwner.length == spot_sumQtyBurned.length 
-			&& ledgerEntryOwner.length == entityId.length,
-			"createLedgerEntryBatch: arrays' lengths don't match"
-		);
+	function createLedgerEntryBatch(StructLib.CreateLedgerEntryParam[] calldata params) external onlyOwner {
+		uint len = params.length;
 
-		for(uint i = 0; i < ledgerEntryOwner.length; i++) {
-			setEntity(ledgerEntryOwner[i], entityId[i]);
-			LoadLib.createLedgerEntry(ld, ledgerEntryOwner[i], ccys[i], spot_sumQtyMinted[i], spot_sumQtyBurned[i]);
+		for(uint i = 0; i < len; i++) {
+			StructLib.CreateLedgerEntryParam memory currParam = params[i];
+			setEntity(currParam.ledgerEntryOwner, currParam.entityId);
+			LoadLib.createLedgerEntry(ld, currParam.ledgerEntryOwner, currParam.ccys, currParam.spot_sumQtyMinted, currParam.spot_sumQtyBurned);
 		}
 	}
 
 	function addSecTokenBatch(StructLib.AddSecTokenBatchParam[] calldata params) external onlyOwner {
-		uint len = params.length;
-
-		for(uint i = 0; i < len; i++) {
-			StructLib.AddSecTokenBatchParam memory currParam = params[i];
-
-			LoadLib.addSecToken(
-				ld,
-				currParam.ledgerEntryOwner,
-				currParam.batchId,
-				currParam.stId,
-				currParam.tokTypeId,
-				currParam.mintedQty,
-				currParam.currentQty,
-				currParam.ft_price,
-				currParam.ft_lastMarkPrice,
-				currParam.ft_ledgerOwner,
-				currParam.ft_PL
-			);
-		}
+		LoadLib.addSecTokenBatch(ld, params);
 	}
 
 	/**
@@ -80,6 +50,7 @@ abstract contract DataLoadable is StErc20 {
 		LoadLib.loadSecTokenBatch(ld, batches, _batches_currentMax_id);
 	}
 
+	// commented out due to the smart contract size limit. Using createLedgerEntryBatch() method instead
 	/**
 	 * @dev add an entry to the ledger
 	 * @param ledgerEntryOwner account address of the ledger owner for the entry
@@ -87,18 +58,19 @@ abstract contract DataLoadable is StErc20 {
 	 * @param spot_sumQtyMinted spot exchange total assets minted quantity
 	 * @param spot_sumQtyBurned spot exchange total assets burned quantity
 	 */
-	function createLedgerEntry(
-		address ledgerEntryOwner,
-		StructLib.LedgerCcyReturn[] memory ccys,
-		uint256 spot_sumQtyMinted,
-		uint256 spot_sumQtyBurned,
-		// v2.TODO add param "uint entityId"
-		uint entityId
-	) public onlyOwner {
-		setEntity(ledgerEntryOwner, entityId);
-		LoadLib.createLedgerEntry(ld, ledgerEntryOwner, ccys, spot_sumQtyMinted, spot_sumQtyBurned);
-	}
+	// function createLedgerEntry(
+	// 	address ledgerEntryOwner,
+	// 	StructLib.LedgerCcyReturn[] memory ccys,
+	// 	uint256 spot_sumQtyMinted,
+	// 	uint256 spot_sumQtyBurned,
+	// 	// v2.TODO add param "uint entityId"
+	// 	uint entityId
+	// ) public onlyOwner {
+	// 	setEntity(ledgerEntryOwner, entityId);
+	// 	LoadLib.createLedgerEntry(ld, ledgerEntryOwner, ccys, spot_sumQtyMinted, spot_sumQtyBurned);
+	// }
 
+	// commenting this out due to the contract size limit. Using method addSecTokenBatch() instead.
 	/**
 	 * @dev add a new security token
 	 * @param ledgerEntryOwner account address of the ledger entry owner
@@ -112,32 +84,32 @@ abstract contract DataLoadable is StErc20 {
 	 * @param ft_ledgerOwner for takePay() lookup of ledger owner by ST [futures only]
 	 * @param ft_PL running total P&L [futures only]
 	 */
-	function addSecToken(
-		address ledgerEntryOwner,
-		uint64 batchId,
-		uint256 stId,
-		uint256 tokTypeId,
-		int64 mintedQty,
-		int64 currentQty,
-		int128 ft_price,
-		int128 ft_lastMarkPrice,
-		address ft_ledgerOwner,
-		int128 ft_PL
-	) public onlyOwner {
-		LoadLib.addSecToken(
-			ld,
-			ledgerEntryOwner,
-			batchId,
-			stId,
-			tokTypeId,
-			mintedQty,
-			currentQty,
-			ft_price,
-			ft_lastMarkPrice,
-			ft_ledgerOwner,
-			ft_PL
-		);
-	}
+	// function addSecToken(
+	// 	address ledgerEntryOwner,
+	// 	uint64 batchId,
+	// 	uint256 stId,
+	// 	uint256 tokTypeId,
+	// 	int64 mintedQty,
+	// 	int64 currentQty,
+	// 	int128 ft_price,
+	// 	int128 ft_lastMarkPrice,
+	// 	address ft_ledgerOwner,
+	// 	int128 ft_PL
+	// ) public onlyOwner {
+	// 	LoadLib.addSecToken(
+	// 		ld,
+	// 		ledgerEntryOwner,
+	// 		batchId,
+	// 		stId,
+	// 		tokTypeId,
+	// 		mintedQty,
+	// 		currentQty,
+	// 		ft_price,
+	// 		ft_lastMarkPrice,
+	// 		ft_ledgerOwner,
+	// 		ft_PL
+	// 	);
+	// }
 
 	/**
 	 * @dev setting totals for security token

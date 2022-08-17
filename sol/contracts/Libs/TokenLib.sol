@@ -86,6 +86,20 @@ library TokenLib {
 	//
 	// TOKEN TYPES
 	//
+	function addSecTokenTypeBatch(
+		StructLib.LedgerStruct storage ld,
+		StructLib.StTypesStruct storage std,
+		StructLib.CcyTypesStruct storage ctd,
+		StructLib.AddSecTokenTypeBatchParam[] calldata params
+	) public {
+		uint len = params.length;
+
+		for(uint i = 0; i < len; i++) {
+			StructLib.AddSecTokenTypeBatchParam memory param = params[i];
+			addSecTokenType(ld, std, ctd, param.name, param.settlementType, param.ft, param.cashflowBaseAddr);
+		}
+	}
+
 	function addSecTokenType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,

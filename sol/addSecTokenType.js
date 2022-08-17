@@ -30,12 +30,16 @@ async function addSecTokenType() {
 async function addSecTokenIfNotPresent(spotTypes, name, O, nameOverride) {
     if (!spotTypes.some(p => p.name == name)) { 
         await CONST.web3_tx(
-            'addSecTokenType',
+            'addSecTokenTypeBatch',
             [
-                name, 
-                CONST.settlementType.SPOT, 
-                CONST.nullFutureArgs, 
-                CONST.nullAddr
+                [
+                    {
+                        name: name, 
+                        settlementType: CONST.settlementType.SPOT, 
+                        ft: CONST.nullFutureArgs, 
+                        cashflowBaseAddr: CONST.nullAddr
+                    }
+                ]
             ], 
             O.addr, 
             O.privKey, 

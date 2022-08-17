@@ -122,7 +122,7 @@ module.exports = async (callback) => {
   }
 
   const ccyTypesPromises = ccyTypesBatches.map((ccyBatch) => 
-    function addCcyType(cb) {
+    function addCcyTypeBatch(cb) {
       console.log(`Adding ccyTypes`);
       console.log(ccyBatch.map((ccyType) => ccyType.name));
 
@@ -158,12 +158,12 @@ module.exports = async (callback) => {
   }
 
   const tokenTypesPromises = tokenTypesBatches.map((tokenTypeBatch) => 
-    function addCcyType(cb) {
+    function addCcyTypeBatch(cb) {
       console.log(`Adding tokenType`);
       console.log(tokenTypeBatch.map((ccyType) => ccyType.name));
 
       newContract
-        .addCcyTypeBatch(
+        .addSecTokenBatch(
           tokenTypeBatch.map((ccyType) => ccyType.name), 
           tokenTypeBatch.map((ccyType) => ccyType.settlementType), 
           tokenTypeBatch.map((ccyType) => ccyType.ft),
@@ -283,17 +283,19 @@ module.exports = async (callback) => {
   }
 
   const ledgersPromises = ledgersBatches.map((ledger, index, allBatches) => 
-    function addCcyType(cb) {
+    function createLedgerEntryBatch(cb) {
       console.log(`Creating ledger batch entry #${index}/${allBatches.length} - currency`);
 
       newContract
-        .createLedgerEntryBatch(
-          ledgersBatches.map((obj) => obj.owner), 
-          ledgersBatches.map((obj) => obj.ledger.ccys),
-          ledgersBatches.map((obj) => obj.ledger.spot_sumQtyMinted),
-          ledgersBatches.map((obj) => obj.ledger.spot_sumQtyBurned),
-          new Array(ledgersBatches.length).fill(1),
-        )
+        .createLedgerEntryBatch(ledgersBatches.map((obj) => {
+          return {
+            ledgerEntryOwner: obj.owner,
+            ccys: obj.ledger.ccys,
+            spot_sumQtyMinted: obj.ledger.spot_sumQtyMinted,
+            spot_sumQtyBurned: obj.ledger.spot_sumQtyBurned,
+            entityId: 1
+          };
+        }))
         .then((result) => cb(null, result))
         .catch((error) => cb(error));
     },
@@ -341,7 +343,7 @@ module.exports = async (callback) => {
   }
 
   const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch) => 
-    function addSecToken(cb) {
+    function addSecTokenBatch(cb) {
       console.log('AddSecTokenToEntryBatch');
       console.log(tokenWithOwnerBatch.map((batchWithOwner) => batchWithOwner.token.stId));
 
@@ -369,6 +371,8 @@ module.exports = async (callback) => {
   await series(tokensPromises);
   await sleep(1000);
 
+  ////////////////////////// Stopped here
+
     // add globalSecTokens to new contract
     const globalSecTokensPromises = data.globalSecTokens.map(
       (token, index, tokens) =>
@@ -390,18 +394,18 @@ module.exports = async (callback) => {
                 return existToken;
               
               console.log('Add global sec token', token);
-              return newContract.addSecToken(
-                    '0x0000000000000000000000000000000000000000',
-                    token.batchId,
-                    stId,
-                    token.tokTypeId,
-                    Number(mintedQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
-                    Number(currentQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
-                    token.ft_price,
-                    token.ft_lastMarkPrice,
-                    token.ft_ledgerOwner,
-                    token.ft_PL,
-                  );
+              return newContract.addSecTokenBatch([{
+                ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
+                batchId: token.batchId,
+                stId: stId,
+                tokTypeId: token.tokTypeId,
+                mintedQty: Number(mintedQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
+                currentQty: Number(currentQty) - Number(transferedFullSecTokensEvent?.qty ?? 0),
+                ft_price: token.ft_price,
+                ft_lastMarkPrice: token.ft_lastMarkPrice,
+                ft_ledgerOwner: token.ft_ledgerOwner,
+                ft_PL: token.ft_PL,
+              }]);
               })
             .then((result) => cb(null, result))
             .catch((error) => cb(error));

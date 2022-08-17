@@ -305,8 +305,17 @@ module.exports = async function (deployer) {
         // link new base type to the controller (can also be disabled: we can do this manually through AdminWeb...)
         process.env.CONTRACT_TYPE = 'CASHFLOW_CONTROLLER';
         const { evs: evsBase } = await CONST.web3_tx(
-          'addSecTokenType',
-          [process.env.ADD_TYPE__TYPE_NAME, CONST.settlementType.SPOT, CONST.nullFutureArgs, addrBase],
+          'addSecTokenTypeBatch',
+          [
+            [
+              {
+                name: process.env.ADD_TYPE__TYPE_NAME, 
+                settlementType: CONST.settlementType.SPOT, 
+                ft: CONST.nullFutureArgs, 
+                cashflowBaseAddr: addrBase
+              }
+            ]
+          ],
           O.addr,
           O.privKey,
         );

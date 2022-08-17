@@ -10,6 +10,22 @@ library CcyLib {
 	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc);
 
 	// CCY TYPES
+
+	function addCcyTypeBatch(
+		StructLib.LedgerStruct storage ld,
+		StructLib.CcyTypesStruct storage ctd,
+		string[] calldata name,
+		string[] calldata unit,
+		uint16[] calldata decimals
+	) public {
+		uint len = name.length;
+		require(len == unit.length && len == decimals.length, "addCcyTypeBatch: arrays' lengths don't match");
+
+		for(uint i = 0; i < len; i++) {
+			addCcyType(ld, ctd, name[i], unit[i], decimals[i]);
+		}
+	}
+
 	function addCcyType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.CcyTypesStruct storage ctd,

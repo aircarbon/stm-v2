@@ -48,6 +48,28 @@ library LoadLib {
 		}
 	}
 
+	function addSecTokenBatch(StructLib.LedgerStruct storage ld, StructLib.AddSecTokenBatchParam[] memory params) public {
+		uint len = params.length;
+
+		for(uint i = 0; i < len; i++) {
+			StructLib.AddSecTokenBatchParam memory currParam = params[i];
+
+			addSecToken(
+				ld,
+				currParam.ledgerEntryOwner,
+				currParam.batchId,
+				currParam.stId,
+				currParam.tokTypeId,
+				currParam.mintedQty,
+				currParam.currentQty,
+				currParam.ft_price,
+				currParam.ft_lastMarkPrice,
+				currParam.ft_ledgerOwner,
+				currParam.ft_PL
+			);
+		}
+	}
+
 	function addSecToken(
 		StructLib.LedgerStruct storage ld,
 		address ledgerEntryOwner,

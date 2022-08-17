@@ -209,15 +209,29 @@ async function initTestMode(testMode) {
     // init - define FTs (todo: extend >1 type)
     const TEST_FT_1 = `FTJOB_USD_1`;
     if (!fts.find(p => p.name == TEST_FT_1)) {
-        await CONST.web3_tx('addSecTokenType', [ TEST_FT_1, CONST.settlementType.FUTURE, { ...CONST.nullFutureArgs,
-            expiryTimestamp: DateTime.local().plus({ days: 30 }).toMillis(),
-            underlyerTypeId: CONST.tokenType.TOK_T1,
-                   refCcyId: CONST.ccyType.USD,
-               contractSize: 1000,
-             feePerContract: 300, // $3.00
-             initMarginBips: 1000, // 10%
-              varMarginBips: 1000, // 10%
-        }, CONST.nullAddr], O.addr, O.privKey);
+        await CONST.web3_tx(
+            'addSecTokenTypeBatch', 
+            [
+                [
+                    {
+                        name: TEST_FT_1, 
+                        settlementType: CONST.settlementType.FUTURE, 
+                        ft: { ...CONST.nullFutureArgs,
+                            expiryTimestamp: DateTime.local().plus({ days: 30 }).toMillis(),
+                            underlyerTypeId: CONST.tokenType.TOK_T1,
+                                refCcyId: CONST.ccyType.USD,
+                            contractSize: 1000,
+                            feePerContract: 300, // $3.00
+                            initMarginBips: 1000, // 10%
+                            varMarginBips: 1000, // 10%
+                        }, 
+                        cashflowBaseAddr: CONST.nullAddr
+                    }
+                ]
+            ], 
+            O.addr, 
+            O.privKey
+        );
     } else console.log(`${TEST_FT_1} future already present; nop.`);
     fts = (await CONST.web3_call('getSecTokenTypes', [])).tokenTypes.filter(p => p.settlementType == CONST.settlementType.FUTURE);
 

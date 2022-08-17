@@ -18,14 +18,13 @@ contract("StMaster", accounts => {
         if (!global.TaddrNdx) global.TaddrNdx = 0;
     });
 
-    // setEntity()
+    // setEntityBatch()
     it(`should set entity from an owner`, async () => {
-        await stm.setEntity(CONST.testAddr1, CONST.testId1);
-        await stm.setEntity(CONST.testAddr4, CONST.testId1);
+        await stm.setEntityBatch([CONST.testAddr1, CONST.testAddr4], [CONST.testId1, CONST.testId1]);
     });
 
     it(`should set entity from another owner`, async () => {
-        await stm.setEntity(CONST.testAddr2, CONST.testId2, {from: accounts[1]});
+        await stm.setEntityBatch([CONST.testAddr2], [CONST.testId2], {from: accounts[1]});
     });
 
     it(`should fail to set entity from a non-owner`, async () => {
