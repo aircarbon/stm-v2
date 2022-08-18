@@ -8,6 +8,7 @@ const chalk = require('chalk');
 const argv = require('yargs-parser')(process.argv.slice(2));
 // @ts-ignore artifacts from truffle
 const StMaster = artifacts.require('StMaster');
+const dcStMaster = artifacts.require('dcStMaster');
 const series = require('async/series');
 
 const { getLedgerHashOffChain, createBackupData, createBatches } = require('./utils');
@@ -19,7 +20,7 @@ process.on('unhandledRejection', console.error);
 // how many items to process in one batch
 // const WHITELIST_COUNT = 5000;
 // const WHITELIST_CHUNK_SIZE = 100;
-const BATCH_CHUNK_SIZE = 2;
+const BATCH_CHUNK_SIZE = 10;
 
 // create a sleep function to be used in the async series
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,6 +49,7 @@ module.exports = async (callback) => {
 
   // deploy new contract with info
   const newContract = await StMaster.at(newContractAddress);
+  const newContractDc = await dcStMaster.at(newContractAddress);
   // show debug info in table format
   console.log(chalk.yellow(`${info.name} (${info.version})`));
 
@@ -109,14 +111,16 @@ module.exports = async (callback) => {
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
   const currencyNames = currencyTypes.map((type) => type.name);
 
-  const filteredCcyTypes = data.ccyTypes.filter((ccyType) => currencyNames.includes(ccyType.name));
+  const filteredCcyTypes = data.ccyTypes.filter((ccyType) => !currencyNames.includes(ccyType.name));
   let ccyTypesBatches = createBatches(filteredCcyTypes, 20);
-
+  
+  console.log('\n Adding Ccy Types (by batches).');
+  // is order important? If not, can send multiple transactions at the same time
   const ccyTypesPromises = ccyTypesBatches.map((ccyBatch, index) => 
     function addCcyTypeBatch(cb) {
-      console.log(`Adding ccyTypes - ${index} / ${ccyTypesBatches.length}`);
+      console.log(`Adding ccyTypes - ${index + 1} / ${ccyTypesBatches.length}`);
 
-      newContract
+      newContractDc
         .addCcyTypeBatch(
           ccyBatch.map((ccyType) => ccyType.name), 
           ccyBatch.map((ccyType) => ccyType.unit), 
@@ -126,37 +130,38 @@ module.exports = async (callback) => {
     },
   );
   
-  console.log('\n\n\n\n======= CHANGES 1 INCOMING ========');
   await series(ccyTypesPromises);
   await sleep(1000);
-
-  return;
 
   // add token types to new contract
   const tokTypes = await newContract.getSecTokenTypes();
   const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
   const tokenNames = tokenTypes.map((type) => type.name);
 
-  const filteredTokenTypes = data.tokenTypes.filter((tokenType) => tokenNames.includes(tokenType.name));
+  const filteredTokenTypes = data.tokenTypes.filter((tokenType) => !tokenNames.includes(tokenType.name));
   let tokenTypesBatches = createBatches(filteredTokenTypes, 20);
 
-  const tokenTypesPromises = tokenTypesBatches.map((tokenTypeBatch) => 
+  console.log('\n Adding Sec Token Types (by batches).');
+  // is order important? If not, can send multiple transactions at the same time
+  const tokenTypesPromises = tokenTypesBatches.map((tokenTypeBatch, index) => 
     function addCcyTypeBatch(cb) {
-      console.log(`Adding tokenType`);
-      console.log(tokenTypeBatch.map((ccyType) => ccyType.name));
+      console.log(`Adding tokenTypeBatch ${index + 1}/${tokenTypesBatches.length}`);
 
       newContract
-        .addSecTokenBatch(
-          tokenTypeBatch.map((ccyType) => ccyType.name), 
-          tokenTypeBatch.map((ccyType) => ccyType.settlementType), 
-          tokenTypeBatch.map((ccyType) => ccyType.ft),
-          tokenTypeBatch.map((ccyType) => ccyType.cashflowBaseAddr))
+        .addSecTokenTypeBatch(
+          tokenTypeBatch.map((ccyType) => {
+            return {
+              name: ccyType.name,
+              settlementType: ccyType.settlementType,
+              ft: ccyType.ft,
+              cashflowBaseAddr: ccyType.cashflowBaseAddr
+            }
+          }))
         .then((ccy) => cb(null, ccy))
         .catch((error) => cb(error));
-    },
+    }
   );
   
-  console.log('\n\n\n\n======= CHANGES 2 INCOMING ========');
   await series(tokenTypesPromises);
   await sleep(1000);
 
@@ -167,6 +172,12 @@ module.exports = async (callback) => {
     // load batches data to new contract
     const maxBatchId = await newContract.getSecTokenBatch_MaxId();
     console.log(`Max batch id: ${maxBatchId}`);
+
+    console.log('\n Loading Sec Tokens (by batches).');
+
+    // is order important? If not, can send multiple transactions at the same time
+    // can play around with BATCH_CHUNK_SIZE, in ideal case make it dynamic
+    // not much to optimize, the transaction data is heavy and already imported in batches.
 
     const batchesPromises = data.batches
       .filter((batch) => Number(batch.id) > Number(maxBatchId))
@@ -181,7 +192,6 @@ module.exports = async (callback) => {
       .map(
         (batches, index, allBatches) =>
           function loadSecTokenBatch(cb) {
-            console.log(`Adding batches`, batches);
             console.log(`Processing batches: ${index + 1}/${allBatches.length}`);
             const batchCount = batches[1]?.id || batches[0]?.id;
             newContract
@@ -214,33 +224,29 @@ module.exports = async (callback) => {
     const whitelistedAddresses = await newContract.getWhitelist();
 
     // whitelisting owners
-    const toBeWhitelisted = data.ledgerOwners.filter((owner) => (ledgerOwners.includes(owner) && !whitelistedAddresses.includes(owner)));
-    let whitelistingAddrBatches = createBatches(toBeWhitelisted, 500);
+    const toBeWhitelisted = data.ledgerOwners.filter((owner) => (!whitelistedAddresses.includes(owner)));
+    let whitelistingAddrBatches = createBatches(toBeWhitelisted, 100);
 
-    const whiteListingPromises = whitelistingAddrBatches.map((wlBatch) => 
+    // order matters?
+    console.log('\n Whitelisting addresses (among ledger owners) that were not whitelisted yet (by batches).');
+    const whiteListingPromises = whitelistingAddrBatches.map((wlBatch, index) => 
       function whitelistMany(cb) {
-        console.log(`Adding addresses to whitelist`);
+        console.log(`Adding addresses to whitelist ${index + 1}/${whitelistingAddrBatches.length}`);
 
         newContract
           .whitelistMany(wlBatch)
-          .then(() => {
-            newContract
-            .then((result) => cb(null, result))
-            .catch((error) => cb(error));
-            },
-          );
+          .then((result) => cb(null, result))
+          .catch((error) => cb(error));
     });
-
-  console.log('\n\n\n\n======= CHANGES 3 INCOMING ========');
+  
   await series(whiteListingPromises);
   await sleep(1000);
   
   // load ledgers data to new contract
-  const batchSize_ledgers = 20;
   let filteredLedgersWithOwners = [];
 
   for(let i = 0; i < data.ledgerOwners.length; i++) {
-    if(ledgerOwners.includes(data.ledgerOwners[i])) {
+    if(!ledgerOwners.includes(data.ledgerOwners[i])) {
       filteredLedgersWithOwners.push({
         ledger: data.ledgers[i],
         owner: data.ledgerOwners[i]
@@ -250,9 +256,10 @@ module.exports = async (callback) => {
 
   let ledgersBatches = createBatches(filteredLedgersWithOwners, 20);
 
-  const ledgersPromises = ledgersBatches.map((ledgerBatch, index, allBatches) => 
+  console.log('\n Creating ledger entries (by batches).');
+  const ledgersPromises = ledgersBatches.map((ledgerBatch, index) => 
     function createLedgerEntryBatch(cb) {
-      console.log(`Creating ledger batch entry #${index}/${allBatches.length} - currency`);
+      console.log(`Creating ledger batch entry ${index + 1}/${ledgersBatches.length}`);
 
       newContract
         .createLedgerEntryBatch(ledgerBatch.map((obj) => {
@@ -269,7 +276,6 @@ module.exports = async (callback) => {
     },
   );
 
-  console.log('\n\n\n\n======= CHANGES 4 INCOMING ========');
   await series(ledgersPromises);
   await sleep(1000);
   
@@ -299,14 +305,14 @@ module.exports = async (callback) => {
     });
   }
 
-  let tokensWithOwnersBatches = createBatches(filteredTokens, 20);
+  let tokensWithOwnersBatches = createBatches(filteredTokens, 30);
 
-  const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch) => 
+  console.log('\n Adding Sec Tokens (by batches).');
+  const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch, index) => 
     function addSecTokenBatch(cb) {
-      console.log('AddSecTokenToEntryBatch');
-      console.log(tokenWithOwnerBatch.map((batchWithOwner) => batchWithOwner.token.stId));
+      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length}`);
 
-      newContract
+      newContractDc
         .addSecTokenBatch(tokenWithOwnerBatch.map((batchWithOwner) => {
           return {
             ledgerEntryOwner: batchWithOwner.owner,
@@ -325,8 +331,7 @@ module.exports = async (callback) => {
         .catch((error) => cb(error));
     },
   );
-  
-  console.log('\n\n\n\n======= CHANGES 5 INCOMING ========');
+
   await series(tokensPromises);
   await sleep(1000);
 
@@ -334,31 +339,44 @@ module.exports = async (callback) => {
   // addSecTokenBatch
   // add globalSecTokens to new contract
   let allTokens = [];
+  
+  // this loop takes for too long, need to create a batchGet function
 
-  for(let i = 0; i < data.globalSecTokens.length; i++) {
-    const token = data.globalSecTokens[i]
+  let counter = 0;
+  
+  // This mechanism is added to avoid the script being stopped once a node doesn't reply once
+  // do{
+  //   try{
+  //     const token = data.globalSecTokens[counter]
 
-    const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
-      (event) => Number(event.stId) === Number(token.stId),
-    );
+  //     const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
+  //       (event) => Number(event.stId) === Number(token.stId),
+  //     );
+  
+  //     if (transferedFullSecTokensEvent) {
+  //       console.log(`Found transferedFullSecTokensEvent for ${token.stId}`);
+  //     }
+  
+  //     let exists = await newContract.getSecToken(token.stId);
+  //     exists = helpers.decodeWeb3Object(exists).exists;
+  
+  //     allTokens.push({token, transferedFullSecTokensEvent, exists});
+  //     counter++;
+  //   }catch(err) {
+  //     console.log('Encountered error, trying again...');
+  //     continue;
+  //   }
+  // } while(counter < data.globalSecTokens.length);
 
-    if (transferedFullSecTokensEvent) {
-      console.log(`Found transferedFullSecTokensEvent for ${token.stId}`, transferedFullSecTokensEvent);
-    }
-
-    let exists = await newContract.getSecToken(token.stId);
-    exists = helpers.decodeWeb3Object(exists).exists;
-
-    allTokens.push({token, transferedFullSecTokensEvent, exists});
-  }
   allTokens = allTokens.filter((tokenObj) => !tokenObj.exists);
   let tokensBatches = createBatches(allTokens, 20);
 
+  console.log('\n Adding Sec Tokens (Global) (by batches).');
   const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
-    function addGlobalSecToken(cb) {
-      console.log(`Creating ledger batch entry #${index}/${allBatches.length} - currency`);
+    function addSecTokenBatch(cb) {
+      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length}`);
 
-        newContract.addSecTokenBatch(
+        newContractDc.addSecTokenBatch(
           tokenBatch.map((tokenObj) => {
             return {
               ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
@@ -379,7 +397,7 @@ module.exports = async (callback) => {
     },
   );
 
-  console.log('\n\n\n\n======= CHANGES 6 INCOMING ========');
+  console.log('\n\n======= CHANGES 6 INCOMING ========');
   await series(promises);
   await sleep(1000);
 
@@ -389,8 +407,6 @@ module.exports = async (callback) => {
       toBN(data.secTokenMintedQty),
       toBN(data.secTokenBurnedQty),
     );
-
-    //////////////////////////////////////////
 
     let allCcyTypesWithFees = data.ccyTypes.map((ccyType, index) => {
       return {
@@ -408,27 +424,18 @@ module.exports = async (callback) => {
         Boolean(ccyTypeObj.fee?.ccy_mirrorFee)
     });
 
-    let ccyTypesBatches = createBatches(allCcyTypesWithFees, 20);
-    
-    
+    let ccyTypesBatches = createBatches(allCcyTypesWithFees, 1);
 
-    const tokPromises = tokensBatches.map((tokenBatch, index, allBatches) => 
+    const ccyTypesPromises = ccyTypesBatches.map((tokenBatch, index) => 
     function setCcyTypesBatches(cb) {
-      console.log(`Setting fee for ccyTypes`);
+      console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length}`);
 
-        newContract.addSecTokenBatch(
-          tokenBatch.map((tokenObj) => {
+        newContractDc.setFee_CcyTypeBatch(
+          tokenBatch.map((ccyTypeObj) => {
             return {
-              ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
-              batchId: tokenObj.token.batchId,
-              stId: tokenObj.token.stId,
-              tokTypeId: tokenObj.token.tokTypeId,
-              mintedQty: Number(tokenObj.token.mintedQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
-              currentQty: Number(tokenObj.token.currentQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
-              ft_price: tokenObj.token.ft_price,
-              ft_lastMarkPrice: tokenObj.token.ft_lastMarkPrice,
-              ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,
-              ft_PL: tokenObj.token.ft_PL,
+              ccyTypeId: ccyTypeObj.ccyType.id,
+              ledgerOwner: CONST.nullAddr,
+              feeArgs: ccyTypeObj.fee
             }
           })
         )
@@ -437,62 +444,47 @@ module.exports = async (callback) => {
     },
   );
 
-  console.log('\n\n\n\n======= CHANGES 6 INCOMING ========');
-  await series(tokPromises);
+  console.log('\n\n\n\n======= CHANGES 7 INCOMING ========');
+  await series(ccyTypesPromises);
   await sleep(1000);
 
-    //////////////////////////////////////////
-
-
-    // set fee for currency and token types
-    const ccyFeePromises = data.ccyTypes.map((ccyType, index) => {
-      return function setFeeForCcyType(cb) {
-        const fee = data.ccyFees[index];
-        if (
-          Number(fee?.fee_fixed) ||
-          Number(fee?.fee_percBips) ||
-          Number(fee?.fee_min) ||
-          Number(fee?.fee_max) ||
-          Number(fee?.ccy_perMillion) ||
-          Boolean(fee?.ccy_mirrorFee)
-        ) {
-          console.log(`Setting fee for ccyType ${ccyType.name}`, fee);
-          newContract
-            .setFee_CcyType(ccyType.id, CONST.nullAddr, fee)
-            .then((result) => cb(null, result))
-            .catch((error) => cb(error));
-        } else {
-          cb(null, fee);
-        }
-      };
-    });
-    await series(ccyFeePromises);
-    await sleep(1000);
-
-    const tokenFeePromises = data.tokenTypes.map((tokenType, index) => {
-      return function setFeeForTokenType(cb) {
-        const fee = data.tokenFees[index];
-        if (
-          Number(fee?.fee_fixed) ||
-          Number(fee?.fee_percBips) ||
-          Number(fee?.fee_min) ||
-          Number(fee?.fee_max) ||
-          Number(fee?.ccy_perMillion) ||
-          Boolean(fee?.ccy_mirrorFee)
-        ) {
-          console.log(`Setting fee for tokenType ${tokenType.name}`, fee);
-          newContract
-            .setFee_TokType(tokenType.id, CONST.nullAddr, fee)
-            .then((result) => cb(null, result))
-            .catch((error) => cb(error));
-        } else {
-          cb(null, fee);
-        }
-      };
+    let allTokenTypesWithFees = data.tokenTypes.map((tokenType, index) => {
+      return {
+        tokenType,
+        fee: data.tokenFees[index]
+      }
     });
 
-    await series(tokenFeePromises);
+    allTokenTypesWithFees = allTokenTypesWithFees.filter((tokenTypeWithFee) => {
+      return Number(tokenTypeWithFee.fee?.fee_fixed) ||
+        Number(tokenTypeWithFee.fee?.fee_percBips) ||
+        Number(tokenTypeWithFee.fee?.fee_min) ||
+        Number(tokenTypeWithFee.fee?.fee_max) ||
+        Number(tokenTypeWithFee.fee?.ccy_perMillion) ||
+        Boolean(tokenTypeWithFee.fee?.ccy_mirrorFee);
+    });
+
+    let tokTypesBatches = createBatches(allTokenTypesWithFees, 20);
+
+    const tokTypesPromises = tokTypesBatches.map((tokTypeBatch, index) => 
+    function setCcyTypesBatches(cb) {
+      console.log(`Setting fee for token types (in batch) - ${index + 1}/${ccyTypesBatches.length}`);
+
+        newContractDc.setFee_TokTypeBatch(
+          tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.tokenType.id),
+          new Array(tokTypeBatch.length).fill(CONST.nullAddr),
+          tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.fee),
+        )
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
+
+    console.log('\n\n======= CHANGES 8 INCOMING ========');
+    await series(tokTypesPromises);
     await sleep(1000);
+
+    ///////////////////////////////////////////////////
 
     // set currency and token types fee for ledger owner
     const ccyFeeForLedgerOwnerPromises = data.ledgerOwners.map((ledgerOwner, index) => {

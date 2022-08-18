@@ -88,11 +88,11 @@ library StructLib {
 		address payable cashflowBaseAddr;
 	}
 
-	// struct SetFeeCcyTypeBatchArgs {
-	// 	uint256 ccyTypeId;
-	// 	address ledgerOwner;
-	// 	SetFeeArgs feeArgs;
-	// }
+	struct SetFeeCcyTypeBatchArgs {
+		uint256 ccyTypeId;
+		address ledgerOwner;
+		SetFeeArgs feeArgs;
+	}
 
 	/**
 	 * @notice Transfers currency across ledger entries

@@ -32,14 +32,6 @@ abstract contract StFees is StLedger {
 	// GLOBAL FEES
 	StructLib.FeeStruct globalFees;
 
-	// function setFee_CcyTypeBatch(
-	// 	StructLib.SetFeeCcyTypeBatchArgs[] calldata params
-	// ) external onlyOwner onlyWhenReadWrite 
-	// 	// hasEntity(ledgerOwner) 
-	// {
-	// 	SpotFeeLib.setFee_CcyTypeBatch(ld, ctd, globalFees, params);
-	// }
-
 	/**
 	 * @dev returns fee structure
 	 * @param feeType 0: currency fee<br/>1: token fee

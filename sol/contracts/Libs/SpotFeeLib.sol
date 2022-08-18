@@ -21,6 +21,22 @@ library SpotFeeLib {
 		uint256 fee_ccy_perMillion
 	);
 
+	function setFee_TokTypeBatch(
+		StructLib.LedgerStruct storage ld,
+		StructLib.StTypesStruct storage std,
+		StructLib.FeeStruct storage globalFees,
+		uint256[] tokTypeId,
+		address[] ledgerOwner,
+		StructLib.SetFeeArgs[] memory a
+	) public {
+		uint len = tokTypeId.length;
+		require(len == ledgerOwner.length && len == a.length, "setFee_TokTypeBatch: argument array lengths does not match");
+
+		for(uint i = 0; i < len; i++) {
+			setFee_TokType(ld, std, globalFees, tokTypeId[i], ledgerOwner[i], a[i]);
+		}
+	}
+
 	function setFee_TokType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
@@ -79,19 +95,19 @@ library SpotFeeLib {
 		}
 	}
 
-	// function setFee_CcyTypeBatch(
-	// 	StructLib.LedgerStruct storage ld,
-	// 	StructLib.CcyTypesStruct storage ctd,
-	// 	StructLib.FeeStruct storage globalFees,
-	// 	StructLib.SetFeeCcyTypeBatchArgs[] calldata params
-	// ) public {
-	// 	uint len = params.length;
+	function setFee_CcyTypeBatch(
+		StructLib.LedgerStruct storage ld,
+		StructLib.CcyTypesStruct storage ctd,
+		StructLib.FeeStruct storage globalFees,
+		StructLib.SetFeeCcyTypeBatchArgs[] calldata params
+	) public {
+		uint len = params.length;
 
-	// 	for(uint i = 0; i < len; i++) {
-	// 		StructLib.SetFeeCcyTypeBatchArgs calldata param = params[i];
-	// 		setFee_CcyType(ld, ctd, globalFees, param.ccyTypeId, param.ledgerOwner, param.feeArgs);
-	// 	}
-	// }
+		for(uint i = 0; i < len; i++) {
+			StructLib.SetFeeCcyTypeBatchArgs calldata param = params[i];
+			setFee_CcyType(ld, ctd, globalFees, param.ccyTypeId, param.ledgerOwner, param.feeArgs);
+		}
+	}
 
 	function setFee_CcyType(
 		StructLib.LedgerStruct storage ld,
