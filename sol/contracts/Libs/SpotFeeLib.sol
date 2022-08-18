@@ -25,8 +25,8 @@ library SpotFeeLib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.FeeStruct storage globalFees,
-		uint256[] tokTypeId,
-		address[] ledgerOwner,
+		uint256[] calldata tokTypeId,
+		address[] calldata ledgerOwner,
 		StructLib.SetFeeArgs[] memory a
 	) public {
 		uint len = tokTypeId.length;
