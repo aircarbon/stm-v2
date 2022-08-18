@@ -644,6 +644,7 @@ async function web3_tx(methodName, methodArgs, fromAddr, fromPrivKey, nameOverri
             chalk.dim(` >   TX: [${chalk.greenBright(contractDb.contract_enum)} nonce=${nonce} ${contractDb.contract_ver} @${contractDb.addr}] ${chalk.reset.red.bgWhiteBright(methodName + '(' + methodArgs.map(p => JSON.stringify(p)).join() + ')')}\n` +
             chalk.dim(`     ... (from: ${fromAddr} / gwei: ${WEB3_GWEI_GAS_BID} / networkId: ${process.env.WEB3_NETWORK_ID} / node: ${web3.currentProvider.host} / db: ${process.env.sql_server})`))
     );
+
     var paramsData = contract.methods
         [methodName](...methodArgs)
         .encodeABI();

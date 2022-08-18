@@ -112,10 +112,9 @@ module.exports = async (callback) => {
   const filteredCcyTypes = data.ccyTypes.filter((ccyType) => currencyNames.includes(ccyType.name));
   let ccyTypesBatches = createBatches(filteredCcyTypes, 20);
 
-  const ccyTypesPromises = ccyTypesBatches.map((ccyBatch) => 
+  const ccyTypesPromises = ccyTypesBatches.map((ccyBatch, index) => 
     function addCcyTypeBatch(cb) {
-      console.log(`Adding ccyTypes`);
-      console.log(ccyBatch.map((ccyType) => ccyType.name));
+      console.log(`Adding ccyTypes - ${index} / ${ccyTypesBatches.length}`);
 
       newContract
         .addCcyTypeBatch(
@@ -130,6 +129,8 @@ module.exports = async (callback) => {
   console.log('\n\n\n\n======= CHANGES 1 INCOMING ========');
   await series(ccyTypesPromises);
   await sleep(1000);
+
+  return;
 
   // add token types to new contract
   const tokTypes = await newContract.getSecTokenTypes();
@@ -411,7 +412,7 @@ module.exports = async (callback) => {
     
     
 
-    const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
+    const tokPromises = tokensBatches.map((tokenBatch, index, allBatches) => 
     function setCcyTypesBatches(cb) {
       console.log(`Setting fee for ccyTypes`);
 
@@ -437,7 +438,7 @@ module.exports = async (callback) => {
   );
 
   console.log('\n\n\n\n======= CHANGES 6 INCOMING ========');
-  await series(promises);
+  await series(tokPromises);
   await sleep(1000);
 
     //////////////////////////////////////////

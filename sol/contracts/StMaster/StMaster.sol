@@ -66,6 +66,7 @@ contract StMaster is
 	string public name;
 	string public version;
 	string public unit; // the smallest (integer, non-divisible) security token unit, e.g. "KGs" or "TONS"
+	address internal impl; // if no method is found, this contract will be called
 
 	// events -- (hack: see: https://ethereum.stackexchange.com/questions/11137/watching-events-defined-in-libraries)
 	// need to be defined (duplicated) here - web3 can't see event signatures in libraries
@@ -275,7 +276,8 @@ contract StMaster is
 		string memory _contractUnit,
 		//#if process.env.CONTRACT_TYPE === 'CASHFLOW_BASE' || process.env.CONTRACT_TYPE === 'COMMODITY'
 		string memory _contractSymbol,
-		uint8 _contractDecimals
+		uint8 _contractDecimals,
+		address _impl
 	)
 		//#endif
 		//#if process.env.CONTRACT_TYPE === 'CASHFLOW_BASE'
@@ -303,6 +305,36 @@ contract StMaster is
 
 		// contract type
 		ld.contractType = _contractType;
+
+		impl = _impl;
+	}
+
+	// fallback function forwards the call to an implementation contract
+	fallback() external payable {
+		address _impl = impl;
+		
+		assembly {
+            // Copy msg.data. We take full control of memory in this inline assembly
+            // block because it will not return to Solidity code. We overwrite the
+            // Solidity scratch pad at memory position 0.
+            calldatacopy(0, 0, calldatasize())
+
+            // Call the implementation.
+            // out and outsize are 0 because we don't know the size yet.
+            let result := delegatecall(gas(), _impl, 0, calldatasize(), 0, 0)
+
+            // Copy the returned data.
+            returndatacopy(0, 0, returndatasize())
+
+            switch result
+            // delegatecall returns 0 on error.
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
 	}
 
 	/**

@@ -2,6 +2,7 @@
 
 // Re: StMintable.sol => LedgerLib.sol, SpotFeeLib.sol
 const st = artifacts.require('StMaster');
+const dst = artifacts.require('dcStMaster');
 const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('./testSetupContract.js');
@@ -86,4 +87,12 @@ contract("StMaster", accounts => {
     it(`should fail to get entity addresses when passing wrong entity id`, async () => {
         await CONST.expectRevertFromCall(stm.getEntityAddresses, [0], 'getEntityAddresses: wrong entity id');
     });
+
+    // it(`temp tests`, async () => {
+    //     console.log('-----');
+    //     const stm2 = await dst.at(stm.address);
+    //     console.log(await stm2.test1());
+    //     await stm2.test2("abcdefg");
+    //     console.log(await stm2.test1());
+    // });
 });

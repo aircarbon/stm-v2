@@ -17,6 +17,7 @@ module.exports = {
         try {
         const { deployer, artifacts, contractType, custodyType, nameOverride, symbolOverride } = p;
             var stmAddr;
+            var dcStmAddr;
             //const contractType = process.env.CONTRACT_TYPE;
             if (contractType != 'CASHFLOW_BASE' && contractType != 'CASHFLOW_CONTROLLER' && contractType != 'COMMODITY') throw ('Unknown contractType');
 
@@ -33,6 +34,7 @@ module.exports = {
             const PayableLib = artifacts.require('./PayableLib.sol');
             const FuturesLib = artifacts.require('./FuturesLib.sol');
             const StMaster = artifacts.require('./StMaster.sol');
+            const dcStMaster = artifacts.require('./dcStMaster.sol');
 
             // deploy
             StMaster.synchronization_timeout = 42; // secs
@@ -45,36 +47,46 @@ module.exports = {
                 deployer.link(StructLib, FuturesLib);
 
                 deployer.link(StructLib, StMaster);
+                deployer.link(StructLib, dcStMaster);
 
             await deployer.deploy(LedgerLib).then(async ledgerLib => {
                 deployer.link(LedgerLib, StMaster);
+                deployer.link(LedgerLib, dcStMaster);
 
             await deployer.deploy(CcyLib).then(async ccyLib => {
                 deployer.link(CcyLib, StMaster);
+                deployer.link(CcyLib, dcStMaster);
 
             await deployer.deploy(TokenLib).then(async tokenLib => {
                 deployer.link(TokenLib, StMaster);
+                deployer.link(TokenLib, dcStMaster);
 
             await deployer.deploy(TransferLib).then(async transferLib => {
                 deployer.link(TransferLib, Erc20Lib);
                 deployer.link(TransferLib, PayableLib);
 
                 deployer.link(TransferLib, StMaster);
+                deployer.link(TransferLib, dcStMaster);
 
             await deployer.deploy(SpotFeeLib).then(async feeLib => {
                 deployer.link(SpotFeeLib, StMaster);
+                deployer.link(SpotFeeLib, dcStMaster);
 
             await deployer.deploy(Erc20Lib).then(async feeLib => {
                 deployer.link(Erc20Lib, StMaster);
+                deployer.link(Erc20Lib, dcStMaster);
 
             await deployer.deploy(LoadLib).then(async loadLib => {
                 deployer.link(LoadLib, StMaster);
+                deployer.link(LoadLib, dcStMaster);
 
             await deployer.deploy(PayableLib).then(async payableLib => {
                 deployer.link(PayableLib, StMaster);
+                deployer.link(PayableLib, dcStMaster);
 
             await deployer.deploy(FuturesLib).then(async futuresLib => {
                 deployer.link(FuturesLib, StMaster);
+                deployer.link(FuturesLib, dcStMaster);
                 const contractName = `${process.env.CONTRACT_PREFIX}${nameOverride || CONST.contractProps[contractType].contractName}`;
 
                 // parse cashflow args; convert from days to blocks
@@ -111,6 +123,12 @@ module.exports = {
                 }
 
                 //
+                // Deploy dcStMaster
+                //
+                dcStmAddr = await deployer.deploy(dcStMaster);
+
+
+                //
                 // Deploy StMaster
                 //
                 stmAddr = await deployer.deploy(StMaster,
@@ -129,7 +147,7 @@ module.exports = {
 //#if process.env.CONTRACT_TYPE === 'CASHFLOW_BASE' || process.env.CONTRACT_TYPE === 'COMMODITY'
                     ,
                     symbolOverride || CONST.contractProps[contractType].contractSymbol,
-                    CONST.contractProps[contractType].contractDecimals
+                    CONST.contractProps[contractType].contractDecimals,
 //#endif
 //#if process.env.CONTRACT_TYPE === 'CASHFLOW_BASE'
 //#                 ,
@@ -137,6 +155,7 @@ module.exports = {
 //#                 CONST.chainlinkAggregators[process.env.NETWORK_ID].ethUsd,
 //#                 CONST.chainlinkAggregators[process.env.NETWORK_ID].bnbUsd,
 //#endif
+                    dcStmAddr.address
                 ).then(async stm => {
                     //console.dir(stm);
                     //console.dir(stm.abi);

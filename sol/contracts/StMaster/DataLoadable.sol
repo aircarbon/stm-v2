@@ -34,10 +34,6 @@ abstract contract DataLoadable is StErc20 {
 		}
 	}
 
-	function addSecTokenBatch(StructLib.AddSecTokenBatchArgs[] calldata params) external onlyOwner {
-		LoadLib.addSecTokenBatch(ld, params);
-	}
-
 	/**
 	 * @dev load a single or multiple security token batch(es)
 	 * @param batches takes an array of security token batches
