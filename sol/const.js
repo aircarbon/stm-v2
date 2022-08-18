@@ -215,6 +215,11 @@ module.exports = {
             ethUsd: '0x0000000000000000000000000000000000000000',
             bnbUsd: '0x0000000000000000000000000000000000000000',
         },
+        "666": { // dev - Antons
+            btcUsd: '0x0000000000000000000000000000000000000000',
+            ethUsd: '0x0000000000000000000000000000000000000000',
+            bnbUsd: '0x0000000000000000000000000000000000000000',
+        },
         "889": { // dev - Dung
             btcUsd: '0x0000000000000000000000000000000000000000',
             ethUsd: '0x0000000000000000000000000000000000000000',
@@ -434,6 +439,8 @@ function getTestContextWeb3(useWs) {
         // dev - DM
           process.env.WEB3_NETWORK_ID == 888 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
         // dev - Dung
+        : process.env.WEB3_NETWORK_ID == 666 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
+
         : process.env.WEB3_NETWORK_ID == 889 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
         // dev - Vince
         : process.env.WEB3_NETWORK_ID == 890 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }

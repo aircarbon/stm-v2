@@ -8,6 +8,8 @@ require('dotenv').config({ path: envFile });
 
 const { getAccountAndKey, web3_call, web3_tx, logGas } = require('./const.js');
 
+const { createBatches } = require('./contract_upgrade/utils');
+
 process.env.WEB3_NETWORK_ID = Number(process.env.NETWORK_ID || 888);
 
 //
@@ -37,7 +39,13 @@ process.env.WEB3_NETWORK_ID = Number(process.env.NETWORK_ID || 888);
         wl_addrs.push(x.addr);
       } else console.log(`skipping ${x.addr} (already in WL)...`);
     }
-    await web3_tx('whitelistMany', [wl_addrs], OWNER, OWNER_privKey);
+
+    const batches = createBatches(wl_addrs, 100);
+
+    for(let i = 0; i < batches.length; i++) {
+      console.log(`Whitelisting WL addresses nr. ${i * 100} - ${(i + 1) * 100 - 1}`);
+      await web3_tx('whitelistMany', [batches[i]], OWNER, OWNER_privKey);  
+    }
 
     console.groupEnd();
     console.group('SEALING...');
