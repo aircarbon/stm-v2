@@ -345,28 +345,29 @@ module.exports = async (callback) => {
   let counter = 0;
   
   // This mechanism is added to avoid the script being stopped once a node doesn't reply once
-  // do{
-  //   try{
-  //     const token = data.globalSecTokens[counter]
+  do{
+    break;
+    try{
+      const token = data.globalSecTokens[counter]
 
-  //     const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
-  //       (event) => Number(event.stId) === Number(token.stId),
-  //     );
+      const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
+        (event) => Number(event.stId) === Number(token.stId),
+      );
   
-  //     if (transferedFullSecTokensEvent) {
-  //       console.log(`Found transferedFullSecTokensEvent for ${token.stId}`);
-  //     }
+      if (transferedFullSecTokensEvent) {
+        console.log(`Found transferedFullSecTokensEvent for ${token.stId}`);
+      }
   
-  //     let exists = await newContract.getSecToken(token.stId);
-  //     exists = helpers.decodeWeb3Object(exists).exists;
+      let exists = await newContract.getSecToken(token.stId);
+      exists = helpers.decodeWeb3Object(exists).exists;
   
-  //     allTokens.push({token, transferedFullSecTokensEvent, exists});
-  //     counter++;
-  //   }catch(err) {
-  //     console.log('Encountered error, trying again...');
-  //     continue;
-  //   }
-  // } while(counter < data.globalSecTokens.length);
+      allTokens.push({token, transferedFullSecTokensEvent, exists});
+      counter++;
+    }catch(err) {
+      console.log('Encountered error, trying again...');
+      continue;
+    }
+  } while(counter < data.globalSecTokens.length);
 
   allTokens = allTokens.filter((tokenObj) => !tokenObj.exists);
   let tokensBatches = createBatches(allTokens, 20);
@@ -424,7 +425,7 @@ module.exports = async (callback) => {
         Boolean(ccyTypeObj.fee?.ccy_mirrorFee)
     });
 
-    let ccyTypesBatches = createBatches(allCcyTypesWithFees, 1);
+    let ccyTypesBatches = createBatches(allCcyTypesWithFees, 20);
 
     const ccyTypesPromises = ccyTypesBatches.map((tokenBatch, index) => 
     function setCcyTypesBatches(cb) {
@@ -484,64 +485,94 @@ module.exports = async (callback) => {
     await series(tokTypesPromises);
     await sleep(1000);
 
-    ///////////////////////////////////////////////////
+    // setting fees for currency types for ledger owners
+    console.log('\nSetting fees for currency types for ledger owners...');
+    let feesWithOwnerAndCcyTypes = [];
 
-    // set currency and token types fee for ledger owner
-    const ccyFeeForLedgerOwnerPromises = data.ledgerOwners.map((ledgerOwner, index) => {
-      return function setFeeForLedgerOwner(callback) {
-        console.log(`Setting fee for ledgerOwner ${ledgerOwner}`);
-        // TODO: set fee for all currency and token types
-        // set fee for currency and token types
-        const ccyFeePromises = data.ledgerOwnersFees[index]?.currencies?.map((fee, counter) => {
-          return function setFeeForCcyType(cb) {
-            const ccyType = data.ccyTypes[counter];
-            if (
-              Number(fee?.fee_fixed) ||
-              Number(fee?.fee_percBips) ||
-              Number(fee?.fee_min) ||
-              Number(fee?.fee_max) ||
-              Number(fee?.ccy_perMillion) ||
-              Boolean(fee?.ccy_mirrorFee)
-            ) {
-              console.log(`Setting fee for ccyType ${ccyType.name}`, ledgerOwner, fee);
-              newContract
-                .setFee_CcyType(ccyType.id, ledgerOwner, fee)
-                .then((result) => cb(null, result))
-                .catch((error) => cb(error));
-            } else {
-              cb(null, fee);
+    for(let i = 0; i < data.ledgerOwners.length; i++) {
+      const ledgerOwner = data.ledgerOwners[i];
+      const cciesFees = data.ledgerOwnersFees[i]?.currencies || [];
+
+      for(let j = 0; j < cciesFees.length; j++) {
+        const fee = cciesFees[j];
+
+        if(Number(fee?.fee_fixed) ||
+          Number(fee?.fee_percBips) ||
+          Number(fee?.fee_min) ||
+          Number(fee?.fee_max) ||
+          Number(fee?.ccy_perMillion) ||
+          Boolean(fee?.ccy_mirrorFee)) {
+            feesWithOwnerAndCcyTypes.push({ccyTypeId: data.ccyTypes[j].id, ledgerOwner, fee});
+        }
+      
+      }
+    }
+
+    let feesWithOwnerAndCcyTypesBatches = createBatches(feesWithOwnerAndCcyTypes, 20);
+
+    const feeCcyTypePromises = feesWithOwnerAndCcyTypesBatches.map((feesBatch, index) => 
+    function setCcyTypesBatches(cb) {
+      console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length}`);
+
+        newContractDc.setFee_CcyTypeBatch(
+          feesBatch.map((ccyTypeObj) => {
+            return {
+              ccyTypeId: ccyTypeObj.ccyTypeId,
+              ledgerOwner: ccyTypeObj.ledgerOwner,
+              feeArgs: ccyTypeObj.fee
             }
-          };
-        });
+          })
+        )
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
 
-        const tokenFeePromises = data.ledgerOwnersFees[index]?.tokens?.map((fee, counter) => {
-          return function setFeeForTokenType(cb) {
-            const tokenType = data.tokenTypes[counter];
-            if (
-              Number(fee?.fee_fixed) ||
-              Number(fee?.fee_percBips) ||
-              Number(fee?.fee_min) ||
-              Number(fee?.fee_max) ||
-              Number(fee?.ccy_perMillion) ||
-              Boolean(fee?.ccy_mirrorFee)
-            ) {
-              console.log(`Setting fee for tokenType ${tokenType.name}`, ledgerOwner, fee);
-              newContract
-                .setFee_TokType(tokenType.id, ledgerOwner, fee)
-                .then((result) => cb(null, result))
-                .catch((error) => cb(error));
-            } else {
-              cb(null, fee);
-            }
-          };
-        });
+    console.log('\n\n======= CHANGES 9 INCOMING ========');
+    await series(feeCcyTypePromises);
+    await sleep(1000);
 
-        series([...tokenFeePromises, ...ccyFeePromises])
-          .then(() => callback(null, ledgerOwner))
-          .catch((error) => callback(error));
-      };
-    });
-    await series(ccyFeeForLedgerOwnerPromises);
+    // setting fees for token types for ledger owners
+    console.log('\nSetting fees for token types for ledger owners...');
+    let feesWithOwnerAndTokenTypes = [];
+
+    for(let i = 0; i < data.ledgerOwners.length; i++) {
+      const ledgerOwner = data.ledgerOwners[i];
+      const tokensFees = data.ledgerOwnersFees[i]?.tokens || [];
+
+      for(let j = 0; j < tokensFees.length; j++) {
+        const fee = tokensFees[j];
+
+        if(Number(fee?.fee_fixed) ||
+          Number(fee?.fee_percBips) ||
+          Number(fee?.fee_min) ||
+          Number(fee?.fee_max) ||
+          Number(fee?.ccy_perMillion) ||
+          Boolean(fee?.ccy_mirrorFee)) {
+            feesWithOwnerAndTokenTypes.push({tokenTypeId: data.tokenTypes[j].id, ledgerOwner, fee});
+        }
+      
+      }
+    }
+
+    let feesWithOwnerAndTokenTypesBatches = createBatches(feesWithOwnerAndTokenTypes, 20);
+
+    const feeTokenTypePromises = feesWithOwnerAndTokenTypesBatches.map((feesBatch, index) => 
+    function setTokenTypesBatches(cb) {
+      console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length}`);
+
+        newContractDc.setFee_TokTypeBatch(
+          feesBatch.map((tokenTypeObj) => tokenTypeObj.tokenTypeId),
+          feesBatch.map((tokenTypeObj) => tokenTypeObj.ledgerOwner),
+          feesBatch.map((tokenTypeObj) => tokenTypeObj.fee),
+        )
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
+
+    console.log('\n\n======= CHANGES 10 INCOMING ========');
+    await series(feeTokenTypePromises);
     await sleep(1000);
   }
 
