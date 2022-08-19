@@ -339,35 +339,40 @@ module.exports = async (callback) => {
   // addSecTokenBatch
   // add globalSecTokens to new contract
   let allTokens = [];
+  let tokensExist = [];
+  let i = 0;
+  const batches = createBatches(data.globalSecTokens, 50);
   
-  // this loop takes for too long, need to create a batchGet function
-
-  let counter = 0;
-  
-  // This mechanism is added to avoid the script being stopped once a node doesn't reply once
   do{
-    break;
     try{
-      const token = data.globalSecTokens[counter]
+      console.log(`Checking if tokens exists (in batches) - ${i + 1}/${batches.length}`);
+      const promises = batches[i].map((token) => newContract.getSecToken(token.stId));
+  
+      const results = await Promise.all(promises);
+      tokensExist = [...tokensExist, ...results];
 
-      const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
-        (event) => Number(event.stId) === Number(token.stId),
-      );
-  
-      if (transferedFullSecTokensEvent) {
-        console.log(`Found transferedFullSecTokensEvent for ${token.stId}`);
-      }
-  
-      let exists = await newContract.getSecToken(token.stId);
-      exists = helpers.decodeWeb3Object(exists).exists;
-  
-      allTokens.push({token, transferedFullSecTokensEvent, exists});
-      counter++;
-    }catch(err) {
-      console.log('Encountered error, trying again...');
-      continue;
+      i++;
+    } catch(err) {
+      console.log('Encountered an error, trying again...');
     }
-  } while(counter < data.globalSecTokens.length);
+  } while(i < batches.length);
+
+  for(let i = 0; i < data.globalSecTokens.length; i++) {
+    const token = data.globalSecTokens[i];
+
+    const transferedFullSecTokensEvent = data.transferedFullSecTokensEvents.find(
+      (event) => Number(event.stId) === Number(token.stId),
+    );
+  
+    if (transferedFullSecTokensEvent) {
+      console.log(`Found transferedFullSecTokensEvent for ${token.stId}`);
+    }
+  
+    let exists = tokensExist[i];
+    exists = helpers.decodeWeb3Object(exists).exists;
+
+    allTokens.push({token, transferedFullSecTokensEvent, exists});
+  }
 
   allTokens = allTokens.filter((tokenObj) => !tokenObj.exists);
   let tokensBatches = createBatches(allTokens, 20);
