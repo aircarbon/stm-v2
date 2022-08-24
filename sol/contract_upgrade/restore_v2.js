@@ -194,7 +194,7 @@ module.exports = async (callback) => {
           function loadSecTokenBatch(cb) {
             console.log(`Processing batches: ${index + 1}/${allBatches.length}`);
             const batchCount = batches[1]?.id || batches[0]?.id;
-            newContract
+            newContractDc
               .loadSecTokenBatch(batches, batchCount)
               .then((result) => cb(null, result))
               .catch((error) => cb(error));
@@ -309,8 +309,9 @@ module.exports = async (callback) => {
 
   console.log('\n Adding Sec Tokens (by batches).');
   const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch, index) => 
-    function addSecTokenBatch(cb) {
-      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length}`);
+    async function addSecTokenBatch(cb) {
+      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
+      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAcc.addr}`);
 
       newContractDc
         .addSecTokenBatch(tokenWithOwnerBatch.map((batchWithOwner) => {
@@ -326,9 +327,13 @@ module.exports = async (callback) => {
             ft_ledgerOwner: batchWithOwner.token.ft_ledgerOwner,
             ft_PL: batchWithOwner.token.ft_PL,
           }
-        }))
+        }),
+        {from: currAcc})
         .then((ccy) => cb(null, ccy))
-        .catch((error) => cb(error));
+        .catch((error) => { 
+          console.log(error);
+          return cb(error);
+        });
     },
   );
 
@@ -379,8 +384,9 @@ module.exports = async (callback) => {
 
   console.log('\n Adding Sec Tokens (Global) (by batches).');
   const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
-    function addSecTokenBatch(cb) {
-      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length}`);
+    async function addSecTokenBatch(cb) {
+      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
+      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length} - from ${currAcc.addr}`);
 
         newContractDc.addSecTokenBatch(
           tokenBatch.map((tokenObj) => {
@@ -396,10 +402,14 @@ module.exports = async (callback) => {
               ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,
               ft_PL: tokenObj.token.ft_PL,
             }
-          })
+          }),
+          {from: currAcc}
         )
         .then((result) => cb(null, result))
-        .catch((error) => cb(error));
+        .catch((error) => {
+          console.log(error);
+          return cb(error)
+        });
     },
   );
 
@@ -413,6 +423,8 @@ module.exports = async (callback) => {
       toBN(data.secTokenMintedQty),
       toBN(data.secTokenBurnedQty),
     );
+
+    await sleep(1000);
 
     let allCcyTypesWithFees = data.ccyTypes.map((ccyType, index) => {
       return {
@@ -433,8 +445,9 @@ module.exports = async (callback) => {
     let ccyTypesBatches = createBatches(allCcyTypesWithFees, 20);
 
     const ccyTypesPromises = ccyTypesBatches.map((tokenBatch, index) => 
-    function setCcyTypesBatches(cb) {
-      console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length}`);
+    async function setCcyTypesBatches(cb) {
+      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
+      console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length} from ${currAcc.addr}`);
 
         newContractDc.setFee_CcyTypeBatch(
           tokenBatch.map((ccyTypeObj) => {
@@ -443,10 +456,14 @@ module.exports = async (callback) => {
               ledgerOwner: CONST.nullAddr,
               feeArgs: ccyTypeObj.fee
             }
-          })
+          }),
+          {from: currAcc.addr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => cb(error));
+        .catch((error) => {
+          console.log(error);
+          return cb(error);
+        });
     },
   );
 
@@ -516,8 +533,9 @@ module.exports = async (callback) => {
     let feesWithOwnerAndCcyTypesBatches = createBatches(feesWithOwnerAndCcyTypes, 20);
 
     const feeCcyTypePromises = feesWithOwnerAndCcyTypesBatches.map((feesBatch, index) => 
-    function setCcyTypesBatches(cb) {
-      console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length}`);
+    async function setCcyTypesBatches(cb) {
+      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
+      console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length} from ${currAcc.addr}`);
 
         newContractDc.setFee_CcyTypeBatch(
           feesBatch.map((ccyTypeObj) => {
@@ -526,10 +544,14 @@ module.exports = async (callback) => {
               ledgerOwner: ccyTypeObj.ledgerOwner,
               feeArgs: ccyTypeObj.fee
             }
-          })
+          }),
+          {from: currAcc.addr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => cb(error));
+        .catch((error) => {
+          console.log(error);
+          return cb(error)
+        });
     },
   );
 
@@ -563,16 +585,21 @@ module.exports = async (callback) => {
     let feesWithOwnerAndTokenTypesBatches = createBatches(feesWithOwnerAndTokenTypes, 20);
 
     const feeTokenTypePromises = feesWithOwnerAndTokenTypesBatches.map((feesBatch, index) => 
-    function setTokenTypesBatches(cb) {
-      console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length}`);
+    async function setTokenTypesBatches(cb) {
+      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
+      console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length} - from ${currAcc.addr}`);
 
         newContractDc.setFee_TokTypeBatch(
           feesBatch.map((tokenTypeObj) => tokenTypeObj.tokenTypeId),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.ledgerOwner),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.fee),
+          {from: currAcc.addr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => cb(error));
+        .catch((error) => {
+          console.log(error);
+          return cb(error)
+        });
     },
   );
 

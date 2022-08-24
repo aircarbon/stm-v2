@@ -77,9 +77,7 @@ abstract contract StFees is StLedger {
 		uint256 tokTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
-	) public onlyOwner onlyWhenReadWrite 
-		// hasEntity(ledgerOwner) 
-	{
+	) public onlyOwner onlyWhenReadWrite hasEntity(ledgerOwner) {
 		SpotFeeLib.setFee_TokType(ld, std, globalFees, tokTypeId, ledgerOwner, feeArgs);
 	}
 
@@ -99,9 +97,7 @@ abstract contract StFees is StLedger {
 		uint256 ccyTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
-	) public onlyOwner onlyWhenReadWrite 
-		// hasEntity(ledgerOwner) 
-	{
+	) public onlyOwner onlyWhenReadWrite hasEntity(ledgerOwner) {
 		SpotFeeLib.setFee_CcyType(ld, ctd, globalFees, ccyTypeId, ledgerOwner, feeArgs);
 	}
 	//#endif

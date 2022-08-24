@@ -34,18 +34,6 @@ abstract contract DataLoadable is StErc20 {
 		}
 	}
 
-	/**
-	 * @dev load a single or multiple security token batch(es)
-	 * @param batches takes an array of security token batches
-	 * @param _batches_currentMax_id total count of existing batches
-	 */
-	function loadSecTokenBatch(
-		StructLib.SecTokenBatch[] memory batches,
-		uint64 _batches_currentMax_id
-	) public onlyOwner {
-		LoadLib.loadSecTokenBatch(ld, batches, _batches_currentMax_id);
-	}
-
 	// commented out due to the smart contract size limit. Using createLedgerEntryBatch() method instead
 	/**
 	 * @dev add an entry to the ledger

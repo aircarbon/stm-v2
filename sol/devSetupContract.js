@@ -39,13 +39,25 @@ module.exports = {
             const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));
             //console.log('usdFee', usdFee);
             if (usdFee.ccy_perMillion.toString() != '300') {
-                await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } ], O.addr, O.privKey);
+                try {
+                    await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } ], O.addr, O.privKey);
+                } catch (error) {
+                    console.log(chalk.red(`setFee_CcyType >> ${error}`));
+                }
             } else console.log(chalk.gray(`exchange fee already set for USD; nop.`));
 
             // create owner ledger entry
             const ownerLedger = (await CONST.web3_call('getLedgerEntry', [O.addr], nameOverride));
             if (!ownerLedger.exists) {
-                await CONST.web3_tx('fundOrWithdraw', [ CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 0, O.addr, 'DEV_INIT' ], O.addr, O.privKey); 
+                try {
+                    // set to local entity
+                    const LOCAL_ENTITY_ID = 4;
+                    await CONST.web3_tx('whitelistMany', [[O.addr]], O.addr, O.privKey);
+                    await CONST.web3_tx('setEntity', [  O.addr,  LOCAL_ENTITY_ID], O.addr, O.privKey);
+                    await CONST.web3_tx('fundOrWithdraw', [ CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 0, O.addr, 'DEV_INIT' ], O.addr, O.privKey);
+                } catch (error) {
+                    console.log(chalk.red(`fundOrWithdraw >> ${error}`));
+                }
             } else console.log(chalk.gray(`owner ledger already set; nop.`));
         }
         else if (await CONST.web3_call('getContractType', [], nameOverride) == CONST.contractType.CASHFLOW_BASE) {
@@ -60,7 +72,7 @@ module.exports = {
 
             // base cashflow - does not track collateral, i.e. no ccy types at all
             ;
-            
+
             // create owner ledger entry
             const ownerLedger = (await CONST.web3_call('getLedgerEntry', [O.addr], nameOverride));
             if (!ownerLedger.exists) {
@@ -86,33 +98,41 @@ module.exports = {
                 await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, O.addr, CONST.nullFees ], O.addr, O.privKey, nameOverride);
             }
         }
-        
+
         console.groupEnd();
         console.log(chalk.inverse('devSetupContract >> DONE'));
     },
 };
 
 async function addSecTokenIfNotPresent(spotTypes, name, O, nameOverride) {
-    if (!spotTypes.some(p => p.name == name)) { 
-        await CONST.web3_tx(
-            'addSecTokenTypeBatch',
-            [ 
+    if (!spotTypes.some(p => p.name == name)) {
+        try {
+            await CONST.web3_tx(
+                'addSecTokenTypeBatch',
                 [
-                    {
-                        name: name, 
-                        settlementType: CONST.settlementType.SPOT, 
-                        ft: CONST.nullFutureArgs, 
-                        cashflowBaseAddr: CONST.nullAddr
-                    }
-                ]
-            ], 
-            O.addr, 
-            O.privKey, nameOverride); 
+                    [
+                        {
+                            name: name,
+                            settlementType: CONST.settlementType.SPOT,
+                            ft: CONST.nullFutureArgs,
+                            cashflowBaseAddr: CONST.nullAddr
+                        }
+                    ]
+                ],
+                O.addr,
+                O.privKey, nameOverride);
+        } catch (error) {
+            console.log(chalk.red(`addSecTokenIfNotPresent >> ${error}`));
+        }
     }
     else console.log(chalk.gray(`${name} already present; nop.`));
 }
 async function addCcyIfNotPresent(ccyTypes, name, unit, decimals, O, nameOverride) {
     if (!ccyTypes.some(p => p.name == name)) {
-        await CONST.web3_tx('addCcyType', [ name, unit, decimals ], O.addr, O.privKey, nameOverride);
+        try {
+            await CONST.web3_tx('addCcyType', [ name, unit, decimals ], O.addr, O.privKey, nameOverride);
+        } catch (error) {
+            console.log(chalk.red(`addCcyIfNotPresent >> ${error}`));
+        }
     } else console.log(chalk.gray(`${name} already present; nop.`));
 }

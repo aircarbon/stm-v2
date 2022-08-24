@@ -30,26 +30,30 @@ contract dcStMaster is dcStLedger, dcStTransferable {
 		external 
 		onlyOwner 
 		onlyWhenReadWrite 
-		// hasEntity(ledgerOwner) 
+		// hasEntity(ledgerOwner) // TODO: After modularization, check that every passed address has entity
 	{
 		SpotFeeLib.setFee_CcyTypeBatch(ld, ctd, globalFees, params);
 	}
 
-	function setFee_TokType(
+	function setFee_TokTypeBatch(
 		uint256[] calldata tokTypeId,
 		address[] calldata ledgerOwner,
 		StructLib.SetFeeArgs[] calldata feeArgs
 	) public onlyOwner onlyWhenReadWrite 
-		// hasEntity(ledgerOwner) 
+		// hasEntity(ledgerOwner) // TODO: After modularization, check that every passed address has entity
 	{
 		SpotFeeLib.setFee_TokTypeBatch(ld, std, globalFees, tokTypeId, ledgerOwner, feeArgs);
 	}
 
-	// function test1() external view returns(string memory) {
-	// 	return unit;
-	// }
-
-	// function test2(string calldata newunit) external {
-	// 	unit = newunit;
-	// }
+	/**
+	 * @dev load a single or multiple security token batch(es)
+	 * @param batches takes an array of security token batches
+	 * @param _batches_currentMax_id total count of existing batches
+	 */
+	 function loadSecTokenBatch(
+		StructLib.SecTokenBatch[] memory batches,
+		uint64 _batches_currentMax_id
+	) public onlyOwner {
+		LoadLib.loadSecTokenBatch(ld, batches, _batches_currentMax_id);
+	}
 }

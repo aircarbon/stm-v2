@@ -112,8 +112,8 @@ abstract contract StTransferable is Owned, StErc20, StPayable {
 		public
 		onlyCustodian
 		onlyWhenReadWrite
-		// hasEntity(transferArgs.ledger_A)
-		// hasEntity(transferArgs.ledger_B)
+		hasEntity(transferArgs.ledger_A)
+		hasEntity(transferArgs.ledger_B)
 	{
 		// abort if sending tokens from a non-whitelist account
 		require(

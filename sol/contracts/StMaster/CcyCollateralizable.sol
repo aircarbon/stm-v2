@@ -59,8 +59,7 @@ abstract contract Collateralizable is StLedger {
 		int256 amount,
 		address ledgerOwner,
 		string calldata desc
-	) public onlyOwner onlyWhenReadWrite 
-		// hasEntity(ledgerOwner) 
+	) public onlyOwner onlyWhenReadWrite hasEntity(ledgerOwner) 
 	{
 		CcyLib.fundOrWithdraw(ld, ctd, direction, ccyTypeId, amount, ledgerOwner, desc);
 	}
