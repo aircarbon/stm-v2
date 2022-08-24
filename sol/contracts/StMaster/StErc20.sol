@@ -208,6 +208,9 @@ abstract contract StErc20 is StFees {
 	}
 
 	function _setEntity(address addr, uint entityId) internal {
+		if(entityId == 0) {
+			return;
+		}
 		require(addr != address(0), "setEntity: invalid entity address");
 		require(entityId > 0, "setEntity: invalid entity id");
 		require(erc20d._whitelisted[addr], "setEntity: address is not white listed");

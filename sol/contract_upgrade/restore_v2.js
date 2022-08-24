@@ -224,23 +224,23 @@ module.exports = async (callback) => {
     const whitelistedAddresses = await newContract.getWhitelist();
 
     // whitelisting owners
-    const toBeWhitelisted = data.ledgerOwners.filter((owner) => (!whitelistedAddresses.includes(owner)));
-    let whitelistingAddrBatches = createBatches(toBeWhitelisted, 100);
+    // const toBeWhitelisted = data.ledgerOwners.filter((owner) => (!whitelistedAddresses.includes(owner)));
+    // let whitelistingAddrBatches = createBatches(toBeWhitelisted, 100);
 
     // order matters?
-    console.log('\n Whitelisting addresses (among ledger owners) that were not whitelisted yet (by batches).');
-    const whiteListingPromises = whitelistingAddrBatches.map((wlBatch, index) => 
-      function whitelistMany(cb) {
-        console.log(`Adding addresses to whitelist ${index + 1}/${whitelistingAddrBatches.length}`);
+    // console.log('\n Whitelisting addresses (among ledger owners) that were not whitelisted yet (by batches).');
+    // const whiteListingPromises = whitelistingAddrBatches.map((wlBatch, index) => 
+    //   function whitelistMany(cb) {
+    //     console.log(`Adding addresses to whitelist ${index + 1}/${whitelistingAddrBatches.length}`);
 
-        newContract
-          .whitelistMany(wlBatch)
-          .then((result) => cb(null, result))
-          .catch((error) => cb(error));
-    });
+    //     newContract
+    //       .whitelistMany(wlBatch)
+    //       .then((result) => cb(null, result))
+    //       .catch((error) => cb(error));
+    // });
   
-  await series(whiteListingPromises);
-  await sleep(1000);
+  // await series(whiteListingPromises);
+  // await sleep(1000);
   
   // load ledgers data to new contract
   let filteredLedgersWithOwners = [];
@@ -268,7 +268,7 @@ module.exports = async (callback) => {
             ccys: obj.ledger.ccys,
             spot_sumQtyMinted: obj.ledger.spot_sumQtyMinted,
             spot_sumQtyBurned: obj.ledger.spot_sumQtyBurned,
-            entityId: 1
+            entityId: whitelistedAddresses.includes(obj.owner) ? 1 : 0
           };
         }))
         .then((result) => cb(null, result))
