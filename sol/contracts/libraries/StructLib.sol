@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
 pragma solidity 0.8.5;
 
-import "../StMaster/StMaster.sol";
-
 library StructLib {
 	enum ContractType {
 		COMMODITY,
@@ -13,6 +11,11 @@ library StructLib {
 	enum FundWithdrawType {
 		FUND,
 		WITHDRAW
+	}
+
+	enum CustodyType {
+		SELF_CUSTODY,
+		THIRD_PARTY_CUSTODY
 	}
 
 	enum TransferType {
