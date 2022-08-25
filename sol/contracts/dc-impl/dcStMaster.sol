@@ -13,6 +13,7 @@ contract dcStMaster is dcStLedger, dcStTransferable {
 	string public name;
 	string public version;
 	string public unit; // the smallest (integer, non-divisible) security token unit, e.g. "KGs" or "TONS"
+	address internal impl; // if no method is found, this contract will be called
 
 	function addSecTokenBatch(StructLib.AddSecTokenBatchArgs[] calldata params) external onlyOwner {
 		LoadLib.addSecTokenBatch(ld, params);
@@ -55,5 +56,9 @@ contract dcStMaster is dcStLedger, dcStTransferable {
 		uint64 _batches_currentMax_id
 	) public onlyOwner {
 		LoadLib.loadSecTokenBatch(ld, batches, _batches_currentMax_id);
+	}
+
+	function updateImpl(address newImpl) public onlyOwner {
+		impl = newImpl;
 	}
 }

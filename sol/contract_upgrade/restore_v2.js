@@ -18,9 +18,7 @@ const { helpers } = require('../../orm/build');
 process.on('unhandledRejection', console.error);
 
 // how many items to process in one batch
-// const WHITELIST_COUNT = 5000;
-// const WHITELIST_CHUNK_SIZE = 100;
-const BATCH_CHUNK_SIZE = 10;
+const BATCH_CHUNK_SIZE = 3;
 
 // create a sleep function to be used in the async series
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,52 +57,6 @@ module.exports = async (callback) => {
   console.log(`New contract address: ${newContract.address}`);
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
-
-  // NOTE: moved this logic to separate file, to restore WL first before closing market to initiate migration.
-  // whitelisting addresses to new contract
-  // const whitelistAddressesOnTarget = await newContract.getWhitelist();
-  // console.log('# of WL Addresses on Target', whitelistAddressesOnTarget.length);
-  // const additionalWLAddresses = [];
-  // for (let i = data.whitelistAddresses.length; i < WHITELIST_COUNT; i++) {
-  //   // note - we include account[0] owner account in the whitelist
-  //   const x = await CONST.getAccountAndKey(i);
-  //   if (!data.whitelistAddresses.map((p) => p.toLowerCase()).includes(x.addr.toLowerCase())) {
-  //     additionalWLAddresses.push(x.addr);
-  //   } else {
-  //     console.log(`skipping ${x.addr} (already in WL)...`);
-  //   }
-  // }
-  
-  // const addressesToWhiteList = [...data.whitelistAddresses, ...additionalWLAddresses];
-  // const whitelistPromises = addressesToWhiteList
-  //   .reduce((result, addr) => {
-  //     if (whitelistAddressesOnTarget.map((p) => p.toLowerCase()).includes(addr.toLowerCase())) {
-  //       return result;
-  //     }
-
-  //     const lastItem = result?.[result.length - 1] ?? [];
-  //     if (lastItem && lastItem.length === WHITELIST_CHUNK_SIZE) {
-  //       return [...result, [addr]];
-  //     } else {
-  //       return [...result.slice(0, -1), [...lastItem, addr]];
-  //     }
-  //   }, [])
-  //   .map(
-  //     (addresses) =>
-  //       function addWhitelist(cb) {
-  //         console.log(`Adding whitelist addresses`, addresses);
-  //         if (addresses.length === 0) {
-  //           return cb(null, []);
-  //         }
-
-  //         newContract
-  //           .whitelistMany(addresses)
-  //           .then((result) => cb(null, result))
-  //           .catch((error) => cb(error));
-  //       },
-  //   );
-
-  // await series(whitelistPromises);
 
   // add ccy data to new contract
   const ccyTypes = await newContract.getCcyTypes();
@@ -176,9 +128,6 @@ module.exports = async (callback) => {
     console.log('\n Loading Sec Tokens (by batches).');
 
     // is order important? If not, can send multiple transactions at the same time
-    // can play around with BATCH_CHUNK_SIZE, in ideal case make it dynamic
-    // not much to optimize, the transaction data is heavy and already imported in batches.
-
     const batchesPromises = data.batches
       .filter((batch) => Number(batch.id) > Number(maxBatchId))
       .reduce((result, batch) => {
@@ -222,25 +171,6 @@ module.exports = async (callback) => {
       });
 
     const whitelistedAddresses = await newContract.getWhitelist();
-
-    // whitelisting owners
-    // const toBeWhitelisted = data.ledgerOwners.filter((owner) => (!whitelistedAddresses.includes(owner)));
-    // let whitelistingAddrBatches = createBatches(toBeWhitelisted, 100);
-
-    // order matters?
-    // console.log('\n Whitelisting addresses (among ledger owners) that were not whitelisted yet (by batches).');
-    // const whiteListingPromises = whitelistingAddrBatches.map((wlBatch, index) => 
-    //   function whitelistMany(cb) {
-    //     console.log(`Adding addresses to whitelist ${index + 1}/${whitelistingAddrBatches.length}`);
-
-    //     newContract
-    //       .whitelistMany(wlBatch)
-    //       .then((result) => cb(null, result))
-    //       .catch((error) => cb(error));
-    // });
-  
-  // await series(whiteListingPromises);
-  // await sleep(1000);
   
   // load ledgers data to new contract
   let filteredLedgersWithOwners = [];
@@ -307,11 +237,21 @@ module.exports = async (callback) => {
 
   let tokensWithOwnersBatches = createBatches(filteredTokens, 30);
 
+  // fetching other addresses that can send the transactions
+  const prms = [];
+  for(let i = 0; i < 10; i++) {
+    prms.push(await CONST.getAccountAndKey(i));
+  }
+
+  const accounts = await Promise.all(prms);
+  const addresses = accounts.map((acc) => acc.addr);
+
   console.log('\n Adding Sec Tokens (by batches).');
+  
   const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch, index) => 
-    async function addSecTokenBatch(cb) {
-      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
-      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAcc.addr}`);
+    function addSecTokenBatch(cb) {
+      const currAddr = addresses[index % 9 + 1];
+      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAddr}`);
 
       newContractDc
         .addSecTokenBatch(tokenWithOwnerBatch.map((batchWithOwner) => {
@@ -328,12 +268,9 @@ module.exports = async (callback) => {
             ft_PL: batchWithOwner.token.ft_PL,
           }
         }),
-        {from: currAcc})
+        {from: currAddr})
         .then((ccy) => cb(null, ccy))
-        .catch((error) => { 
-          console.log(error);
-          return cb(error);
-        });
+        .catch((error) => cb(error));
     },
   );
 
@@ -384,9 +321,9 @@ module.exports = async (callback) => {
 
   console.log('\n Adding Sec Tokens (Global) (by batches).');
   const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
-    async function addSecTokenBatch(cb) {
-      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
-      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length} - from ${currAcc.addr}`);
+    function addSecTokenBatch(cb) {
+      const currAddr = addresses[index % 9 + 1];
+      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length} - from ${currAddr}`);
 
         newContractDc.addSecTokenBatch(
           tokenBatch.map((tokenObj) => {
@@ -403,17 +340,13 @@ module.exports = async (callback) => {
               ft_PL: tokenObj.token.ft_PL,
             }
           }),
-          {from: currAcc}
+          {from: currAddr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => {
-          console.log(error);
-          return cb(error)
-        });
+        .catch((error) => cb(error));
     },
   );
 
-  console.log('\n\n======= CHANGES 6 INCOMING ========');
   await series(promises);
   await sleep(1000);
 
@@ -445,9 +378,9 @@ module.exports = async (callback) => {
     let ccyTypesBatches = createBatches(allCcyTypesWithFees, 20);
 
     const ccyTypesPromises = ccyTypesBatches.map((tokenBatch, index) => 
-    async function setCcyTypesBatches(cb) {
-      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
-      console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length} from ${currAcc.addr}`);
+    function setCcyTypesBatches(cb) {
+      const currAddr = addresses[index % 9 + 1];
+      console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length} from ${currAddr}`);
 
         newContractDc.setFee_CcyTypeBatch(
           tokenBatch.map((ccyTypeObj) => {
@@ -457,17 +390,13 @@ module.exports = async (callback) => {
               feeArgs: ccyTypeObj.fee
             }
           }),
-          {from: currAcc.addr}
+          {from: currAddr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => {
-          console.log(error);
-          return cb(error);
-        });
+        .catch((error) => cb(error));
     },
   );
 
-  console.log('\n\n\n\n======= CHANGES 7 INCOMING ========');
   await series(ccyTypesPromises);
   await sleep(1000);
 
@@ -503,7 +432,6 @@ module.exports = async (callback) => {
     },
   );
 
-    console.log('\n\n======= CHANGES 8 INCOMING ========');
     await series(tokTypesPromises);
     await sleep(1000);
 
@@ -533,9 +461,9 @@ module.exports = async (callback) => {
     let feesWithOwnerAndCcyTypesBatches = createBatches(feesWithOwnerAndCcyTypes, 20);
 
     const feeCcyTypePromises = feesWithOwnerAndCcyTypesBatches.map((feesBatch, index) => 
-    async function setCcyTypesBatches(cb) {
-      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
-      console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length} from ${currAcc.addr}`);
+    function setCcyTypesBatches(cb) {
+      const currAddr = addresses[index % 9 + 1];
+      console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length} from ${currAddr}`);
 
         newContractDc.setFee_CcyTypeBatch(
           feesBatch.map((ccyTypeObj) => {
@@ -545,17 +473,13 @@ module.exports = async (callback) => {
               feeArgs: ccyTypeObj.fee
             }
           }),
-          {from: currAcc.addr}
+          {from: currAddr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => {
-          console.log(error);
-          return cb(error)
-        });
+        .catch((error) => cb(error));
     },
   );
 
-    console.log('\n\n======= CHANGES 9 INCOMING ========');
     await series(feeCcyTypePromises);
     await sleep(1000);
 
@@ -585,25 +509,21 @@ module.exports = async (callback) => {
     let feesWithOwnerAndTokenTypesBatches = createBatches(feesWithOwnerAndTokenTypes, 20);
 
     const feeTokenTypePromises = feesWithOwnerAndTokenTypesBatches.map((feesBatch, index) => 
-    async function setTokenTypesBatches(cb) {
-      const currAcc = await CONST.getAccountAndKey(index % 9 + 1);
-      console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length} - from ${currAcc.addr}`);
+    function setTokenTypesBatches(cb) {
+      const currAddr = addresses[index % 9 + 1];
+      console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length} - from ${currAddr}`);
 
         newContractDc.setFee_TokTypeBatch(
           feesBatch.map((tokenTypeObj) => tokenTypeObj.tokenTypeId),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.ledgerOwner),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.fee),
-          {from: currAcc.addr}
+          {from: currAddr}
         )
         .then((result) => cb(null, result))
-        .catch((error) => {
-          console.log(error);
-          return cb(error)
-        });
+        .catch((error) => cb(error));
     },
   );
 
-    console.log('\n\n======= CHANGES 10 INCOMING ========');
     await series(feeTokenTypePromises);
     await sleep(1000);
   }
