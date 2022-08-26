@@ -6,7 +6,7 @@ import { TransferLib } from "../libraries/TransferLib.sol";
 import { Erc20Lib } from "../libraries/Erc20Lib.sol";
 import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StTransferableFacet {
 	uint256 constant MAX_BATCHES_PREVIEW = 128; // library constants not accessible in contract; must duplicate TransferLib value
@@ -22,7 +22,7 @@ contract StTransferableFacet {
 		external
 		view
 		returns (bytes32 ledgerHashcode)
-	{	
+	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		return
 			LedgerLib.getLedgerHashcode(
@@ -47,7 +47,7 @@ contract StTransferableFacet {
 		external
 		view
 		returns (StructLib.FeesCalc[1] memory feesAll)
-	{	
+	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		return
 			TransferLib.transfer_feePreview_ExchangeOnly(
@@ -68,9 +68,16 @@ contract StTransferableFacet {
 		external
 		view
 		returns (StructLib.FeesCalc[1 + MAX_BATCHES_PREVIEW * 2] memory feesAll)
-	{	
+	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		return TransferLib.transfer_feePreview(s.ld, s.std, s.globalFees, s.deploymentOwner, transferArgs);
+		return
+			TransferLib.transfer_feePreview(
+				s.ld,
+				s.std,
+				s.globalFees,
+				s.deploymentOwner,
+				transferArgs
+			);
 	}
 
 	/**
@@ -92,11 +99,11 @@ contract StTransferableFacet {
 	 * feeAddrOwner : account address of fee owner
 	 */
 
-	function transferOrTrade(StructLib.TransferArgs memory transferArgs) public {	
-		OwnedLib.onlyCustodian();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(transferArgs.ledger_A);
-		OwnedLib.hasEntity(transferArgs.ledger_B);
+	function transferOrTrade(StructLib.TransferArgs memory transferArgs) public {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(transferArgs.ledger_A);
+		ValidationLib.validateHasEntity(transferArgs.ledger_B);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		// abort if sending tokens from a non-whitelist account

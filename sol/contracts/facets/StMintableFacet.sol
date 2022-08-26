@@ -6,7 +6,7 @@ import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { SpotFeeLib } from "../libraries/SpotFeeLib.sol";
 import { TokenLib } from "../libraries/TokenLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StMintableFacet {
 	/**
@@ -20,9 +20,14 @@ contract StMintableFacet {
 		string calldata metaKeyNew,
 		string calldata metaValueNew
 	) external {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		TokenLib.addMetaSecTokenBatch(LibMainStorage.getStorage().ld, batchId, metaKeyNew, metaValueNew);
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		TokenLib.addMetaSecTokenBatch(
+			LibMainStorage.getStorage().ld,
+			batchId,
+			metaKeyNew,
+			metaValueNew
+		);
 	}
 
 	/**
@@ -33,8 +38,8 @@ contract StMintableFacet {
 	function setOriginatorFeeTokenBatch(uint64 batchId, StructLib.SetFeeArgs calldata originatorFee)
 		external
 	{
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
 
 		TokenLib.setOriginatorFeeTokenBatch(LibMainStorage.getStorage().ld, batchId, originatorFee);
 	}
@@ -46,11 +51,15 @@ contract StMintableFacet {
 	 */
 	function setOriginatorFeeCurrencyBatch(uint64 batchId, uint16 origCcyFee_percBips_ExFee)
 		external
-	{	
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
+	{
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
 
-		TokenLib.setOriginatorFeeCurrencyBatch(LibMainStorage.getStorage().ld, batchId, origCcyFee_percBips_ExFee);
+		TokenLib.setOriginatorFeeCurrencyBatch(
+			LibMainStorage.getStorage().ld,
+			batchId,
+			origCcyFee_percBips_ExFee
+		);
 	}
 
 	// 24k
@@ -85,9 +94,9 @@ contract StMintableFacet {
 		string[] memory metaKeys,
 		string[] memory metaValues
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(batchOwner);
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(batchOwner);
 
 		TokenLib.MintSecTokenBatchArgs memory args = TokenLib.MintSecTokenBatchArgs({
 			tokTypeId: tokTypeId,

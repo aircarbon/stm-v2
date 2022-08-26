@@ -3,7 +3,7 @@ pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 /**
  * @title Security Token Master
@@ -257,7 +257,7 @@ contract StMasterFacet {
 	 * @return contractType
 	 * @param contractType returns the contract type<br/>0: commodity token<br/>1: cashflow token<br/>2: cashflow controller
 	 */
-	 function getContractType() external view returns (StructLib.ContractType contractType) {
+	function getContractType() external view returns (StructLib.ContractType contractType) {
 		return LibMainStorage.getStorage().ld.contractType;
 	}
 

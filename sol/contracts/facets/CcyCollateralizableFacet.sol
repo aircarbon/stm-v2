@@ -4,10 +4,9 @@ pragma solidity 0.8.5;
 import { StructLib } from "../libraries/StructLib.sol";
 import { CcyLib } from "../libraries/CcyLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract CollateralizableFacet {
-
 	/**
 	 * @dev returns the current supporting currencies
 	 * @return ccyTypes
@@ -28,8 +27,8 @@ contract CollateralizableFacet {
 		string memory unit,
 		uint16 decimals
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		CcyLib.addCcyType(s.ld, s.ctd, name, unit, decimals);
 	}
@@ -48,10 +47,10 @@ contract CollateralizableFacet {
 		int256 amount,
 		address ledgerOwner,
 		string calldata desc
-	) public {	
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(ledgerOwner);
+	) public {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		CcyLib.fundOrWithdraw(s.ld, s.ctd, direction, ccyTypeId, amount, ledgerOwner, desc);

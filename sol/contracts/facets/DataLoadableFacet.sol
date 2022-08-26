@@ -4,20 +4,25 @@ pragma solidity 0.8.5;
 import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { LoadLib } from "../libraries/LoadLib.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 import { StErc20Facet } from "./StErc20Facet.sol";
 
 contract DataLoadableFacet {
-
 	function createLedgerEntryBatch(StructLib.CreateLedgerEntryArgs[] calldata params) external {
-		OwnedLib.onlyOwner();
-		uint len = params.length;
+		ValidationLib.validateOnlyOwner();
+		uint256 len = params.length;
 		StructLib.LedgerStruct storage ld = LibMainStorage.getStorage().ld;
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			StructLib.CreateLedgerEntryArgs memory currParam = params[i];
 			StErc20Facet(address(this)).setEntity(currParam.ledgerEntryOwner, currParam.entityId);
-			LoadLib.createLedgerEntry(ld, currParam.ledgerEntryOwner, currParam.ccys, currParam.spot_sumQtyMinted, currParam.spot_sumQtyBurned);
+			LoadLib.createLedgerEntry(
+				ld,
+				currParam.ledgerEntryOwner,
+				currParam.ccys,
+				currParam.spot_sumQtyMinted,
+				currParam.spot_sumQtyBurned
+			);
 		}
 	}
 
@@ -33,11 +38,17 @@ contract DataLoadableFacet {
 		StructLib.LedgerCcyReturn[] memory ccys,
 		uint256 spot_sumQtyMinted,
 		uint256 spot_sumQtyBurned,
-		uint entityId
+		uint256 entityId
 	) public {
-		OwnedLib.onlyOwner();
+		ValidationLib.validateOnlyOwner();
 		StErc20Facet(address(this)).setEntity(ledgerEntryOwner, entityId);
-		LoadLib.createLedgerEntry(LibMainStorage.getStorage().ld, ledgerEntryOwner, ccys, spot_sumQtyMinted, spot_sumQtyBurned);
+		LoadLib.createLedgerEntry(
+			LibMainStorage.getStorage().ld,
+			ledgerEntryOwner,
+			ccys,
+			spot_sumQtyMinted,
+			spot_sumQtyBurned
+		);
 	}
 
 	/**
@@ -65,7 +76,7 @@ contract DataLoadableFacet {
 		address ft_ledgerOwner,
 		int128 ft_PL
 	) public {
-		OwnedLib.onlyOwner();
+		ValidationLib.validateOnlyOwner();
 		LoadLib.addSecToken(
 			LibMainStorage.getStorage().ld,
 			ledgerEntryOwner,
@@ -95,7 +106,7 @@ contract DataLoadableFacet {
 		uint256 totalMintedQty,
 		uint256 totalBurnedQty
 	) public {
-		OwnedLib.onlyOwner();
+		ValidationLib.validateOnlyOwner();
 		LoadLib.setTokenTotals(
 			LibMainStorage.getStorage().ld,
 			//packed_ExchangeFeesPaidQty, packed_OriginatorFeesPaidQty, packed_TransferedQty,

@@ -17,7 +17,7 @@ library StructLib {
 		SELF_CUSTODY,
 		THIRD_PARTY_CUSTODY
 	}
-	
+
 	enum GetFeeType {
 		CCY,
 		TOK
@@ -73,7 +73,7 @@ library StructLib {
 		LedgerCcyReturn[] ccys;
 		uint256 spot_sumQtyMinted;
 		uint256 spot_sumQtyBurned;
-		uint entityId;
+		uint256 entityId;
 	}
 
 	struct AddSecTokenBatchArgs {

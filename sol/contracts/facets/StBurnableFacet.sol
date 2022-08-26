@@ -4,7 +4,7 @@ pragma solidity 0.8.5;
 import { StructLib } from "../libraries/StructLib.sol";
 import { TokenLib } from "../libraries/TokenLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StBurnableFacet {
 	/**
@@ -29,9 +29,9 @@ contract StBurnableFacet {
 		int256 burnQty,
 		uint256[] memory stIds // IFF supplied (len > 0): sum of supplied STs current qty must == supplied burnQty
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(ledgerOwner);
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		TokenLib.burnTokens(

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
 pragma solidity 0.8.5;
 
-import "../libraries/StructLib.sol";
-import "./SpotFeeLib.sol";
-import "./Strings.sol";
+import { StructLib } from "../libraries/StructLib.sol";
+import { SpotFeeLib } from "./SpotFeeLib.sol";
+import { strings } from "./Strings.sol";
 
-import "../facets/StMasterFacet.sol";
-import "../facets/DataLoadableFacet.sol";
-import "../facets/StLedgerFacet.sol";
-import "../facets/StBurnableFacet.sol";
-import "../facets/StMintableFacet.sol";
+import { StMasterFacet } from "../facets/StMasterFacet.sol";
+import { DataLoadableFacet } from "../facets/DataLoadableFacet.sol";
+import { StLedgerFacet } from "../facets/StLedgerFacet.sol";
+import { StBurnableFacet } from "../facets/StBurnableFacet.sol";
+import { StMintableFacet } from "../facets/StMintableFacet.sol";
 
 library TokenLib {
 	using strings for *;
@@ -95,11 +95,19 @@ library TokenLib {
 		StructLib.CcyTypesStruct storage ctd,
 		StructLib.AddSecTokenTypeBatchArgs[] calldata params
 	) public {
-		uint len = params.length;
+		uint256 len = params.length;
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			StructLib.AddSecTokenTypeBatchArgs memory param = params[i];
-			addSecTokenType(ld, std, ctd, param.name, param.settlementType, param.ft, param.cashflowBaseAddr);
+			addSecTokenType(
+				ld,
+				std,
+				ctd,
+				param.name,
+				param.settlementType,
+				param.ft,
+				param.cashflowBaseAddr
+			);
 		}
 	}
 

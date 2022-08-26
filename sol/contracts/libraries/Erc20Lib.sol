@@ -3,8 +3,8 @@
 // Certik (AD): locked compiler version
 pragma solidity 0.8.5;
 
-import "../libraries/StructLib.sol";
-import "./TransferLib.sol";
+import { StructLib } from "../libraries/StructLib.sol";
+import { TransferLib } from "./TransferLib.sol";
 
 library Erc20Lib {
 	struct transferErc20Args {

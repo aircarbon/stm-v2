@@ -6,16 +6,16 @@ import { TransferLib } from "../libraries/TransferLib.sol";
 import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { Erc20Lib } from "../libraries/Erc20Lib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StErc20Facet {
-	function setEntityBatch(address[] calldata addr, uint[] calldata entityId) external {
-		OwnedLib.onlyOwner();
+	function setEntityBatch(address[] calldata addr, uint256[] calldata entityId) external {
+		ValidationLib.validateOnlyOwner();
 
-		uint len = addr.length;
+		uint256 len = addr.length;
 		require(len == entityId.length, "setEntityBatch: arrays are not the same length");
 
-		for(uint i=0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			_setEntity(addr[i], entityId[i]);
 		}
 	}
@@ -24,12 +24,12 @@ contract StErc20Facet {
 		_symbol = LibMainStorage.getStorage().symbol;
 	}
 
-	function decimals() external view returns (uint _decimals) {
+	function decimals() external view returns (uint256 _decimals) {
 		_decimals = LibMainStorage.getStorage().decimals;
 	}
 
-	function setEntity(address addr, uint entityId) public {
-		OwnedLib.onlyOwner();
+	function setEntity(address addr, uint256 entityId) public {
+		ValidationLib.validateOnlyOwner();
 		_setEntity(addr, entityId);
 	}
 
@@ -39,7 +39,7 @@ contract StErc20Facet {
 	 */
 
 	function whitelistMany(address[] calldata addr) external {
-		OwnedLib.onlyOwner();
+		ValidationLib.validateOnlyOwner();
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 
 		for (uint256 i = 0; i < addr.length; i++) {
@@ -76,7 +76,11 @@ contract StErc20Facet {
 		returns (address[] memory whitelistAddresses)
 	{
 		require(pageSize > 0 && pageSize < 2000, "Bad page size: must be > 0 and < 2000");
-		whitelistAddresses = Erc20Lib.getWhitelist(LibMainStorage.getStorage().erc20d._whitelist, pageNo, pageSize);
+		whitelistAddresses = Erc20Lib.getWhitelist(
+			LibMainStorage.getStorage().erc20d._whitelist,
+			pageNo,
+			pageSize
+		);
 	}
 
 	function init(string memory _symbol, uint8 _decimals) external {
@@ -199,8 +203,8 @@ contract StErc20Facet {
 		spendAllowance = LibMainStorage.getStorage().erc20d._allowances[sender][spender];
 	}
 
-	function _setEntity(address addr, uint entityId) internal {
-		if(entityId == 0) {
+	function _setEntity(address addr, uint256 entityId) internal {
+		if (entityId == 0) {
 			return;
 		}
 		require(addr != address(0), "setEntity: invalid entity address");
@@ -209,7 +213,7 @@ contract StErc20Facet {
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		require(s.erc20d._whitelisted[addr], "setEntity: address is not white listed");
 		require(s.entities[addr] == 0, "setEntity: address already assigned to an entity");
-		
+
 		s.entities[addr] = entityId;
 		s.addressesPerEntity[entityId].push(addr);
 	}

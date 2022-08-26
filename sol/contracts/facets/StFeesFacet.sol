@@ -4,7 +4,7 @@ pragma solidity 0.8.5;
 import { StructLib } from "../libraries/StructLib.sol";
 import { SpotFeeLib } from "../libraries/SpotFeeLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StFeesFacet {
 	/**
@@ -55,14 +55,14 @@ contract StFeesFacet {
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(ledgerOwner);
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		SpotFeeLib.setFee_TokType(s.ld, s.std, s.globalFees, tokTypeId, ledgerOwner, feeArgs);
 	}
-	
+
 	/**
 	 * @dev set fee for a currency type
 	 * @param ccyTypeId currency type identifier
@@ -79,10 +79,10 @@ contract StFeesFacet {
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
-		OwnedLib.hasEntity(ledgerOwner);
-		
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(ledgerOwner);
+
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, s.globalFees, ccyTypeId, ledgerOwner, feeArgs);
 	}

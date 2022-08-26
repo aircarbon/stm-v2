@@ -5,14 +5,12 @@ import { StructLib } from "../libraries/StructLib.sol";
 import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { TokenLib } from "../libraries/TokenLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StLedgerFacet {
-	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) 
-		external
-	{	
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
+	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) external {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		TokenLib.addSecTokenTypeBatch(s.ld, s.std, s.ctd, params);
@@ -31,7 +29,7 @@ contract StLedgerFacet {
 		secTokenTypes = TokenLib.getSecTokenTypes(LibMainStorage.getStorage().std);
 	}
 
-	function getEntityAddresses(uint entityId) external view returns(address[] memory) {
+	function getEntityAddresses(uint256 entityId) external view returns (address[] memory) {
 		require(entityId > 0, "getEntityAddresses: wrong entity id");
 		return LibMainStorage.getStorage().addressesPerEntity[entityId];
 	}
@@ -75,7 +73,7 @@ contract StLedgerFacet {
 		external
 		view
 		returns (StructLib.LedgerReturn memory ledgerEntry)
-	{	
+	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		ledgerEntry = LedgerLib.getLedgerEntry(s.ld, s.std, s.ctd, account);
 	}
@@ -133,16 +131,20 @@ contract StLedgerFacet {
 		external
 		view
 		returns (StructLib.LedgerSecTokenReturn memory secToken)
-	{	
+	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		secToken = TokenLib.getSecToken(s.ld, s.std, id);
 	}
 
-	function getEntityBatch(address[] calldata addr) external view returns(uint[] memory results) {
-		uint len = addr.length;
-		results = new uint[](len);
+	function getEntityBatch(address[] calldata addr)
+		external
+		view
+		returns (uint256[] memory results)
+	{
+		uint256 len = addr.length;
+		results = new uint256[](len);
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			results[i] = getEntity(addr[i]);
 		}
 	}
@@ -162,14 +164,14 @@ contract StLedgerFacet {
 		StructLib.FutureTokenTypeArgs memory ft,
 		address payable cashflowBaseAddr
 	) public {
-		OwnedLib.onlyOwner();
-		OwnedLib.onlyWhenReadWrite();
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		TokenLib.addSecTokenType(s.ld, s.std, s.ctd, name, settlementType, ft, cashflowBaseAddr);
 	}
 
-	function getEntity(address addr) public view returns(uint) {
+	function getEntity(address addr) public view returns (uint256) {
 		require(addr != address(0), "getEntity: invalid address");
 		return LibMainStorage.getStorage().entities[addr];
 	}

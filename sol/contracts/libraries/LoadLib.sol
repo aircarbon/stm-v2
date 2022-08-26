@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
 pragma solidity 0.8.5;
 
-import "../libraries/StructLib.sol";
+import { StructLib } from "../libraries/StructLib.sol";
 
 library LoadLib {
 	function loadSecTokenBatch(
@@ -16,7 +16,6 @@ library LoadLib {
 		ld._batches_currentMax_id = _batches_currentMax_id;
 	}
 
-
 	// Add another param "entity ID"
 	function createLedgerEntry(
 		StructLib.LedgerStruct storage ld,
@@ -24,8 +23,8 @@ library LoadLib {
 		StructLib.LedgerCcyReturn[] memory ccys,
 		uint256 spot_sumQtyMinted,
 		uint256 spot_sumQtyBurned
-		// uint entityId
-	) public {
+	) public // uint entityId
+	{
 		require(!ld._contractSealed, "Contract is sealed");
 
 		if (!ld._ledger[ledgerEntryOwner].exists) {
@@ -47,10 +46,13 @@ library LoadLib {
 		}
 	}
 
-	function addSecTokenBatch(StructLib.LedgerStruct storage ld, StructLib.AddSecTokenBatchArgs[] memory params) public {
-		uint len = params.length;
+	function addSecTokenBatch(
+		StructLib.LedgerStruct storage ld,
+		StructLib.AddSecTokenBatchArgs[] memory params
+	) public {
+		uint256 len = params.length;
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			StructLib.AddSecTokenBatchArgs memory currParam = params[i];
 
 			addSecToken(

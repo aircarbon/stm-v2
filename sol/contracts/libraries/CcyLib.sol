@@ -2,7 +2,7 @@
 // Author: https://github.com/7-of-9
 pragma solidity 0.8.5;
 
-import "../libraries/StructLib.sol";
+import { StructLib } from "../libraries/StructLib.sol";
 
 library CcyLib {
 	event AddedCcyType(uint256 id, string name, string unit);
@@ -18,10 +18,13 @@ library CcyLib {
 		string[] calldata unit,
 		uint16[] calldata decimals
 	) public {
-		uint len = name.length;
-		require(len == unit.length && len == decimals.length, "addCcyTypeBatch: arrays' lengths don't match");
+		uint256 len = name.length;
+		require(
+			len == unit.length && len == decimals.length,
+			"addCcyTypeBatch: arrays' lengths don't match"
+		);
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			addCcyType(ld, ctd, name[i], unit[i], decimals[i]);
 		}
 	}
