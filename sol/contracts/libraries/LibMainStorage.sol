@@ -12,11 +12,6 @@ import { StructLib } from "./StructLib.sol";
 // The loupe functions are required by the EIP2535 Diamonds standard
 
 library LibMainStorage {
-    enum GetFeeType {
-		CCY,
-		TOK
-	}
-
     struct MainStorage {
         address payable deploymentOwner;
         bool readOnlyState;

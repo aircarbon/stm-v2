@@ -7,21 +7,6 @@ import { StructLib } from "../libraries/StructLib.sol";
 library OwnedLib {
     uint8 constant THIRDPARTY_CUSTODY_NDX = 1;
 
-    /**
-	 * @dev modifier to limit access to deployment owners onlyOwner
-	 */
-	// modifier onlyOwner() {
-	// 	uint256 ownersCount = owners.length;
-	// 	for (uint256 i = 0; i < ownersCount; i++) {
-	// 		if (owners[i] == msg.sender) {
-	// 			_;
-	// 			return;
-	// 		}
-	// 	}
-	// 	revert("Restricted");
-	// 	_;
-	// }
-
     function onlyOwner() external view {
         LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
         uint256 ownersCount = s.owners.length;
@@ -33,32 +18,6 @@ library OwnedLib {
 		}
 		revert("Restricted");
     }
-
-	// modifier onlyCustodian() {
-	// 	uint256 ownersCount = owners.length;
-	// 	if (custodyType == StructLib.CustodyType.SELF_CUSTODY) {
-	// 		for (uint256 i = 0; i < ownersCount; i++) {
-	// 			if (owners[i] == msg.sender) {
-	// 				_;
-	// 				return;
-	// 			}
-	// 		}
-	// 		revert("Restricted");
-	// 	} else {
-	// 		if (custodyType == StructLib.CustodyType.THIRD_PARTY_CUSTODY) {
-	// 			if (owners[THIRDPARTY_CUSTODY_NDX] == msg.sender) {
-	// 				_;
-	// 				return;
-	// 			}
-	// 			// fixed reserved addresses index for custodian address
-	// 			else {
-	// 				revert("Restricted");
-	// 			}
-	// 		}
-	// 		revert("Bad custody type");
-	// 	}
-	// 	_;
-	// }
 
     function onlyCustodian() external view {
         LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
@@ -85,16 +44,15 @@ library OwnedLib {
 		}
     }
 
-	/**
-	 * @dev access modifier to allow read-write only when the READ-ONLY mode is off
-	 */
-	// modifier onlyWhenReadWrite() {
-	// 	require(!readOnlyState, "Read-only");
-	// 	_;
-	// }
-
     function onlyWhenReadWrite() external view {
         require(!LibMainStorage.getStorage().readOnlyState, "Read-only");
+    }
+
+	function hasEntity(address addr) external view {
+		require(
+			addr == address(0) || LibMainStorage.getStorage().entities[addr] != 0, 
+			"The address is not assigned to any entity"
+		);
     }
 
 }

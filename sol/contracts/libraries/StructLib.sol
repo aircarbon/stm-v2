@@ -17,6 +17,11 @@ library StructLib {
 		SELF_CUSTODY,
 		THIRD_PARTY_CUSTODY
 	}
+	
+	enum GetFeeType {
+		CCY,
+		TOK
+	}
 
 	enum TransferType {
 		Undefined,

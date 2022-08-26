@@ -5,6 +5,7 @@ import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { LoadLib } from "../libraries/LoadLib.sol";
 import { OwnedLib } from "../libraries/OwnedLib.sol";
+import { StErc20Facet } from "./StErc20Facet.sol";
 
 contract DataLoadableFacet {
 
@@ -15,7 +16,7 @@ contract DataLoadableFacet {
 
 		for(uint i = 0; i < len; i++) {
 			StructLib.CreateLedgerEntryArgs memory currParam = params[i];
-			// setEntity(currParam.ledgerEntryOwner, currParam.entityId); // TODO: Set entity
+			StErc20Facet(address(this)).setEntity(currParam.ledgerEntryOwner, currParam.entityId);
 			LoadLib.createLedgerEntry(ld, currParam.ledgerEntryOwner, currParam.ccys, currParam.spot_sumQtyMinted, currParam.spot_sumQtyBurned);
 		}
 	}
@@ -35,7 +36,7 @@ contract DataLoadableFacet {
 		uint entityId
 	) public {
 		OwnedLib.onlyOwner();
-		// setEntity(ledgerEntryOwner, entityId); // TODO: Set entity
+		StErc20Facet(address(this)).setEntity(ledgerEntryOwner, entityId);
 		LoadLib.createLedgerEntry(LibMainStorage.getStorage().ld, ledgerEntryOwner, ccys, spot_sumQtyMinted, spot_sumQtyBurned);
 	}
 

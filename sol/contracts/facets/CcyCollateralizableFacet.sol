@@ -48,10 +48,10 @@ contract CollateralizableFacet {
 		int256 amount,
 		address ledgerOwner,
 		string calldata desc
-	) public 
-		// hasEntity(ledgerOwner) // TODO: check this
-	{	OwnedLib.onlyOwner();
+	) public {	
+		OwnedLib.onlyOwner();
 		OwnedLib.onlyWhenReadWrite();
+		OwnedLib.hasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		CcyLib.fundOrWithdraw(s.ld, s.ctd, direction, ccyTypeId, amount, ledgerOwner, desc);

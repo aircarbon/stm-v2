@@ -102,4 +102,8 @@ contract OwnedFacet {
 	function getOwners() external view returns (address[] memory deploymentOwners) {
 		deploymentOwners = LibMainStorage.getStorage().owners;
 	}
+
+	function custodyType() external view returns (StructLib.CustodyType _custodyType) {
+		_custodyType = LibMainStorage.getStorage().custodyType;
+	}
 }
