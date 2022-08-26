@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
+// Author: https://github.com/7-of-9
+
 const _ = require('lodash');
 const chalk = require('chalk');
 const BN = require('bn.js');
@@ -14,16 +16,6 @@ module.exports = {
     Deploy: async (p) => {
         try {
         const { deployer, artifacts, contractType, custodyType, nameOverride, symbolOverride } = p;
-        const deployImpl = async(contr, contractName) => {
-            try{
-                await deployer.deploy(contr);
-            } catch (err) {
-                console.log(`Failed to deploy contract '${contractName}', error:`);
-                console.log(err);
-                process.exit();
-            }
-        }
-
             var stmAddr;
             var dcStmAddr;
             //const contractType = process.env.CONTRACT_TYPE;
@@ -31,10 +23,7 @@ module.exports = {
 
             if (custodyType != 'SELF_CUSTODY' && custodyType != 'THIRD_PARTY_CUSTODY') throw ('Unknown custodyType');
 
-            // libs
-            const StructLib = artifacts.require('./StructLib.sol');
-            const LibMainStorage = artifacts.require('./LibMainStorage.sol');
-            const ValidationLib = artifacts.require('./ValidationLib.sol');
+            const StructLib = artifacts.require('../Interfaces/StructLib.sol');
             const CcyLib = artifacts.require('./CcyLib.sol');
             const TokenLib = artifacts.require('./TokenLib.sol');
             const LedgerLib = artifacts.require('./LedgerLib.sol');
@@ -42,67 +31,10 @@ module.exports = {
             const SpotFeeLib = artifacts.require('./SpotFeeLib.sol');
             const Erc20Lib = artifacts.require('./Erc20Lib.sol');
             const LoadLib = artifacts.require('./LoadLib.sol');
+            const PayableLib = artifacts.require('./PayableLib.sol');
             const FuturesLib = artifacts.require('./FuturesLib.sol');
-
-            // contracts
-            const CcyCollateralizableFacet = artifacts.require('./CcyCollateralizableFacet.sol');
-            const DataLoadableFacet = artifacts.require('./DataLoadableFacet.sol');
-            const DiamondCutFacet = artifacts.require('./DiamondCutFacet.sol');
-            const OwnedFacet = artifacts.require('./OwnedFacet.sol');
-            const StBurnableFacet = artifacts.require('./StBurnableFacet.sol');
-            const StErc20Facet = artifacts.require('./StErc20Facet.sol');
-            const StFeesFacet = artifacts.require('./StFeesFacet.sol');
-            const StLedgerFacet = artifacts.require('./StLedgerFacet.sol');
-            const StMasterFacet = artifacts.require('./StMasterFacet.sol');
-            const StMintableFacet = artifacts.require('./StMintableFacet.sol');
-            const StTransferableFacet = artifacts.require('./StTransferableFacet.sol');
-            const DiamondProxy = artifacts.require('./DiamondProxy.sol');
-
-
-            ////////////////////////////////////////////////////////
-            // deploying StructLib
-            await deployImpl(StructLib, 'StructLib');
-            
-            deployer.link(StructLib, LibMainStorage);
-            deployer.link(StructLib, ValidationLib);
-            deployer.link(StructLib, CcyLib);
-            deployer.link(StructLib, TokenLib);
-            deployer.link(StructLib, LedgerLib);
-            deployer.link(StructLib, Erc20Lib);
-            deployer.link(StructLib, TransferLib);
-            deployer.link(StructLib, LoadLib);
-            deployer.link(StructLib, SpotFeeLib);
-            deployer.link(StructLib, FuturesLib);
-
-            deployer.link(StructLib, CcyCollateralizableFacet);
-            deployer.link(StructLib, DataLoadableFacet);
-            deployer.link(StructLib, OwnedFacet);
-            deployer.link(StructLib, StBurnableFacet);
-            deployer.link(StructLib, StErc20Facet);
-            deployer.link(StructLib, StFeesFacet);
-            deployer.link(StructLib, StLedgerFacet);
-            deployer.link(StructLib, StMasterFacet);
-            deployer.link(StructLib, StMintableFacet);
-            deployer.link(StructLib, StTransferableFacet);
-
-            // deploying LibMainStorage
-            await deployImpl(LibMainStorage, 'LibMainStorage');
-
-            deployer.link(LibMainStorage, CcyCollateralizableFacet);
-            deployer.link(LibMainStorage, DataLoadableFacet);
-            deployer.link(LibMainStorage, OwnedFacet);
-            deployer.link(LibMainStorage, StBurnableFacet);
-            deployer.link(LibMainStorage, StErc20Facet);
-            deployer.link(LibMainStorage, StFeesFacet);
-            deployer.link(LibMainStorage, StLedgerFacet);
-            deployer.link(LibMainStorage, StMasterFacet);
-            deployer.link(LibMainStorage, StMintableFacet);
-            deployer.link(LibMainStorage, StTransferableFacet);
-            deployer.link(LibMainStorage, ValidationLib);
-
-            ////////////////////////////////////////////////////////
-
-            process.exit();
+            const StMaster = artifacts.require('./StMaster.sol');
+            const dcStMaster = artifacts.require('./dcStMaster.sol');
 
             // deploy
             StMaster.synchronization_timeout = 42; // secs

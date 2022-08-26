@@ -555,6 +555,12 @@ module.exports = async (callback) => {
     ledgerHash,
   });
 
+  console.log("\n\nCalculating on-chain hashcode:");
+  const result = await CONST.getLedgerHashcode(newContract);
+
+  // print out "chk.totalMinted and ld._spot_totalMintedQty"
+  console.log(result);
+
   console.timeEnd('restore');
   callback('Done.');
 };

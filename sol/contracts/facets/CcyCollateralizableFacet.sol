@@ -6,7 +6,7 @@ import { CcyLib } from "../libraries/CcyLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
-contract CollateralizableFacet {
+contract CcyCollateralizableFacet {
 	/**
 	 * @dev returns the current supporting currencies
 	 * @return ccyTypes
