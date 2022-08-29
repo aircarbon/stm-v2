@@ -3,7 +3,6 @@ pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
-import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 /**
  * @title Security Token Master
