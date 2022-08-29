@@ -33,6 +33,18 @@ contract CcyCollateralizableFacet {
 		CcyLib.addCcyType(s.ld, s.ctd, name, unit, decimals);
 	}
 
+	function addCcyTypeBatch(
+		string[] calldata _name,
+		string[] calldata _unit,
+		uint16[] calldata _decimals
+	) external {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		CcyLib.addCcyTypeBatch(s.ld, s.ctd, _name, _unit, _decimals);
+	}
+
 	/**
 	 * @dev fund or withdraw currency type collaterised tokens from a ledger owner address
 	 * @param direction 0: FUND<br/>1: WITHDRAW

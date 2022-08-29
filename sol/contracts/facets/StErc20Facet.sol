@@ -16,7 +16,7 @@ contract StErc20Facet {
 		require(len == entityId.length, "setEntityBatch: arrays are not the same length");
 
 		for (uint256 i = 0; i < len; i++) {
-			_setEntity(addr[i], entityId[i]);
+			Erc20Lib.setEntity(addr[i], entityId[i]);
 		}
 	}
 
@@ -30,7 +30,7 @@ contract StErc20Facet {
 
 	function setEntity(address addr, uint256 entityId) public {
 		ValidationLib.validateOnlyOwner();
-		_setEntity(addr, entityId);
+		Erc20Lib.setEntity(addr, entityId);
 	}
 
 	/**
@@ -201,20 +201,5 @@ contract StErc20Facet {
 		returns (uint256 spendAllowance)
 	{
 		spendAllowance = LibMainStorage.getStorage().erc20d._allowances[sender][spender];
-	}
-
-	function _setEntity(address addr, uint256 entityId) internal {
-		if (entityId == 0) {
-			return;
-		}
-		require(addr != address(0), "setEntity: invalid entity address");
-		require(entityId > 0, "setEntity: invalid entity id");
-
-		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		require(s.erc20d._whitelisted[addr], "setEntity: address is not white listed");
-		require(s.entities[addr] == 0, "setEntity: address already assigned to an entity");
-
-		s.entities[addr] = entityId;
-		s.addressesPerEntity[entityId].push(addr);
 	}
 }

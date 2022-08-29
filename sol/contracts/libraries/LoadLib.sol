@@ -31,8 +31,6 @@ library LoadLib {
 			ld._ledgerOwners.push(ledgerEntryOwner);
 		}
 
-		// setEntity(ledgerEntryOwner, entityId);
-
 		StructLib.Ledger storage entry = ld._ledger[ledgerEntryOwner];
 
 		entry.exists = true;

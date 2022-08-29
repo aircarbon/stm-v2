@@ -63,6 +63,23 @@ contract StFeesFacet {
 		SpotFeeLib.setFee_TokType(s.ld, s.std, s.globalFees, tokTypeId, ledgerOwner, feeArgs);
 	}
 
+	function setFee_TokTypeBatch(
+		uint256[] calldata tokTypeId,
+		address[] calldata ledgerOwner,
+		StructLib.SetFeeArgs[] calldata feeArgs
+	) public {	
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		uint len = ledgerOwner.length;
+		for(uint i = 0; i < len; i++) {
+			ValidationLib.validateHasEntity(ledgerOwner[i]);
+		}
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		SpotFeeLib.setFee_TokTypeBatch(s.ld, s.std, s.globalFees, tokTypeId, ledgerOwner, feeArgs);
+	}
+
 	/**
 	 * @dev set fee for a currency type
 	 * @param ccyTypeId currency type identifier
@@ -85,5 +102,18 @@ contract StFeesFacet {
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, s.globalFees, ccyTypeId, ledgerOwner, feeArgs);
+	}
+
+	function setFee_CcyTypeBatch(StructLib.SetFeeCcyTypeBatchArgs[] calldata params) external {	
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		uint len = params.length;
+		for(uint i = 0; i < len; i++) {
+			ValidationLib.validateHasEntity(params[i].ledgerOwner);
+		}
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		SpotFeeLib.setFee_CcyTypeBatch(s.ld, s.ctd, s.globalFees, params);
 	}
 }

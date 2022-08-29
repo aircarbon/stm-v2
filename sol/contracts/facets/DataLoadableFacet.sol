@@ -6,6 +6,7 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { LoadLib } from "../libraries/LoadLib.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 import { StErc20Facet } from "./StErc20Facet.sol";
+import { Erc20Lib } from "../libraries/Erc20Lib.sol";
 
 contract DataLoadableFacet {
 	function createLedgerEntryBatch(StructLib.CreateLedgerEntryArgs[] calldata params) external {
@@ -15,7 +16,7 @@ contract DataLoadableFacet {
 
 		for (uint256 i = 0; i < len; i++) {
 			StructLib.CreateLedgerEntryArgs memory currParam = params[i];
-			StErc20Facet(address(this)).setEntity(currParam.ledgerEntryOwner, currParam.entityId);
+			Erc20Lib.setEntity(currParam.ledgerEntryOwner, currParam.entityId);
 			LoadLib.createLedgerEntry(
 				ld,
 				currParam.ledgerEntryOwner,
@@ -41,7 +42,7 @@ contract DataLoadableFacet {
 		uint256 entityId
 	) public {
 		ValidationLib.validateOnlyOwner();
-		StErc20Facet(address(this)).setEntity(ledgerEntryOwner, entityId);
+		Erc20Lib.setEntity(ledgerEntryOwner, entityId);
 		LoadLib.createLedgerEntry(
 			LibMainStorage.getStorage().ld,
 			ledgerEntryOwner,
@@ -92,6 +93,11 @@ contract DataLoadableFacet {
 		);
 	}
 
+	function addSecTokenBatch(StructLib.AddSecTokenBatchArgs[] calldata params) external {
+		ValidationLib.validateOnlyOwner();
+		LoadLib.addSecTokenBatch(LibMainStorage.getStorage().ld, params);
+	}
+
 	/**
 	 * @dev setting totals for security token
 	 * @param base_id 1-based - assigned (once, when set to initial zero value) by Mint()
@@ -115,5 +121,13 @@ contract DataLoadableFacet {
 			totalMintedQty,
 			totalBurnedQty
 		);
+	}
+
+	function loadSecTokenBatch(
+		StructLib.SecTokenBatch[] memory batches,
+		uint64 _batches_currentMax_id
+	) public {
+		ValidationLib.validateOnlyOwner();
+		LoadLib.loadSecTokenBatch(LibMainStorage.getStorage().ld, batches, _batches_currentMax_id);
 	}
 }

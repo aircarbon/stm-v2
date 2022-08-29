@@ -5,6 +5,7 @@ pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
 import { TransferLib } from "./TransferLib.sol";
+import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 
 library Erc20Lib {
 	struct transferErc20Args {
@@ -17,6 +18,21 @@ library Erc20Lib {
 
 	event Transfer(address indexed from, address indexed to, uint256 value);
 	event Approval(address indexed owner, address indexed spender, uint256 value);
+
+	function setEntity(address addr, uint256 entityId) internal {
+		if (entityId == 0) {
+			return;
+		}
+		require(addr != address(0), "setEntity: invalid entity address");
+		require(entityId > 0, "setEntity: invalid entity id");
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		require(s.erc20d._whitelisted[addr], "setEntity: address is not white listed");
+		require(s.entities[addr] == 0, "setEntity: address already assigned to an entity");
+
+		s.entities[addr] = entityId;
+		s.addressesPerEntity[entityId].push(addr);
+	}
 
 	function getWhitelist(
 		address[] calldata wld,

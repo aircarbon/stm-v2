@@ -142,6 +142,7 @@ module.exports = {
             deployer.link(LibMainStorage, StMintableFacet);
             deployer.link(LibMainStorage, StTransferableFacet);
             deployer.link(LibMainStorage, ValidationLib);
+            deployer.link(LibMainStorage, Erc20Lib);
 
             // deploying ValidationLib
             await deployImpl(ValidationLib, 'ValidationLib');
@@ -186,6 +187,7 @@ module.exports = {
             await deployImpl(Erc20Lib, 'Erc20Lib');
             deployer.link(Erc20Lib, StErc20Facet);
             deployer.link(Erc20Lib, StTransferableFacet);
+            deployer.link(Erc20Lib, DataLoadableFacet);
 
             // deploying TokenLib
             await deployImpl(TokenLib, 'TokenLib');
