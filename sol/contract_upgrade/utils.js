@@ -4,13 +4,14 @@
 const { soliditySha3, hexToNumberString } = require('web3-utils');
 const Web3 = require('web3');
 const argv = require('yargs-parser')(process.argv.slice(2));
-const parallelLimit = require('async/parallelLimit');
 const fs = require('fs');
 const path = require('path');
 
 const CONST = require('../const');
 const { helpers } = require('../../orm/build');
 const config = require('../truffle-config');
+
+const series = require('async/series');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -249,56 +250,7 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
   return ledgerHash;
 }
 
-// get transfer full token event by chunk
-const EVENT_CHUNK_SIZE = 1000;
-const MAX_CONCURRENT = 5;
-const startFrom = 3799000;
-async function getTransferFullTokenEvents(contract) {
-  const promises = [];
-  const network = argv?.network || 'development';
-  // @ts-ignore
-  const web3 = new Web3(config.networks[network].provider());
-  const latestBlockNumber = await web3.eth.getBlockNumber();
-  console.log(`Latest block number: ${latestBlockNumber}`);
-  const range = Math.ceil((latestBlockNumber - startFrom) / EVENT_CHUNK_SIZE);
-
-  const allFuncs = [];
-  for (let index = 0; index <= range; index += 1) {
-    const fromBlock = index * EVENT_CHUNK_SIZE + startFrom;
-    const toBlock = (index + 1) * EVENT_CHUNK_SIZE + startFrom;
-
-    allFuncs.push(contract.getPastEvents.bind(this, 'TransferedFullSecToken', {fromBlock, toBlock}));
-
-    // promises.push(function searchEventByBlockRange(cb) {
-      // console.log(`#${index}/${range} - Searching for TransferedFullSecToken`, {
-      //   fromBlock,
-      //   toBlock,
-      // });
-
-      // contract
-      //   .getPastEvents('TransferedFullSecToken', {
-      //     fromBlock,
-      //     toBlock,
-      //   })
-      //   .then((events) => cb(null, events))
-      //   .catch((err) => cb(err));
-    // });
-  }
-
-  const funcsBatched = createBatches(allFuncs, 100);
-
-  let results = [];
-  for(let i = 0; i < funcsBatched.length; i++) {
-    console.log(`#${i + 1}/${funcsBatched.length} - Searching for TransferedFullSecToken`);
-    const newResults = await retry(funcsBatched[i], 1000);
-    results = [...results, ...newResults];
-  }
-
-  // return (await parallelLimit(promises, MAX_CONCURRENT)).flat();
-  return results.flat();
-}
-
-async function createBackupData(contract, contractAddress, contractType, getTransferedFullSecToken = true) {
+async function createBackupData(contract, contractAddress, contractType) {
   const owners = await contract.getOwners();
   const unit = await contract.unit();
   const symbol = await contract.symbol();
@@ -333,7 +285,17 @@ async function createBackupData(contract, contractAddress, contractType, getTran
   // get ledgers
   const ledgerOwners = previousLedgersOwners || (await contract.getLedgerOwners());
 
-  const ledgers = (await Promise.all(ledgerOwners.map((owner) => contract.getLedgerEntry(owner))))
+  // this is used due to Ganache limitations
+  let ledgers = [];
+  if(network === 'development') {
+    for(let i = 0; i < ledgerOwners.length; i++) {
+      ledgers.push(await contract.getLedgerEntry(ledgerOwners[i]));
+    }
+  } else {
+    ledgers = (await Promise.all(ledgerOwners.map((owner) => contract.getLedgerEntry(owner))));
+  }
+
+  ledgers = ledgers
     .map((ledger) => helpers.decodeWeb3Object(ledger))
     .map((ledger, index, ledgers) => {
       return {
@@ -350,10 +312,8 @@ async function createBackupData(contract, contractAddress, contractType, getTran
 
   if (!previousLedgerOwnersFees) {
     // fetch ledger owner fee for all currencies types and token types
-    const ledgerOwnersFeesPromises = [];
     console.time('ledgerOwnersFeesPromises');
 
-    ////////////////////////////////////////////////////////////////////////////////////
     let results = [];
     for(let i = 0; i < ledgerOwners.length; i++) {
       console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${ledgerOwners[i]}`);
@@ -388,35 +348,7 @@ async function createBackupData(contract, contractAddress, contractType, getTran
         tokens: tokenFees.map((fee) => helpers.decodeWeb3Object(fee)),
       });
     }
-    
-    ////////////////////////////////////////////////////////////////////////////////////
-    
-    // ledgerOwners.forEach((owner, index) => {
-    //   ledgerOwnersFeesPromises.push(function getedgerOwnersFees(cb) {
-    //     console.log(`#${index + 1}/${ledgerOwners.length} - getLedgerOwnersFees`, owner);
-    //     const ccyFeePromise = [];
-    //     for (let index = 0; index < currencyTypes.length; index++) {
-    //       ccyFeePromise.push(contract.getFee(CONST.getFeeType.CCY, currencyTypes[index].id, owner));
-    //     }
-    //     const tokenFeePromise = [];
-    //     for (let index = 0; index < tokenTypes.length; index++) {
-    //       tokenFeePromise.push(contract.getFee(CONST.getFeeType.TOK, tokenTypes[index].id, owner));
-    //     }
 
-    //     Promise.all(ccyFeePromise)
-    //       .then((ccyFees) =>
-    //         Promise.all(tokenFeePromise).then((tokenFees) =>
-    //           cb(null, {
-    //             currencies: ccyFees.map((fee) => helpers.decodeWeb3Object(fee)),
-    //             tokens: tokenFees.map((fee) => helpers.decodeWeb3Object(fee)),
-    //           }),
-    //         ),
-    //       )
-    //       .catch((err) => cb(err));
-    //   });
-    // });
-
-    // previousLedgerOwnersFees = await series(ledgerOwnersFeesPromises);
     previousLedgerOwnersFees = results;
     console.timeEnd('ledgerOwnersFeesPromises');
   }
@@ -428,7 +360,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
   const funcs = [];
   for (let index = 1; index <= maxBatchId; index++) {
     funcs.push(contract.getSecTokenBatch.bind(this, index));
-    // batches.push(await contract.getSecTokenBatch(index));
   }
 
   const batchedFuncs = createBatches(funcs, 50);
@@ -470,7 +401,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
 
   // get all stId
   const maxStId = Number(hexToNumberString(secTokenMintedCount));
-  const getTokenPromise = [];
   const existStId = [];
   ledgers.forEach((ledger) => {
     ledger.tokens.forEach((token) => {
@@ -484,7 +414,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
   const allFuncs = [];
   for (let index = 0; index < maxStId; index++) {
     if (!existStId.includes(index + 1)) {
-      // getTokenPromise.push(contract.getSecToken(index + 1));
       allFuncs.push(contract.getSecToken.bind(this, index + 1));
     }
   }
@@ -497,25 +426,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
     const newResults = await retry(funcBatches[i], 1000);
     globalSecTokens = [...globalSecTokens, ...newResults];
   }
-
-  // globalSecTokens = await series(getTokenPromise);
-
-  // get all TransferedFullSecToken events
-  // TODO:  will remove on next migration
-  console.time('transferedFullSecTokens');
-  const events = getTransferedFullSecToken ? await getTransferFullTokenEvents(contract) : [];
-
-  const transferedFullSecTokens = events
-    .filter((event) => Number(event.returnValues.mergedToSecTokenId) > 0)
-    .map((event) => ({
-      from: event.returnValues.from,
-      to: event.returnValues.to,
-      stId: event.returnValues.stId,
-      mergedToSecTokenId: event.returnValues.mergedToSecTokenId,
-      qty: event.returnValues.qty,
-      transferType: event.returnValues.transferType,
-    }));
-  console.timeEnd('transferedFullSecTokens');
 
   // write backup to json file
   const backup = {
@@ -535,7 +445,7 @@ async function createBackupData(contract, contractAddress, contractType, getTran
       secTokenMintedCount: hexToNumberString(secTokenMintedCount),
       secTokenBurnedQty: hexToNumberString(secTokenBurnedQty),
       secTokenMintedQty: hexToNumberString(secTokenMintedQty),
-      transferedFullSecTokensEvents: transferedFullSecTokens,
+      transferedFullSecTokensEvents: [],
       whitelistAddresses,
       ledgerOwners,
       ledgerOwnersFees: previousLedgerOwnersFees || [],
