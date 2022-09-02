@@ -7,8 +7,17 @@ const { toBN } = require('web3-utils');
 const chalk = require('chalk');
 const argv = require('yargs-parser')(process.argv.slice(2));
 // @ts-ignore artifacts from truffle
-const StMaster = artifacts.require('StMaster');
-const dcStMaster = artifacts.require('dcStMaster');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const DataLoadableFacet = artifacts.require('DataLoadableFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StMintableFacet = artifacts.require('StMintableFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+
 const series = require('async/series');
 
 const { getLedgerHashOffChain, createBackupData, createBatches } = require('./utils');
@@ -46,20 +55,28 @@ module.exports = async (callback) => {
   const { data, info, ledgerHash: previousHash } = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
 
   // deploy new contract with info
-  const newContract = await StMaster.at(newContractAddress);
-  const newContractDc = await dcStMaster.at(newContractAddress);
+  const newContract_CcyCollateralizableFacet = await CcyCollateralizableFacet.at(newContractAddress);
+  const newContract_DataLoadableFacet = await DataLoadableFacet.at(newContractAddress);
+  const newContract_OwnedFacet = await OwnedFacet.at(newContractAddress);
+  const newContract_StBurnableFacet = await StBurnableFacet.at(newContractAddress);
+  const newContract_StErc20Facet = await StErc20Facet.at(newContractAddress);
+  const newContract_StFeesFacet = await StFeesFacet.at(newContractAddress);
+  const newContract_StLedgerFacet = await StLedgerFacet.at(newContractAddress);
+  const newContract_StMasterFacet = await StMasterFacet.at(newContractAddress);
+  const newContract_StMintableFacet = await StMintableFacet.at(newContractAddress);
+  const newContract_StTransferableFacet = await StTransferableFacet.at(newContractAddress);
   // show debug info in table format
   console.log(chalk.yellow(`${info.name} (${info.version})`));
 
   // get contract info
-  const name = await newContract.name();
-  const version = await newContract.version();
-  console.log(`New contract address: ${newContract.address}`);
+  const name = await newContract_StMasterFacet.name();
+  const version = await newContract_StMasterFacet.version();
+  console.log(`New contract address: ${newContractAddress}`);
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
   // add ccy data to new contract
-  const ccyTypes = await newContract.getCcyTypes();
+  const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
   const currencyNames = currencyTypes.map((type) => type.name);
 
@@ -72,7 +89,7 @@ module.exports = async (callback) => {
     function addCcyTypeBatch(cb) {
       console.log(`Adding ccyTypes - ${index + 1} / ${ccyTypesBatches.length}`);
 
-      newContractDc
+      newContract_CcyCollateralizableFacet
         .addCcyTypeBatch(
           ccyBatch.map((ccyType) => ccyType.name), 
           ccyBatch.map((ccyType) => ccyType.unit), 
@@ -86,7 +103,7 @@ module.exports = async (callback) => {
   await sleep(1000);
 
   // add token types to new contract
-  const tokTypes = await newContract.getSecTokenTypes();
+  const tokTypes = await newContract_StLedgerFacet.getSecTokenTypes();
   const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
   const tokenNames = tokenTypes.map((type) => type.name);
 
@@ -99,7 +116,7 @@ module.exports = async (callback) => {
     function addSecTokenTypeBatch(cb) {
       console.log(`Adding tokenTypeBatch ${index + 1}/${tokenTypesBatches.length}`);
 
-      newContract
+      newContract_StLedgerFacet
         .addSecTokenTypeBatch(
           tokenTypeBatch.map((ccyType) => {
             return {
@@ -117,12 +134,12 @@ module.exports = async (callback) => {
   await series(tokenTypesPromises);
   await sleep(1000);
 
-  const hasSealed = await newContract.getContractSeal();
+  const hasSealed = await newContract_StMasterFacet.getContractSeal();
   console.log('Contract seal', hasSealed);
 
   if (!hasSealed) {
     // load batches data to new contract
-    const maxBatchId = await newContract.getSecTokenBatch_MaxId();
+    const maxBatchId = await newContract_StLedgerFacet.getSecTokenBatch_MaxId();
     console.log(`Max batch id: ${maxBatchId}`);
 
     console.log('\n Loading Sec Tokens (by batches).');
@@ -142,7 +159,7 @@ module.exports = async (callback) => {
           function loadSecTokenBatch(cb) {
             console.log(`Processing batches: ${index + 1}/${allBatches.length}`);
             const batchCount = batches[1]?.id || batches[0]?.id;
-            newContractDc
+            newContract_DataLoadableFacet
               .loadSecTokenBatch(batches, batchCount)
               .then((result) => cb(null, result))
               .catch((error) => cb(error));
@@ -153,8 +170,8 @@ module.exports = async (callback) => {
     await sleep(1000);
 
     // get ledgers
-    const ledgerOwners = await newContract.getLedgerOwners();
-    const ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract.getLedgerEntry(owner))))
+    const ledgerOwners = await newContract_StLedgerFacet.getLedgerOwners();
+    const ledgers = (await Promise.all(ledgerOwners.map((owner) => StLedgerFacet.getLedgerEntry(owner))))
       .map((ledger) => helpers.decodeWeb3Object(ledger))
       .map((ledger) => {
         return {
@@ -169,7 +186,7 @@ module.exports = async (callback) => {
         };
       });
 
-    const whitelistedAddresses = await newContract.getWhitelist();
+    const whitelistedAddresses = await newContract_StErc20Facet.getWhitelist();
   
   // load ledgers data to new contract
   let filteredLedgersWithOwners = [];
@@ -190,7 +207,7 @@ module.exports = async (callback) => {
     function createLedgerEntryBatch(cb) {
       console.log(`Creating ledger batch entry ${index + 1}/${ledgersBatches.length}`);
 
-      newContract
+      newContract_DataLoadableFacet
         .createLedgerEntryBatch(ledgerBatch.map((obj) => {
           return {
             ledgerEntryOwner: obj.owner,
@@ -252,7 +269,7 @@ module.exports = async (callback) => {
       const currAddr = addresses[index % 9 + 1];
       console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAddr}`);
 
-      newContractDc
+      newContract_DataLoadableFacet
         .addSecTokenBatch(tokenWithOwnerBatch.map((batchWithOwner) => {
           return {
             ledgerEntryOwner: batchWithOwner.owner,
@@ -287,7 +304,7 @@ module.exports = async (callback) => {
   do{
     try{
       console.log(`Checking if tokens exists (in batches) - ${i + 1}/${batches.length}`);
-      const promises = batches[i].map((token) => newContract.getSecToken(token.stId));
+      const promises = batches[i].map((token) => newContract_StLedgerFacet.getSecToken(token.stId));
   
       const results = await Promise.all(promises);
       tokensExist = [...tokensExist, ...results];
@@ -324,7 +341,7 @@ module.exports = async (callback) => {
       const currAddr = addresses[index % 9 + 1];
       console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length} - from ${currAddr}`);
 
-        newContractDc.addSecTokenBatch(
+      newContract_DataLoadableFacet.addSecTokenBatch(
           tokenBatch.map((tokenObj) => {
             return {
               ledgerEntryOwner: '0x0000000000000000000000000000000000000000',
@@ -349,7 +366,7 @@ module.exports = async (callback) => {
   await series(promises);
   await sleep(1000);
 
-    await newContract.setTokenTotals(
+    await newContract_DataLoadableFacet.setTokenTotals(
       data.secTokenBaseId,
       toBN(data.secTokenMintedCount),
       toBN(data.secTokenMintedQty),
@@ -381,7 +398,7 @@ module.exports = async (callback) => {
       const currAddr = addresses[index % 9 + 1];
       console.log(`Setting fee for ccyTypes (in batch) - ${index + 1}/${ccyTypesBatches.length} from ${currAddr}`);
 
-        newContractDc.setFee_CcyTypeBatch(
+      newContract_StFeesFacet.setFee_CcyTypeBatch(
           tokenBatch.map((ccyTypeObj) => {
             return {
               ccyTypeId: ccyTypeObj.ccyType.id,
@@ -421,7 +438,7 @@ module.exports = async (callback) => {
     function setCcyTypesBatches(cb) {
       console.log(`Setting fee for token types (in batch) - ${index + 1}/${ccyTypesBatches.length}`);
 
-        newContractDc.setFee_TokTypeBatch(
+      newContract_StFeesFacet.setFee_TokTypeBatch(
           tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.tokenType.id),
           new Array(tokTypeBatch.length).fill(CONST.nullAddr),
           tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.fee),
@@ -464,7 +481,7 @@ module.exports = async (callback) => {
       const currAddr = addresses[index % 9 + 1];
       console.log(`Setting fee for ccyTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndCcyTypesBatches.length} from ${currAddr}`);
 
-        newContractDc.setFee_CcyTypeBatch(
+      newContract_StFeesFacet.setFee_CcyTypeBatch(
           feesBatch.map((ccyTypeObj) => {
             return {
               ccyTypeId: ccyTypeObj.ccyTypeId,
@@ -512,7 +529,7 @@ module.exports = async (callback) => {
       const currAddr = addresses[index % 9 + 1];
       console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length} - from ${currAddr}`);
 
-        newContractDc.setFee_TokTypeBatch(
+      newContract_StFeesFacet.setFee_TokTypeBatch(
           feesBatch.map((tokenTypeObj) => tokenTypeObj.tokenTypeId),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.ledgerOwner),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.fee),
@@ -527,13 +544,24 @@ module.exports = async (callback) => {
     await sleep(1000);
   }
 
-  if (!hasSealed) await newContract.sealContract();
+  if (!hasSealed) await newContract_StMasterFacet.sealContract();
 
-  const backupData = await createBackupData(newContract, newContractAddress, 0, false);
+  const backupData = await createBackupData([
+    newContract_CcyCollateralizableFacet,
+    newContract_DataLoadableFacet,
+    newContract_OwnedFacet,
+    newContract_StBurnableFacet,
+    newContract_StErc20Facet,
+    newContract_StFeesFacet,
+    newContract_StLedgerFacet,
+    newContract_StMasterFacet,
+    newContract_StMintableFacet,
+    newContract_StTransferableFacet
+  ], newContractAddress, 0);
 
   const onChainLedgerHash = argv?.h === 'onchain';
   const ledgerHash = onChainLedgerHash
-    ? await CONST.getLedgerHashcode(newContract)
+    ? await CONST.getLedgerHashcode(newContract_StTransferableFacet)
     : getLedgerHashOffChain(backupData.data, data.transferedFullSecTokensEvents, data.whitelistAddresses.length);
 
   // write backup to json file
@@ -553,12 +581,6 @@ module.exports = async (callback) => {
     previousHash,
     ledgerHash,
   });
-
-  console.log("\n\nCalculating on-chain hashcode:");
-  const result = await CONST.getLedgerHashcode(newContract);
-
-  // print out "chk.totalMinted and ld._spot_totalMintedQty"
-  console.log(result);
 
   console.timeEnd('restore');
   callback('Done.');

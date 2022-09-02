@@ -5,7 +5,16 @@ const fs = require('fs');
 const path = require('path');
 const argv = require('yargs-parser')(process.argv.slice(2));
 // @ts-ignore artifacts from truffle
-const StMaster = artifacts.require('StMaster');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const DataLoadableFacet = artifacts.require('DataLoadableFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StMintableFacet = artifacts.require('StMintableFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
 
 const { getLedgerHashOffChain, createBackupData } = require('./utils');
 const CONST = require('../const');
@@ -25,22 +34,45 @@ module.exports = async (callback) => {
     return callback(new Error(`Invalid address: ${contractAddress}`));
   }
 
-  const contract = await StMaster.at(contractAddress);
+  const contract_CcyCollateralizableFacet = await CcyCollateralizableFacet.at(contractAddress);
+  const contract_DataLoadableFacet = await DataLoadableFacet.at(contractAddress);
+  const contract_OwnedFacet = await OwnedFacet.at(contractAddress);
+  const contract_StBurnableFacet = await StBurnableFacet.at(contractAddress);
+  const contract_StErc20Facet = await StErc20Facet.at(contractAddress);
+  const contract_StFeesFacet = await StFeesFacet.at(contractAddress);
+  const contract_StLedgerFacet = await StLedgerFacet.at(contractAddress);
+  const contract_StMasterFacet = await StMasterFacet.at(contractAddress);
+  const contract_StMintableFacet = await StMintableFacet.at(contractAddress);
+  const contract_StTransferableFacet = await StTransferableFacet.at(contractAddress);
 
   // TODO: support different contract types
   // skip if contract type is not commodity
-  const contractType = await contract.getContractType();
+  const contractType = await contract_StMasterFacet.getContractType();
   if (Number(contractType) !== Number(CONST.contractType.COMMODITY)) {
     callback(`Invalid contract type: ${contractType}`);
     return;
   }
 
   // get contract info
-  const backup = await createBackupData(contract, contractAddress, contractType);
+  const backup = await createBackupData([
+      contract_CcyCollateralizableFacet,
+      contract_DataLoadableFacet,
+      contract_OwnedFacet,
+      contract_StBurnableFacet,
+      contract_StErc20Facet,
+      contract_StFeesFacet,
+      contract_StLedgerFacet,
+      contract_StMasterFacet,
+      contract_StMintableFacet,
+      contract_StTransferableFacet,
+    ], 
+    contractAddress, 
+    contractType
+  );
 
   const onChainLedgerHash = argv?.h === 'onchain';
   const ledgerHash = onChainLedgerHash
-    ? await CONST.getLedgerHashcode(contract)
+    ? await CONST.getLedgerHashcode(contract_StTransferableFacet)
     : getLedgerHashOffChain(backup.data, backup.data.transferedFullSecTokensEvents);
 
   // create data directory if not exists
