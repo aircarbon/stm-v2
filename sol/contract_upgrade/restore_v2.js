@@ -18,7 +18,7 @@ const { helpers } = require('../../orm/build');
 process.on('unhandledRejection', console.error);
 
 // how many items to process in one batch
-const BATCH_CHUNK_SIZE = 3;
+const BATCH_CHUNK_SIZE = 2;
 
 // create a sleep function to be used in the async series
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -96,7 +96,7 @@ module.exports = async (callback) => {
   console.log('\n Adding Sec Token Types (by batches).');
   // is order important? If not, can send multiple transactions at the same time
   const tokenTypesPromises = tokenTypesBatches.map((tokenTypeBatch, index) => 
-    function addCcyTypeBatch(cb) {
+    function addSecTokenTypeBatch(cb) {
       console.log(`Adding tokenTypeBatch ${index + 1}/${tokenTypesBatches.length}`);
 
       newContract
@@ -127,7 +127,6 @@ module.exports = async (callback) => {
 
     console.log('\n Loading Sec Tokens (by batches).');
 
-    // is order important? If not, can send multiple transactions at the same time
     const batchesPromises = data.batches
       .filter((batch) => Number(batch.id) > Number(maxBatchId))
       .reduce((result, batch) => {
@@ -332,8 +331,8 @@ module.exports = async (callback) => {
               batchId: tokenObj.token.batchId,
               stId: tokenObj.token.stId,
               tokTypeId: tokenObj.token.tokTypeId,
-              mintedQty: Number(tokenObj.token.mintedQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
-              currentQty: Number(tokenObj.token.currentQty) - Number(tokenObj.transferedFullSecTokensEvent?.qty ?? 0),
+              mintedQty: Number(tokenObj.token.mintedQty),
+              currentQty: Number(tokenObj.token.currentQty),
               ft_price: tokenObj.token.ft_price,
               ft_lastMarkPrice: tokenObj.token.ft_lastMarkPrice,
               ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,

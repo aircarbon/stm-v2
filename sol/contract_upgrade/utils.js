@@ -11,6 +11,8 @@ const CONST = require('../const');
 const { helpers } = require('../../orm/build');
 const config = require('../truffle-config');
 
+const series = require('async/series');
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // implement get ledger hash
@@ -248,38 +250,7 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
   return ledgerHash;
 }
 
-// get transfer full token event by chunk
-const EVENT_CHUNK_SIZE = 1000;
-const MAX_CONCURRENT = 5;
-const startFrom = 3799000;
-async function getTransferFullTokenEvents(contract) {
-  const promises = [];
-  const network = argv?.network || 'development';
-  // @ts-ignore
-  const web3 = new Web3(config.networks[network].provider());
-  const latestBlockNumber = await web3.eth.getBlockNumber();
-  console.log(`Latest block number: ${latestBlockNumber}`);
-  const range = Math.ceil((latestBlockNumber - startFrom) / EVENT_CHUNK_SIZE);
-
-  const allFuncs = [];
-  for (let index = 0; index <= range; index += 1) {
-    const fromBlock = index * EVENT_CHUNK_SIZE + startFrom;
-    const toBlock = (index + 1) * EVENT_CHUNK_SIZE + startFrom;
-    allFuncs.push(contract.getPastEvents.bind(this, 'TransferedFullSecToken', {fromBlock, toBlock}))
-  }
-
-  const funcsBatched = createBatches(allFuncs, 100);
-
-  let results = [];
-  for(let i = 0; i < funcsBatched.length; i++) {
-    console.log(`#${i + 1}/${funcsBatched.length} - Searching for TransferedFullSecToken`);
-    const newResults = await retry(funcsBatched[i], 1000);
-    results = [...results, ...newResults];
-  }
-  return results.flat();
-}
-
-async function createBackupData(contract, contractAddress, contractType, getTransferedFullSecToken = true) {
+async function createBackupData(contract, contractAddress, contractType) {
   const owners = await contract.getOwners();
   const unit = await contract.unit();
   const symbol = await contract.symbol();
@@ -314,7 +285,17 @@ async function createBackupData(contract, contractAddress, contractType, getTran
   // get ledgers
   const ledgerOwners = previousLedgersOwners || (await contract.getLedgerOwners());
 
-  const ledgers = (await Promise.all(ledgerOwners.map((owner) => contract.getLedgerEntry(owner))))
+  // this is used due to Ganache limitations
+  let ledgers = [];
+  if(network === 'development') {
+    for(let i = 0; i < ledgerOwners.length; i++) {
+      ledgers.push(await contract.getLedgerEntry(ledgerOwners[i]));
+    }
+  } else {
+    ledgers = (await Promise.all(ledgerOwners.map((owner) => contract.getLedgerEntry(owner))));
+  }
+
+  ledgers = ledgers
     .map((ledger) => helpers.decodeWeb3Object(ledger))
     .map((ledger, index, ledgers) => {
       return {
@@ -331,7 +312,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
 
   if (!previousLedgerOwnersFees) {
     // fetch ledger owner fee for all currencies types and token types
-    const ledgerOwnersFeesPromises = [];
     console.time('ledgerOwnersFeesPromises');
 
     let results = [];
@@ -421,7 +401,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
 
   // get all stId
   const maxStId = Number(hexToNumberString(secTokenMintedCount));
-  const getTokenPromise = [];
   const existStId = [];
   ledgers.forEach((ledger) => {
     ledger.tokens.forEach((token) => {
@@ -448,23 +427,6 @@ async function createBackupData(contract, contractAddress, contractType, getTran
     globalSecTokens = [...globalSecTokens, ...newResults];
   }
 
-  // get all TransferedFullSecToken events
-  // TODO:  will remove on next migration
-  console.time('transferedFullSecTokens');
-  const events = getTransferedFullSecToken ? await getTransferFullTokenEvents(contract) : [];
-
-  const transferedFullSecTokens = events
-    .filter((event) => Number(event.returnValues.mergedToSecTokenId) > 0)
-    .map((event) => ({
-      from: event.returnValues.from,
-      to: event.returnValues.to,
-      stId: event.returnValues.stId,
-      mergedToSecTokenId: event.returnValues.mergedToSecTokenId,
-      qty: event.returnValues.qty,
-      transferType: event.returnValues.transferType,
-    }));
-  console.timeEnd('transferedFullSecTokens');
-
   // write backup to json file
   const backup = {
     info: {
@@ -483,272 +445,7 @@ async function createBackupData(contract, contractAddress, contractType, getTran
       secTokenMintedCount: hexToNumberString(secTokenMintedCount),
       secTokenBurnedQty: hexToNumberString(secTokenBurnedQty),
       secTokenMintedQty: hexToNumberString(secTokenMintedQty),
-      transferedFullSecTokensEvents: transferedFullSecTokens,
-      whitelistAddresses,
-      ledgerOwners,
-      ledgerOwnersFees: previousLedgerOwnersFees || [],
-      ccyTypes: currencyTypes.map((ccy) => ({
-        id: ccy.id,
-        name: ccy.name,
-        unit: ccy.unit,
-        decimals: ccy.decimals,
-      })),
-      ccyFees: previousGlobalFees?.currencies ?? ccyFees.map((fee) => helpers.decodeWeb3Object(fee)),
-      tokenTypes: tokenTypes.map((tok, index) => {
-        return {
-          ...tok,
-          ft: {
-            expiryTimestamp: tokTypes[0][index]['ft']['expiryTimestamp'],
-            underlyerTypeId: tokTypes[0][index]['ft']['underlyerTypeId'],
-            refCcyId: tokTypes[0][index]['ft']['refCcyId'],
-            initMarginBips: tokTypes[0][index]['ft']['initMarginBips'],
-            varMarginBips: tokTypes[0][index]['ft']['varMarginBips'],
-            contractSize: tokTypes[0][index]['ft']['contractSize'],
-            feePerContract: tokTypes[0][index]['ft']['feePerContract'],
-          },
-        };
-      }),
-      tokenFees: previousGlobalFees?.tokens ?? tokenFees.map((fee) => helpers.decodeWeb3Object(fee)),
-      globalSecTokens: globalSecTokens.map((token) => helpers.decodeWeb3Object(token)),
-      ledgers,
-      batches: batches
-        .map((batch) => helpers.decodeWeb3Object(batch))
-        .map((batch, index) => {
-          return {
-            ...batch,
-            origTokFee: {
-              fee_fixed: batches[index]['origTokFee']['fee_fixed'],
-              fee_percBips: batches[index]['origTokFee']['fee_percBips'],
-              fee_min: batches[index]['origTokFee']['fee_min'],
-              fee_max: batches[index]['origTokFee']['fee_max'],
-              ccy_perMillion: batches[index]['origTokFee']['ccy_perMillion'],
-              ccy_mirrorFee: batches[index]['origTokFee']['ccy_mirrorFee'],
-            },
-          };
-        }),
-    },
-  };
-  return backup;
-}
-
-async function createBackupData2(contracts, contractAddress, contractType, getTransferedFullSecToken = true) {
-  const [
-    newContract_CcyCollateralizableFacet,
-    newContract_DataLoadableFacet,
-    newContract_OwnedFacet,
-    newContract_StBurnableFacet,
-    newContract_StErc20Facet,
-    newContract_StFeesFacet,
-    newContract_StLedgerFacet,
-    newContract_StMasterFacet,
-    newContract_StMintableFacet,
-    newContract_StTransferableFacet,
-  ] = contracts;
-
-  const owners = await newContract_OwnedFacet.getOwners();
-  const unit = await newContract_StMasterFacet.unit();
-  const symbol = await newContract_StErc20Facet.symbol();
-  const decimals = await newContract_StErc20Facet.decimals();
-  const network = argv?.network || 'development';
-  const name = await newContract_StMasterFacet.name();
-  const version = await newContract_StMasterFacet.version();
-  console.log(`Contract address: ${contractAddress}`);
-  console.log(`Name: ${name}`);
-  console.log(`Version: ${version}`);
-
-  // get all ccy and token types
-  const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
-  const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
-
-  const tokTypes = await newContract_StLedgerFacet.getSecTokenTypes();
-  const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
-
-  // open contract file if exist
-  let previousLedgersOwners;
-  let previousGlobalFees;
-  let previousLedgerOwnersFees;
-  const dataFile = path.join(__dirname, `${name}.json`);
-  if (fs.existsSync(dataFile)) {
-    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-    console.log(`Previous data found: ${name}.json`, data);
-    previousLedgersOwners = data.ledgerOwners;
-    previousGlobalFees = data.globalFees;
-    previousLedgerOwnersFees = data.ledgerOwnersFees;
-  }
-
-  // get ledgers
-  const ledgerOwners = previousLedgersOwners || (await newContract_StLedgerFacet.getLedgerOwners());
-
-  const ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StErc20Facet.getLedgerEntry(owner))))
-    .map((ledger) => helpers.decodeWeb3Object(ledger))
-    .map((ledger, index, ledgers) => {
-      return {
-        ...ledger,
-        ccys: ledgers[index].ccys.map((ccy) => ({
-          ccyTypeId: ccy.ccyTypeId,
-          name: ccy.name,
-          unit: ccy.unit,
-          balance: ccy.balance,
-          reserved: ccy.reserved,
-        })),
-      };
-    });
-
-  if (!previousLedgerOwnersFees) {
-    // fetch ledger owner fee for all currencies types and token types
-    const ledgerOwnersFeesPromises = [];
-    console.time('ledgerOwnersFeesPromises');
-
-    let results = [];
-    for(let i = 0; i < ledgerOwners.length; i++) {
-      console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${ledgerOwners[i]}`);
-      const ccyFeeFuncs = [];
-      for (let index = 0; index < currencyTypes.length; index++) {
-        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, currencyTypes[index].id, ledgerOwners[i]));
-      }
-
-      const tokenFeeFuncs = [];
-      for (let index = 0; index < tokenTypes.length; index++) {
-        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, tokenTypes[index].id, ledgerOwners[i]));
-      }
-
-      const ccyFeeFundBatches = createBatches(ccyFeeFuncs, 50);
-      const tokenFeeFuncBatches = createBatches(tokenFeeFuncs, 50);
-
-      let ccyFees = [];
-      
-      for(let batch of ccyFeeFundBatches) {
-        const newResults = await retry(batch, 2000);
-        ccyFees = [...ccyFees, ...newResults];
-      }
-      
-      let tokenFees = [];
-      for(let batch of tokenFeeFuncBatches) {
-        const newResults = await retry(batch, 2000);
-        tokenFees = [...tokenFees, ...newResults];
-      }
-
-      results.push({
-        currencies: ccyFees.map((fee) => helpers.decodeWeb3Object(fee)),
-        tokens: tokenFees.map((fee) => helpers.decodeWeb3Object(fee)),
-      });
-    }
-
-    previousLedgerOwnersFees = results;
-    console.timeEnd('ledgerOwnersFeesPromises');
-  }
-
-  // get all batches
-  let batches = [];
-  const maxBatchId = await newContract_StLedgerFacet.getSecTokenBatch_MaxId();
-  
-  const funcs = [];
-  for (let index = 1; index <= maxBatchId; index++) {
-    funcs.push(newContract_StLedgerFacet.getSecTokenBatch.bind(this, index));
-  }
-
-  const batchedFuncs = createBatches(funcs, 50);
-
-  for(let batch of batchedFuncs) {
-    const newResults = await retry(batch, 1000);
-    batches = [...batches, ...newResults];
-  }
-
-  const whitelistAddresses = await newContract_StErc20Facet.getWhitelist();
-  const secTokenBaseId = await newContract_StLedgerFacet.getSecToken_BaseId();
-  const secTokenMintedCount = await newContract_StLedgerFacet.getSecToken_MaxId();
-  const secTokenBurnedQty = await newContract_StBurnableFacet.getSecToken_totalBurnedQty();
-  const secTokenMintedQty = await newContract_StMintableFacet.getSecToken_totalMintedQty();
-
-  // get all currency types fee
-  let ccyFees;
-  if (previousGlobalFees?.currencies) {
-    ccyFees = previousGlobalFees.currencies;
-  } else {
-    const ccyFeePromise = [];
-    for (let index = 0; index < currencyTypes.length; index++) {
-      ccyFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.CCY, currencyTypes[index].id, CONST.nullAddr));
-    }
-    ccyFees = await Promise.all(ccyFeePromise);
-  }
-
-  // get all token types fee
-  let tokenFees;
-  if (previousGlobalFees?.tokens) {
-    tokenFees = previousGlobalFees.tokens;
-  } else {
-    const tokenFeePromise = [];
-    for (let index = 0; index < tokenTypes.length; index++) {
-      tokenFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.TOK, tokenTypes[index].id, CONST.nullAddr));
-    }
-    tokenFees = await Promise.all(tokenFeePromise);
-  }
-
-  // get all stId
-  const maxStId = Number(hexToNumberString(secTokenMintedCount));
-  const getTokenPromise = [];
-  const existStId = [];
-  ledgers.forEach((ledger) => {
-    ledger.tokens.forEach((token) => {
-      const stId = Number(token.stId);
-      if (!existStId.includes(stId)) {
-        existStId.push(stId);
-      }
-    });
-  });
-
-  const allFuncs = [];
-  for (let index = 0; index < maxStId; index++) {
-    if (!existStId.includes(index + 1)) {
-      allFuncs.push(newContract_StLedgerFacet.getSecToken.bind(this, index + 1));
-    }
-  }
-
-  const funcBatches = createBatches(allFuncs, 50);
-  let globalSecTokens = [];
-
-  for(let i = 0; i < funcBatches.length; i++) {
-    console.log(`#${i+1}/${funcBatches.length} - getSecToken`);
-    const newResults = await retry(funcBatches[i], 1000);
-    globalSecTokens = [...globalSecTokens, ...newResults];
-  }
-
-  // get all TransferedFullSecToken events
-  // TODO:  will remove on next migration
-  console.time('transferedFullSecTokens');
-  const events = getTransferedFullSecToken ? await getTransferFullTokenEvents(newContract_StMasterFacet) : [];
-
-  const transferedFullSecTokens = events
-    .filter((event) => Number(event.returnValues.mergedToSecTokenId) > 0)
-    .map((event) => ({
-      from: event.returnValues.from,
-      to: event.returnValues.to,
-      stId: event.returnValues.stId,
-      mergedToSecTokenId: event.returnValues.mergedToSecTokenId,
-      qty: event.returnValues.qty,
-      transferType: event.returnValues.transferType,
-    }));
-  console.timeEnd('transferedFullSecTokens');
-
-  // write backup to json file
-  const backup = {
-    info: {
-      network,
-      contractAddress,
-      contractType,
-      name,
-      version,
-      owners,
-      symbol,
-      unit,
-      decimals,
-    },
-    data: {
-      secTokenBaseId: hexToNumberString(secTokenBaseId),
-      secTokenMintedCount: hexToNumberString(secTokenMintedCount),
-      secTokenBurnedQty: hexToNumberString(secTokenBurnedQty),
-      secTokenMintedQty: hexToNumberString(secTokenMintedQty),
-      transferedFullSecTokensEvents: transferedFullSecTokens,
+      transferedFullSecTokensEvents: [],
       whitelistAddresses,
       ledgerOwners,
       ledgerOwnersFees: previousLedgerOwnersFees || [],
@@ -830,5 +527,4 @@ function retry(funcs, delay) {
 
 exports.getLedgerHashOffChain = getLedgerHashOffChain;
 exports.createBackupData = createBackupData;
-exports.createBackupData2 = createBackupData2;
 exports.createBatches = createBatches;
