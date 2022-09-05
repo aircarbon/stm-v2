@@ -22,9 +22,8 @@ library LoadLib {
 		address ledgerEntryOwner,
 		StructLib.LedgerCcyReturn[] memory ccys,
 		uint256 spot_sumQtyMinted,
-		uint256 spot_sumQtyBurned
-	) public // uint entityId
-	{
+		uint256 spot_sumQtyBurned // uint entityId
+	) public {
 		require(!ld._contractSealed, "Contract is sealed");
 
 		if (!ld._ledger[ledgerEntryOwner].exists) {

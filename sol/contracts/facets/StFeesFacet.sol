@@ -67,12 +67,12 @@ contract StFeesFacet {
 		uint256[] calldata tokTypeId,
 		address[] calldata ledgerOwner,
 		StructLib.SetFeeArgs[] calldata feeArgs
-	) public {	
+	) public {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 
-		uint len = ledgerOwner.length;
-		for(uint i = 0; i < len; i++) {
+		uint256 len = ledgerOwner.length;
+		for (uint256 i = 0; i < len; i++) {
 			ValidationLib.validateHasEntity(ledgerOwner[i]);
 		}
 
@@ -104,12 +104,12 @@ contract StFeesFacet {
 		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, s.globalFees, ccyTypeId, ledgerOwner, feeArgs);
 	}
 
-	function setFee_CcyTypeBatch(StructLib.SetFeeCcyTypeBatchArgs[] calldata params) external {	
+	function setFee_CcyTypeBatch(StructLib.SetFeeCcyTypeBatchArgs[] calldata params) external {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 
-		uint len = params.length;
-		for(uint i = 0; i < len; i++) {
+		uint256 len = params.length;
+		for (uint256 i = 0; i < len; i++) {
 			ValidationLib.validateHasEntity(params[i].ledgerOwner);
 		}
 
