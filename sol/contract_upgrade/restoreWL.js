@@ -8,7 +8,8 @@ const { toBN } = require('web3-utils');
 const chalk = require('chalk');
 const argv = require('yargs-parser')(process.argv.slice(2));
 // @ts-ignore artifacts from truffle
-const StMaster = artifacts.require('StMaster');
+const StErc20Facet = artifacts.require('StErc20Facet');
+const StMasterFacet = artifacts.require('StMasterFacet');
 const series = require('async/series');
 
 const { getLedgerHashOffChain } = require('./utils');
@@ -47,20 +48,21 @@ module.exports = async (callback) => {
   const { info, wlHash: sourceWlHash, count: sourceWlCount, whitelistAddresses } = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
 
   // deploy new contract with info
-  const newContract = await StMaster.at(newContractAddress);
+  const newContract_StErc20Facet = await StErc20Facet.at(newContractAddress);
+  const newContract_StMasterFacet = await StMasterFacet.at(newContractAddress);
   // show debug info in table format
   console.log(chalk.yellow(`${info.name} (${info.version})`));
 
   // get contract info
-  const name = await newContract.name();
-  const version = await newContract.version();
+  const name = await newContract_StMasterFacet.name();
+  const version = await newContract_StMasterFacet.version();
   console.log('Restore WL addresses from source (and create additional if any)')
-  console.log(`New contract address: ${newContract.address}`);
+  console.log(`New contract address: ${newContractAddress}`);
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
   // whitelisting addresses to new contract
-  const whitelistAddressesOnTarget = await newContract.getWhitelist();
+  const whitelistAddressesOnTarget = await newContract_StErc20Facet.getWhitelist();
   console.log('# of WL Addresses on Target', whitelistAddressesOnTarget.length);
   const additionalWLAddresses = [];
   for (let i = whitelistAddresses.length; i < WHITELIST_COUNT; i++) {
@@ -98,7 +100,7 @@ module.exports = async (callback) => {
             return cb(null, []);
           }
 
-          newContract
+          newContract_StErc20Facet
             .whitelistMany(addresses)
             .then((result) => cb(null, result))
             .catch((error) => cb(error));
@@ -107,7 +109,7 @@ module.exports = async (callback) => {
 
   await series(whitelistPromises);
 
-  const targetWhitelistAddresses = await newContract.getWhitelist();
+  const targetWhitelistAddresses = await newContract_StErc20Facet.getWhitelist();
   let targetWLHash = '';
 
   for (let i = 0; i < sourceWlCount; i++) {

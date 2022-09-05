@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
-// Author: https://github.com/7-of-9
 pragma solidity 0.8.5;
 
-import "../Interfaces/StructLib.sol";
-import "./SpotFeeLib.sol";
-import "./Strings.sol";
+import { StructLib } from "../libraries/StructLib.sol";
+import { SpotFeeLib } from "./SpotFeeLib.sol";
+import { strings } from "./Strings.sol";
 
-import "../StMaster/StMaster.sol";
+import { StMasterFacet } from "../facets/StMasterFacet.sol";
+import { DataLoadableFacet } from "../facets/DataLoadableFacet.sol";
+import { StLedgerFacet } from "../facets/StLedgerFacet.sol";
+import { StBurnableFacet } from "../facets/StBurnableFacet.sol";
+import { StMintableFacet } from "../facets/StMintableFacet.sol";
 
 library TokenLib {
 	using strings for *;
@@ -92,11 +95,19 @@ library TokenLib {
 		StructLib.CcyTypesStruct storage ctd,
 		StructLib.AddSecTokenTypeBatchArgs[] calldata params
 	) public {
-		uint len = params.length;
+		uint256 len = params.length;
 
-		for(uint i = 0; i < len; i++) {
+		for (uint256 i = 0; i < len; i++) {
 			StructLib.AddSecTokenTypeBatchArgs memory param = params[i];
-			addSecTokenType(ld, std, ctd, param.name, param.settlementType, param.ft, param.cashflowBaseAddr);
+			addSecTokenType(
+				ld,
+				std,
+				ctd,
+				param.name,
+				param.settlementType,
+				param.ft,
+				param.cashflowBaseAddr
+			);
 		}
 	}
 
@@ -160,11 +171,11 @@ library TokenLib {
 
 		if (cashflowBaseAddr != address(0x0)) {
 			// add base, indirect type (to cashflow controller)
-			//StMaster base = StMaster(cashflowBaseAddr);
-			//string memory s0 = base.name;
+			//StMasterFacet base = StMasterFacet(cashflowBaseAddr);
+			//string memory s0 = base.name();
 			//strings.slice memory s = "asd".toSlice();
 			//string memory ss = s.toString();
-			//string storage baseName = base.name;
+			//string storage baseName = base.name();
 			std._tt_name[std._tt_Count] = name; // https://ethereum.stackexchange.com/questions/3727/contract-reading-a-string-returned-by-another-contract
 			std._tt_settle[std._tt_Count] = settlementType;
 			std._tt_addr[std._tt_Count] = cashflowBaseAddr;
@@ -173,7 +184,7 @@ library TokenLib {
 			uint256 segmentStartId = (std._tt_Count << 192) |
 				//| ((1 << 192) - 1) // test: token id overflow
 				0; // segment - first 64 bits: type ID (max 0xFFFFFFFFFFFFFFFF), remaining 192 bits: local/segmented sub-id
-			StMaster base = StMaster(cashflowBaseAddr);
+			DataLoadableFacet base = DataLoadableFacet(cashflowBaseAddr);
 			base.setTokenTotals(segmentStartId, segmentStartId, 0, 0);
 		} else {
 			// add direct type (to commodity or cashflow base)
@@ -307,7 +318,7 @@ library TokenLib {
 		if (ld.contractType == StructLib.ContractType.CASHFLOW_CONTROLLER) {
 			// controller: delegate to base
 			//require(std._tt_addr[a.tokTypeId] != address(0x0), "Bad cashflow request");
-			StMaster base = StMaster(std._tt_addr[a.tokTypeId]);
+			StLedgerFacet base = StLedgerFacet(std._tt_addr[a.tokTypeId]);
 
 			// emit (preempt) token minted event(s) (controller - not base; its batch and tok-type IDs are local)
 			for (int256 ndx = 0; ndx < a.mintSecTokenCount; ndx++) {
@@ -323,7 +334,7 @@ library TokenLib {
 			}
 
 			// mint - passthrough to base
-			base.mintSecTokenBatch(
+			StMintableFacet(std._tt_addr[a.tokTypeId]).mintSecTokenBatch(
 				1, /*tokTypeId*/ // base: UNI_TOKEN (controller does type ID mapping for clients)
 				a.mintQty,
 				a.mintSecTokenCount,
@@ -395,7 +406,7 @@ library TokenLib {
 
 		// controller: delegate burn op. to base
 		if (ld.contractType == StructLib.ContractType.CASHFLOW_CONTROLLER) {
-			StMaster base = StMaster(std._tt_addr[a.tokTypeId]);
+			StBurnableFacet base = StBurnableFacet(std._tt_addr[a.tokTypeId]);
 			base.burnTokens(
 				a.ledgerOwner,
 				1, /*a.tokTypeId*/ // base: UNI_TOKEN (controller does type ID mapping for clients),
@@ -597,7 +608,7 @@ library TokenLib {
 		if (ld.contractType == StructLib.ContractType.CASHFLOW_CONTROLLER) {
 			// controller: delegate to base
 			uint256 tokTypeId = stId >> 192;
-			StMaster base = StMaster(std._tt_addr[tokTypeId]);
+			StLedgerFacet base = StLedgerFacet(std._tt_addr[tokTypeId]);
 			StructLib.LedgerSecTokenReturn memory ret = base.getSecToken(stId);
 
 			// remap base return field: tokTypeId & tokTypeName

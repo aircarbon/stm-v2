@@ -15,6 +15,11 @@ library StructLib {
 		WITHDRAW
 	}
 
+	enum CustodyType {
+		SELF_CUSTODY,
+		THIRD_PARTY_CUSTODY
+	}
+
 	enum TransferType {
 		Undefined,
 		// spot trades: user-requested trade transfers, and automated fees
