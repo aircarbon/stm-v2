@@ -22,6 +22,7 @@ const hdkey = require('ethereumjs-wallet/hdkey');
 const EthereumJsTx = require('ethereumjs-tx');
 const EthereumJsCommon = require('ethereumjs-common').default;
 const sha3_512 = require('js-sha3').sha3_512;
+const fs = require('fs');
 //let r = new EthereumJsCommon('ropsten');
 //console.log(r.hardforks());
 
@@ -249,6 +250,32 @@ module.exports = {
 
     web3_call: (methodName, methodArgs, nameOverride, addrOverride, fromAddr) =>
         web3_call(methodName, methodArgs, nameOverride, addrOverride, fromAddr),
+        
+    getContractAddress: () => getContractAddress(),
+
+    generateContractTotalAbi: () => {
+        let files = fs.readdirSync('./build/contracts/');
+        files = files.filter((fileName) => fileName.includes('Facet.json'));
+        
+        const result = []
+
+        if(files.length == 0) {
+            throw new Error("No ABI files found in the build/contracts folder!");
+        }
+
+        for(let fileName of files) {
+            try {
+            let data = fs.readFileSync(`./build/contracts/${fileName}`, 'utf8');
+            data = JSON.parse(data);
+            result.push(...data.abi);
+            } catch (err) {
+            console.error(err);
+            }
+        }
+
+        return result;
+        // fs.writeFile('./build/contracts/ContractTotal.json', JSON.stringify(result), (err) => { if (err) throw err;});
+    },
 
     web3_tx: (methodName, methodArgs, fromAddr, fromPrivKey, nameOverride, addrOverride, value) =>
         web3_tx(methodName, methodArgs, fromAddr, fromPrivKey, nameOverride, addrOverride, value),

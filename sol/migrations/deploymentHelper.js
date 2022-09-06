@@ -90,7 +90,6 @@ module.exports = {
             const SpotFeeLib = artifacts.require('./SpotFeeLib.sol');
             const Erc20Lib = artifacts.require('./Erc20Lib.sol');
             const LoadLib = artifacts.require('./LoadLib.sol');
-            const FuturesLib = artifacts.require('./FuturesLib.sol');
 
             // contracts
             const CcyCollateralizableFacet = artifacts.require('./CcyCollateralizableFacet.sol');
@@ -117,7 +116,6 @@ module.exports = {
             deployer.link(StructLib, TransferLib);
             deployer.link(StructLib, LoadLib);
             deployer.link(StructLib, SpotFeeLib);
-            deployer.link(StructLib, FuturesLib);
             deployer.link(StructLib, CcyCollateralizableFacet);
             deployer.link(StructLib, DataLoadableFacet);
             deployer.link(StructLib, OwnedFacet);
@@ -355,7 +353,7 @@ module.exports = {
                     deployedAddress: stm.address,
                     deployerHostName: os.hostname(),
                     deployerIpv4: ip,
-                    deployedAbi: JSON.stringify(stm.abi),
+                    deployedAbi: JSON.stringify(CONST.generateContractTotalAbi()),
                     contractType,
                     txHash: stm.transactionHash,
                     symbol: symbolOverride || ''
@@ -386,7 +384,6 @@ module.exports = {
             console.log(`SpotFeeLib: '${SpotFeeLib.address}',`);
             console.log(`Erc20Lib: '${Erc20Lib.address}',`);
             console.log(`LoadLib: '${LoadLib.address}',`);
-            console.log(`FuturesLib: '${FuturesLib.address}',`);
 
             console.log(`CcyCollateralizableFacet: '${CcyCollateralizableFacet.address}',`);
             console.log(`DataLoadableFacet: '${DataLoadableFacet.address}',`);
@@ -400,6 +397,8 @@ module.exports = {
             console.log(`StMintableFacet: '${StMintableFacet.address}',`);
             console.log(`StTransferableFacet: '${StTransferableFacet.address}',`);
             console.log('\n');
+
+            console.log(`Proxy entry point (STM): '${stm.address}',`);
 
             return stm.address;
         } catch(err) { 

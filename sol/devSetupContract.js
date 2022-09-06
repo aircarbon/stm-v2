@@ -83,7 +83,6 @@ module.exports = {
             console.log(chalk.italic('devSetupContract >> cashflow controller contract...'));
 
             // cashflow controller - aggregates/exposes linked base cashflows as token-types - no direct token-types
-            ;
 
             // cashflow controller - holds ledger collateral, so ccy types only here
             const ccyTypes = (await CONST.web3_call('getCcyTypes', [], nameOverride)).ccyTypes;
