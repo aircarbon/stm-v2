@@ -10,46 +10,6 @@ const  db  = require('../../orm/build');
 const { assert } = require('console');
 const Web3 = require('web3');
 const web3 = new Web3();
-const fs = require('fs');
-
-const FacetCutAction = {
-    Add: 0,
-    Replace: 1,
-    Remove: 2
-}
-
-const getAbi = (contractName) => {
-    try {
-        const contract = JSON.parse(fs.readFileSync(`./build/contracts/${contractName}.json`, 'utf8'));
-        return contract.abi;
-    } catch (err) {
-        console.log(`Failed to get ABI for the contract '${contractName}', error:`);
-        console.log(err);
-        process.exit();
-    }
-}
-
-const getContractsSelectors = (contractName, except = []) => {
-    const abi = getAbi(contractName);
-    try{
-        const selectors = [];
-
-        for (const func of abi) {
-            const selector = web3.eth.abi.encodeFunctionSignature(func);
-            if(!except.includes(func.name)) {
-                selectors.push(selector);
-            }
-        }
-
-        return selectors;
-    } catch (err) {
-        console.log(`Failed to get selectors from the contract '${contractName}', error:`);
-        console.log(err);
-        process.exit();
-    } 
-}
-
-
 
 module.exports = {
 
@@ -95,6 +55,7 @@ module.exports = {
             const CcyCollateralizableFacet = artifacts.require('./CcyCollateralizableFacet.sol');
             const DataLoadableFacet = artifacts.require('./DataLoadableFacet.sol');
             const DiamondCutFacet = artifacts.require('./DiamondCutFacet.sol');
+            const DiamondLoupeFacet = artifacts.require('./DiamondLoupeFacet.sol');
             const OwnedFacet = artifacts.require('./OwnedFacet.sol');
             const StBurnableFacet = artifacts.require('./StBurnableFacet.sol');
             const StErc20Facet = artifacts.require('./StErc20Facet.sol');
@@ -195,6 +156,9 @@ module.exports = {
 
             // deploying DiamondCutFacet
             await deployImpl(DiamondCutFacet, 'DiamondCutFacet');
+
+            // deploying DiamondLoupeFacet
+            await deployImpl(DiamondLoupeFacet, 'DiamondLoupeFacet');
             
             // deploying DiamondProxy
             await deployImpl(DiamondProxy, 'DiamondProxy', [owners[0], DiamondCutFacet.address]);
@@ -214,38 +178,43 @@ module.exports = {
             const diamondCutParams = [
                 {
                     facetAddress: CcyCollateralizableFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('CcyCollateralizableFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('CcyCollateralizableFacet')
                 },
                 {
                     facetAddress: DataLoadableFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('DataLoadableFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('DataLoadableFacet')
                 },
                 {
                     facetAddress: StBurnableFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StBurnableFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StBurnableFacet')
                 },
                 {
                     facetAddress: StFeesFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StFeesFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StFeesFacet')
                 },
                 {
                     facetAddress: StLedgerFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StLedgerFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StLedgerFacet')
                 },
                 {
                     facetAddress: StMintableFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StMintableFacet')
+                    action: CONST.acetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StMintableFacet')
                 },
                 {
                     facetAddress: StTransferableFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StTransferableFacet')
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StTransferableFacet')
+                },
+                {
+                    facetAddress: DiamondLoupeFacet.address,
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('DiamondLoupeFacet')
                 },
             ];
 
@@ -268,7 +237,7 @@ module.exports = {
             //deploying OwnedFacet
             await deployImpl(OwnedFacet, 'OwnedFacet');
             
-            let abi = getAbi('OwnedFacet');
+            let abi = CONST.getAbi('OwnedFacet');
             let initFuncAbi = abi.find((func) => func.name === 'init');
             const ownedInitCalldata = web3.eth.abi.encodeFunctionCall(
                 initFuncAbi, 
@@ -281,15 +250,15 @@ module.exports = {
             await proxyRegistratable.diamondCut([
                 {
                     facetAddress: OwnedFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('OwnedFacet', ['init'])
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('OwnedFacet', ['init'])
                 }
             ], OwnedFacet.address, ownedInitCalldata);
 
             //deploying StErc20Facet
             await deployImpl(StErc20Facet, 'StErc20Facet');
 
-            abi = getAbi('StErc20Facet');
+            abi = CONST.getAbi('StErc20Facet');
             initFuncAbi = abi.find((func) => func.name === 'init');
             const sterc20InitCalldata = web3.eth.abi.encodeFunctionCall(
                 initFuncAbi, 
@@ -302,8 +271,8 @@ module.exports = {
             await proxyRegistratable.diamondCut([
                 {
                     facetAddress: StErc20Facet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StErc20Facet', ['init'])
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StErc20Facet', ['init'])
                 }
             ], StErc20Facet.address, sterc20InitCalldata);
 
@@ -311,7 +280,7 @@ module.exports = {
             await deployImpl(StMasterFacet, 'StMasterFacet');
             const contractName = `${process.env.CONTRACT_PREFIX}${nameOverride || CONST.contractProps[contractType].contractName}`;
 
-            abi = getAbi('StMasterFacet');
+            abi = CONST.getAbi('StMasterFacet');
             initFuncAbi = abi.find((func) => func.name === 'init');
             const masterInitCalldata = web3.eth.abi.encodeFunctionCall(
                 initFuncAbi, 
@@ -327,8 +296,8 @@ module.exports = {
             await proxyRegistratable.diamondCut([
                 {
                     facetAddress: StMasterFacet.address,
-                    action: FacetCutAction.Add,
-                    functionSelectors: getContractsSelectors('StMasterFacet', ['init'])
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors('StMasterFacet', ['init'])
                 }
             ], StMasterFacet.address, masterInitCalldata);
 
@@ -388,6 +357,7 @@ module.exports = {
             console.log(`CcyCollateralizableFacet: '${CcyCollateralizableFacet.address}',`);
             console.log(`DataLoadableFacet: '${DataLoadableFacet.address}',`);
             console.log(`DiamondCutFacet: '${DiamondCutFacet.address}',`);
+            console.log(`DiamondLoupeFacet: '${DiamondLoupeFacet.address}',`);
             console.log(`OwnedFacet: '${OwnedFacet.address}',`);
             console.log(`StBurnableFacet: '${StBurnableFacet.address}',`);
             console.log(`StErc20Facet: '${StErc20Facet.address}',`);

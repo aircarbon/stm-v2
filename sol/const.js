@@ -118,11 +118,39 @@ module.exports = {
     testId2: 2,
     testId3: 3,
 
+    FacetCutAction: {
+        Add: 0,
+        Replace: 1,
+        Remove: 2
+    },
+
     blocksFromSecs: (secs) => blocksFromSecs(secs),
     blocksFromMins: (mins) => blocksFromMins(mins),
     blocksFromHours: (hours) => blocksFromHours(hours),
     blocksFromDays: (days) => blocksFromDays(days),
     blocksFromMonths: (months) => blocksFromMonths(months),
+
+    getAbi: (contractName) => getAbi(contractName),
+
+    getContractsSelectors: (contractName, except = []) => {
+        const abi = getAbi(contractName);
+        try{
+            const selectors = [];
+    
+            for (const func of abi) {
+                const selector = web3.eth.abi.encodeFunctionSignature(func);
+                if(!except.includes(func.name)) {
+                    selectors.push(selector);
+                }
+            }
+    
+            return selectors;
+        } catch (err) {
+            console.log(`Failed to get selectors from the contract '${contractName}', error:`);
+            console.log(err);
+            process.exit();
+        } 
+    },
 
     expectRevertFromCall: async(func, params, err) => {
         try {
@@ -635,6 +663,17 @@ async function web3_call(methodName, methodArgs, nameOverride, addrOverride, fro
     }
     else {
         return await contract.methods[methodName](...methodArgs).call();
+    }
+}
+
+const getAbi = (contractName) => {
+    try {
+        const contract = JSON.parse(fs.readFileSync(`./build/contracts/${contractName}.json`, 'utf8'));
+        return contract.abi;
+    } catch (err) {
+        console.log(`Failed to get ABI for the contract '${contractName}', error:`);
+        console.log(err);
+        process.exit();
     }
 }
 
