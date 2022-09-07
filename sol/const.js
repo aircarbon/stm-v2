@@ -250,8 +250,6 @@ module.exports = {
 
     web3_call: (methodName, methodArgs, nameOverride, addrOverride, fromAddr) =>
         web3_call(methodName, methodArgs, nameOverride, addrOverride, fromAddr),
-        
-    getContractAddress: () => getContractAddress(),
 
     generateContractTotalAbi: () => {
         let files = fs.readdirSync('./build/contracts/');
@@ -272,6 +270,13 @@ module.exports = {
             console.error(err);
             }
         }
+
+        results = result.map((func) => {
+            return {
+                ...func,
+                selector: web3.eth.abi.encodeFunctionSignature(func)
+            }
+        });
 
         return result;
         // fs.writeFile('./build/contracts/ContractTotal.json', JSON.stringify(result), (err) => { if (err) throw err;});
