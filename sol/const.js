@@ -283,7 +283,7 @@ module.exports = {
         let files = fs.readdirSync('./build/contracts/');
         files = files.filter((fileName) => fileName.includes('Facet.json'));
         
-        const result = []
+        let result = []
 
         if(files.length == 0) {
             throw new Error("No ABI files found in the build/contracts folder!");
@@ -299,10 +299,10 @@ module.exports = {
             }
         }
 
-        results = result.map((func) => {
+        result = result.map((func) => {
             return {
                 ...func,
-                selector: web3.eth.abi.encodeFunctionSignature(func)
+                signature: web3.eth.abi.encodeFunctionSignature(func)
             }
         });
 
