@@ -203,7 +203,7 @@ module.exports = {
                 },
                 {
                     facetAddress: StMintableFacet.address,
-                    action: CONST.acetCutAction.Add,
+                    action: CONST.FacetCutAction.Add,
                     functionSelectors: CONST.getContractsSelectors('StMintableFacet')
                 },
                 {
@@ -324,7 +324,7 @@ module.exports = {
                     deployerIpv4: ip,
                     deployedAbi: JSON.stringify(CONST.generateContractTotalAbi()),
                     contractType,
-                    txHash: stm.transactionHash,
+                    txHash: DiamondProxy.transactionHash,
                     symbol: symbolOverride || ''
                 });
 
