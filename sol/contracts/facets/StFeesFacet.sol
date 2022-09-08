@@ -17,14 +17,21 @@ contract StFeesFacet {
 	 */
 	function getFee(
 		StructLib.GetFeeType feeType,
+		uint256 entityId,
 		uint256 typeId,
 		address ledgerOwner
 	) external view returns (StructLib.SetFeeArgs memory fee) {
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 
-		StructLib.FeeStruct storage fs = ledgerOwner == address(0x0)
-			? s.globalFees
-			: s.ld._ledger[ledgerOwner].spot_customFees;
+		StructLib.FeeStruct storage fs;
+
+		if(ledgerOwner == address(0x0)) {
+			require(entityId > 0, "getFee: invalid entity id");
+			fs = LibMainStorage.getStorage2().feesPerEntity[entityId];
+		} else {
+			fs = s.ld._ledger[ledgerOwner].spot_customFees;
+		}
+		
 		mapping(uint256 => StructLib.SetFeeArgs) storage fa = feeType == StructLib.GetFeeType.CCY
 			? fs.ccy
 			: fs.tok;
@@ -51,6 +58,7 @@ contract StFeesFacet {
 	 * ccy_mirrorFee: N/A
 	 */
 	function setFee_TokType(
+		uint entityId,
 		uint256 tokTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
@@ -60,10 +68,11 @@ contract StFeesFacet {
 		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_TokType(s.ld, s.std, s.globalFees, tokTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_TokType(s.ld, s.std, LibMainStorage.getStorage2().feesPerEntity, entityId, tokTypeId, ledgerOwner, feeArgs);
 	}
 
 	function setFee_TokTypeBatch(
+		uint256[] calldata entityId,
 		uint256[] calldata tokTypeId,
 		address[] calldata ledgerOwner,
 		StructLib.SetFeeArgs[] calldata feeArgs
@@ -77,7 +86,7 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_TokTypeBatch(s.ld, s.std, s.globalFees, tokTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_TokTypeBatch(s.ld, s.std, LibMainStorage.getStorage2().feesPerEntity, entityId, tokTypeId, ledgerOwner, feeArgs);
 	}
 
 	/**
@@ -92,6 +101,7 @@ contract StFeesFacet {
 	 * ccy_mirrorFee: trade - apply this ccy fee structure to counterparty's ccy balance, post trade
 	 */
 	function setFee_CcyType(
+		uint entityId,
 		uint256 ccyTypeId,
 		address ledgerOwner,
 		StructLib.SetFeeArgs memory feeArgs
@@ -101,7 +111,7 @@ contract StFeesFacet {
 		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, s.globalFees, ccyTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, LibMainStorage.getStorage2().feesPerEntity, entityId, ccyTypeId, ledgerOwner, feeArgs);
 	}
 
 	function setFee_CcyTypeBatch(StructLib.SetFeeCcyTypeBatchArgs[] calldata params) external {
@@ -114,6 +124,6 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_CcyTypeBatch(s.ld, s.ctd, s.globalFees, params);
+		SpotFeeLib.setFee_CcyTypeBatch(s.ld, s.ctd, LibMainStorage.getStorage2().feesPerEntity, params);
 	}
 }

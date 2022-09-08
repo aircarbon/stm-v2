@@ -97,6 +97,7 @@ library StructLib {
 	}
 
 	struct SetFeeCcyTypeBatchArgs {
+		uint256 entityId;
 		uint256 ccyTypeId;
 		address ledgerOwner;
 		SetFeeArgs feeArgs;

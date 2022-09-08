@@ -25,10 +25,22 @@ library LibMainStorage {
 		string unit; // the smallest (integer, non-divisible) security token unit, e.g. "KGs" or "TONS"
 	}
 
+	struct MainStorage2 {
+		mapping(uint => StructLib.FeeStruct) feesPerEntity;
+	}
+
 	bytes32 constant STORAGE_POSITION = keccak256("diamond.standard.diamond.storage1");
+	bytes32 constant STORAGE_POSITION_2 = keccak256("diamond.standard.diamond.storage2");
 
 	function getStorage() public pure returns (MainStorage storage ds) {
 		bytes32 position = STORAGE_POSITION;
+		assembly {
+			ds.slot := position
+		}
+	}
+
+	function getStorage2() public pure returns (MainStorage2 storage ds) {
+		bytes32 position = STORAGE_POSITION_2;
 		assembly {
 			ds.slot := position
 		}
