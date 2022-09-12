@@ -36,7 +36,7 @@ module.exports = {
             await addCcyIfNotPresent(ccyTypes, 'ETH', 'Wei', 18, O, nameOverride);
             await addCcyIfNotPresent(ccyTypes, 'BTC', 'Satoshi', 8, O, nameOverride);
 
-            const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));
+            const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, 1, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));
             //console.log('usdFee', usdFee);
             if (usdFee.ccy_perMillion.toString() != '300') {
                 try {
