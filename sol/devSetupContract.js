@@ -36,11 +36,14 @@ module.exports = {
             await addCcyIfNotPresent(ccyTypes, 'ETH', 'Wei', 18, O, nameOverride);
             await addCcyIfNotPresent(ccyTypes, 'BTC', 'Satoshi', 8, O, nameOverride);
 
+            // creating entity
+            await CONST.web3_tx('createOrUpdateEntity', [ 1, CONST.nullAddr ], O.addr, O.privKey, nameOverride);
+
             const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, 1, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));
             //console.log('usdFee', usdFee);
             if (usdFee.ccy_perMillion.toString() != '300') {
                 try {
-                    await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } ], O.addr, O.privKey);
+                    await CONST.web3_tx('setFee_CcyType', [ 1, CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } ], O.addr, O.privKey);
                 } catch (error) {
                     console.log(chalk.red(`setFee_CcyType >> ${error}`));
                 }
@@ -52,6 +55,7 @@ module.exports = {
                 try {
                     // set to local entity
                     const LOCAL_ENTITY_ID = 4;
+                    await CONST.web3_tx('createOrUpdateEntity', [ LOCAL_ENTITY_ID, CONST.nullAddr ], O.addr, O.privKey, nameOverride);
                     await CONST.web3_tx('whitelistMany', [[O.addr]], O.addr, O.privKey);
                     await CONST.web3_tx('setEntity', [  O.addr,  LOCAL_ENTITY_ID], O.addr, O.privKey);
                     await CONST.web3_tx('fundOrWithdraw', [ CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 0, O.addr, 'DEV_INIT' ], O.addr, O.privKey);
@@ -94,7 +98,7 @@ module.exports = {
             // create owner ledger entry
             const ownerLedger = (await CONST.web3_call('getLedgerEntry', [O.addr], nameOverride));
             if (!ownerLedger.exists) {
-                await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, O.addr, CONST.nullFees ], O.addr, O.privKey, nameOverride);
+                await CONST.web3_tx('setFee_CcyType', [ 1, CONST.ccyType.USD, O.addr, CONST.nullFees ], O.addr, O.privKey, nameOverride);
             }
         }
 
