@@ -152,6 +152,26 @@ module.exports = {
         } 
     },
 
+    getContractsSelectorsWithFuncName: (contractName, funcs = []) => {
+        const abi = getAbi(contractName);
+        try{
+            const selectors = [];
+    
+            for (const func of abi) {
+                const selector = web3.eth.abi.encodeFunctionSignature(func);
+                if(funcs.includes(func.name)) {
+                    selectors.push(selector);
+                }
+            }
+    
+            return selectors;
+        } catch (err) {
+            console.log(`Failed to get selectors from the contract '${contractName}', error:`);
+            console.log(err);
+            process.exit();
+        } 
+    },
+
     expectRevertFromCall: async(func, params, err) => {
         try {
             await func(...params);

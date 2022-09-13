@@ -26,7 +26,7 @@ contract StFeesFacet {
 		StructLib.FeeStruct storage fs;
 
 		if(ledgerOwner == address(0x0)) {
-			require(entityId > 0, "getFee: invalid entity id");
+			ValidationLib.validateEntityExists(entityId);
 			fs = LibMainStorage.getStorage2().feesPerEntity[entityId];
 		} else {
 			fs = s.ld._ledger[ledgerOwner].spot_customFees;
@@ -65,6 +65,7 @@ contract StFeesFacet {
 	) public {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateEntityExists(entityId);
 		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
@@ -82,6 +83,7 @@ contract StFeesFacet {
 
 		uint256 len = ledgerOwner.length;
 		for (uint256 i = 0; i < len; i++) {
+			ValidationLib.validateEntityExists(entityId[i]);
 			ValidationLib.validateHasEntity(ledgerOwner[i]);
 		}
 
@@ -108,6 +110,7 @@ contract StFeesFacet {
 	) public {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateEntityExists(entityId);
 		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
@@ -121,6 +124,7 @@ contract StFeesFacet {
 		uint256 len = params.length;
 		for (uint256 i = 0; i < len; i++) {
 			ValidationLib.validateHasEntity(params[i].ledgerOwner);
+			ValidationLib.validateEntityExists(params[i].entityId);
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();

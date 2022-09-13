@@ -9,6 +9,17 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StErc20Facet {
+
+	function createOrUpdateEntityBatch(uint[] calldata entityId, address[] calldata transferOrTradeFeesOwner) external {
+		ValidationLib.validateOnlyOwner();
+		Erc20Lib.createOrUpdateEntityBatch(entityId, transferOrTradeFeesOwner);
+	}
+
+	function createOrUpdateEntity(uint entityId, address transferOrTradeFeesOwner) external {
+		ValidationLib.validateOnlyOwner();
+		Erc20Lib.createOrUpdateEntity(entityId, transferOrTradeFeesOwner);
+	}
+
 	function setEntityBatch(address[] calldata addr, uint256[] calldata entityId) external {
 		ValidationLib.validateOnlyOwner();
 
@@ -16,8 +27,28 @@ contract StErc20Facet {
 		require(len == entityId.length, "setEntityBatch: arrays are not the same length");
 
 		for (uint256 i = 0; i < len; i++) {
-			Erc20Lib.setEntity(addr[i], entityId[i]);
+			uint currEntityId = entityId[i];
+			ValidationLib.validateEntityExists(currEntityId);
+			Erc20Lib.setEntity(addr[i], currEntityId);
 		}
+	}
+
+	function setEntity(address addr, uint256 entityId) public {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateEntityExists(entityId);
+		Erc20Lib.setEntity(addr, entityId);
+	}
+
+	function entityExists(uint entityId) external view returns(bool) {
+		return LibMainStorage.getStorage3().entityExists[entityId];
+	}
+
+	function getEntities() external view returns(uint[] memory) {
+		return LibMainStorage.getStorage3().entities;
+	}
+
+	function getEntityFeeOwner(uint entityId) external view returns(address) {
+		return LibMainStorage.getStorage3().feeAddrPerEntity[entityId];
 	}
 
 	function symbol() external view returns (string memory _symbol) {
@@ -26,11 +57,6 @@ contract StErc20Facet {
 
 	function decimals() external view returns (uint256 _decimals) {
 		_decimals = LibMainStorage.getStorage().decimals;
-	}
-
-	function setEntity(address addr, uint256 entityId) public {
-		ValidationLib.validateOnlyOwner();
-		Erc20Lib.setEntity(addr, entityId);
 	}
 
 	/**

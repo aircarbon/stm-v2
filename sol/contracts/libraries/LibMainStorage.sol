@@ -2,9 +2,6 @@
 pragma solidity ^0.8.0;
 import { StructLib } from "./StructLib.sol";
 
-// TODO: Remember to add the loupe functions from DiamondLoupeFacet to the diamond.
-// The loupe functions are required by the EIP2535 Diamonds standard
-
 library LibMainStorage {
 	struct MainStorage {
 		address payable deploymentOwner;
@@ -29,8 +26,15 @@ library LibMainStorage {
 		mapping(uint => StructLib.FeeStruct) feesPerEntity;
 	}
 
+	struct MainStorage3 {
+		mapping(uint => bool) entityExists;
+		uint[] entities;
+		mapping(uint => address) feeAddrPerEntity;
+	}
+
 	bytes32 constant STORAGE_POSITION = keccak256("diamond.standard.diamond.storage1");
 	bytes32 constant STORAGE_POSITION_2 = keccak256("diamond.standard.diamond.storage2");
+	bytes32 constant STORAGE_POSITION_3 = keccak256("diamond.standard.diamond.storage3");
 
 	function getStorage() public pure returns (MainStorage storage ds) {
 		bytes32 position = STORAGE_POSITION;
@@ -41,6 +45,13 @@ library LibMainStorage {
 
 	function getStorage2() public pure returns (MainStorage2 storage ds) {
 		bytes32 position = STORAGE_POSITION_2;
+		assembly {
+			ds.slot := position
+		}
+	}
+
+	function getStorage3() public pure returns (MainStorage3 storage ds) {
+		bytes32 position = STORAGE_POSITION_3;
 		assembly {
 			ds.slot := position
 		}

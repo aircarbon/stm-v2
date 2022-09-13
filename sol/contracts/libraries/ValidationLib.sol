@@ -54,4 +54,8 @@ library ValidationLib {
 			"The address is not assigned to any entity"
 		);
 	}
+
+	function validateEntityExists(uint entityId) external view {
+		require(LibMainStorage.getStorage3().entityExists[entityId], "Entity does not exist");
+	}
 }

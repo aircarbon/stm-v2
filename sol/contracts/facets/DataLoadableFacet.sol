@@ -16,7 +16,11 @@ contract DataLoadableFacet {
 
 		for (uint256 i = 0; i < len; i++) {
 			StructLib.CreateLedgerEntryArgs memory currParam = params[i];
-			Erc20Lib.setEntity(currParam.ledgerEntryOwner, currParam.entityId);
+
+			uint entityId = currParam.entityId;
+			ValidationLib.validateEntityExists(entityId);
+
+			Erc20Lib.setEntity(currParam.ledgerEntryOwner, entityId);
 			LoadLib.createLedgerEntry(
 				ld,
 				currParam.ledgerEntryOwner,
@@ -42,6 +46,8 @@ contract DataLoadableFacet {
 		uint256 entityId
 	) public {
 		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateEntityExists(entityId);
+
 		Erc20Lib.setEntity(ledgerEntryOwner, entityId);
 		LoadLib.createLedgerEntry(
 			LibMainStorage.getStorage().ld,

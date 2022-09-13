@@ -30,7 +30,7 @@ contract StLedgerFacet {
 	}
 
 	function getEntityAddresses(uint256 entityId) external view returns (address[] memory) {
-		require(entityId > 0, "getEntityAddresses: wrong entity id");
+		ValidationLib.validateEntityExists(entityId);
 		return LibMainStorage.getStorage().addressesPerEntity[entityId];
 	}
 

@@ -3,7 +3,6 @@ pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
 import { TransferLib } from "../libraries/TransferLib.sol";
-import { Erc20Lib } from "../libraries/Erc20Lib.sol";
 import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
@@ -116,9 +115,10 @@ contract StTransferableFacet {
 			"Not whitelisted (B)"
 		);
 
-		transferArgs.feeAddrOwner = s.deploymentOwner; // v2.TODO (at first all the fees are accrued to one acc, later should be in diff ones)
-		// v2.TODO when setEntityFeeAddr() function is ready, replace the addr here
 		// v2.TODO split the fees if both ledgers are from diff entities
+		// NOT WORKING for the shared orderbook
+		// At the moment fees go to the fee address of the entity of ledger_A, but if ledger_A and ledger_B are different, it should be split
+		transferArgs.feeAddrOwner = LibMainStorage.getStorage3().feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
 		TransferLib.transferOrTrade(s.ld, s.std, s.ctd, s.globalFees, transferArgs);
 	}
 }

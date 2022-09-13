@@ -19,6 +19,27 @@ library Erc20Lib {
 	event Transfer(address indexed from, address indexed to, uint256 value);
 	event Approval(address indexed owner, address indexed spender, uint256 value);
 
+	function createOrUpdateEntityBatch(uint[] calldata entityId, address[] calldata transferOrTradeFeesOwner) internal {
+		uint len = entityId.length;
+		require(len == transferOrTradeFeesOwner.length, "createOrUpdateEntityBatch: array lengths don't match");
+
+		for(uint i = 0; i < len; i++) {
+			createOrUpdateEntity(entityId[i], transferOrTradeFeesOwner[i]);
+		}
+	}
+
+	function createOrUpdateEntity(uint entityId, address transferOrTradeFeesOwner) internal {
+		require(entityId > 0, 'createOrUpdateEntity: invalid entity id');
+		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
+
+		if(!s3.entityExists[entityId]) {
+			s3.entityExists[entityId] = true;
+			s3.entities.push(entityId);
+		}
+
+		s3.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
+	}
+
 	function setEntity(address addr, uint256 entityId) internal {
 		if (entityId == 0) {
 			return;
