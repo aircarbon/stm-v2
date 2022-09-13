@@ -255,3 +255,25 @@ export async function SaveDeployment({
   );
   return true;
 }
+
+export async function UpdateABI({
+  deployedAddress,
+  deployedAbi,
+}: {
+  deployedAddress: string;
+  deployedAbi: string;
+}) {
+  const sqlPool = await getPool("erc20");
+  const result = await sqlPool
+    .request()
+    .input("addr", sql.NVarChar, deployedAddress)
+    .input("abi", sql.NVarChar, deployedAbi)
+    .query(
+      `UPDATE [contract] SET [abi] = @abi WHERE [addr] = @addr`
+    );
+  console.log(
+    `DB: updated contract abi @ ${deployedAddress} - ok`,
+    result.rowsAffected
+  );
+  return true;
+}
