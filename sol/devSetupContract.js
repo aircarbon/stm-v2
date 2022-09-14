@@ -38,7 +38,9 @@ module.exports = {
 
             // creating entity
             const LOCAL_ENTITY_ID = 4;
-            await CONST.web3_tx('createOrUpdateEntity', [ LOCAL_ENTITY_ID, CONST.nullAddr ], O.addr, O.privKey, nameOverride);
+            if(!await CONST.web3_call('entityExists', [LOCAL_ENTITY_ID], nameOverride)) {
+                await CONST.web3_tx('createEntity', [ {id: LOCAL_ENTITY_ID, addr: CONST.nullAddr} ], O.addr, O.privKey, nameOverride);
+            }
 
             const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, LOCAL_ENTITY_ID, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));
             if (usdFee.ccy_perMillion.toString() != '300') {
@@ -54,7 +56,7 @@ module.exports = {
             if (!ownerLedger.exists) {
                 try {
                     await CONST.web3_tx('whitelistMany', [[O.addr]], O.addr, O.privKey);
-                    await CONST.web3_tx('setEntity', [  O.addr,  LOCAL_ENTITY_ID], O.addr, O.privKey);
+                    await CONST.web3_tx('setAccountEntity', [ { id: LOCAL_ENTITY_ID, addr: O.addr }], O.addr, O.privKey);
                     await CONST.web3_tx('fundOrWithdraw', [ CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 0, O.addr, 'DEV_INIT' ], O.addr, O.privKey);
                 } catch (error) {
                     console.log(chalk.red(`fundOrWithdraw >> ${error}`));
