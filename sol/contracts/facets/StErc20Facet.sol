@@ -10,45 +10,66 @@ import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StErc20Facet {
 
-	function createOrUpdateEntityBatch(uint[] calldata entityId, address[] calldata transferOrTradeFeesOwner) external {
+	function createEntity(StructLib.IdWithAddress calldata entityIdWithAddr) external {
 		ValidationLib.validateOnlyOwner();
-		Erc20Lib.createOrUpdateEntityBatch(entityId, transferOrTradeFeesOwner);
+		Erc20Lib.createEntity(entityIdWithAddr);
 	}
 
-	function createOrUpdateEntity(uint entityId, address transferOrTradeFeesOwner) external {
+	function createEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) external {
 		ValidationLib.validateOnlyOwner();
-		Erc20Lib.createOrUpdateEntity(entityId, transferOrTradeFeesOwner);
+		Erc20Lib.createEntityBatch(entityIdWithAddr);
 	}
 
-	function setEntityBatch(address[] calldata addr, uint256[] calldata entityId) external {
+	function updateEntity(StructLib.IdWithAddress calldata entityIdWithAddr) external {
+		ValidationLib.validateOnlyOwner();
+		Erc20Lib.updateEntity(entityIdWithAddr);
+	}
+
+	function updateEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) external {
+		ValidationLib.validateOnlyOwner();
+		Erc20Lib.updateEntityBatch(entityIdWithAddr);
+	}
+	
+	function setAccountEntity(StructLib.IdWithAddress memory entityIdWithAddr) public {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateEntityExists(entityIdWithAddr.id);
+		Erc20Lib.setAccountEntity(entityIdWithAddr);
+	}
+
+	function setAccountEntityBatch(StructLib.IdWithAddress[] memory entityIdWithAddr) external {
 		ValidationLib.validateOnlyOwner();
 
-		uint256 len = addr.length;
-		require(len == entityId.length, "setEntityBatch: arrays are not the same length");
+		uint256 len = entityIdWithAddr.length;
 
 		for (uint256 i = 0; i < len; i++) {
-			uint currEntityId = entityId[i];
-			ValidationLib.validateEntityExists(currEntityId);
-			Erc20Lib.setEntity(addr[i], currEntityId);
+			ValidationLib.validateEntityExists(entityIdWithAddr[i].id);
+			Erc20Lib.setAccountEntity(entityIdWithAddr[i]);
 		}
 	}
 
-	function setEntity(address addr, uint256 entityId) public {
-		ValidationLib.validateOnlyOwner();
-		ValidationLib.validateEntityExists(entityId);
-		Erc20Lib.setEntity(addr, entityId);
-	}
-
-	function entityExists(uint entityId) external view returns(bool) {
+	function entityExists(uint entityId) public view returns(bool) {
 		return LibMainStorage.getStorage3().entityExists[entityId];
 	}
 
-	function getEntities() external view returns(uint[] memory) {
+	function getAllEntities() public view returns(uint[] memory) {
 		return LibMainStorage.getStorage3().entities;
 	}
 
 	function getEntityFeeOwner(uint entityId) external view returns(address) {
-		return LibMainStorage.getStorage3().feeAddrPerEntity[entityId];
+		require(entityExists(entityId), 'getEntityFeeOwner: entity does not exist');
+		return _getEntityFeeOwner(entityId);
+	}
+
+	function getAllEntitiesWithFeeOwners() external view returns(StructLib.IdWithAddress[] memory entityIdWithAddr) {
+		uint[] memory entityIds = getAllEntities();
+		uint len = entityIds.length;
+
+		entityIdWithAddr = new StructLib.IdWithAddress[](len);
+
+		for(uint i = 0; i < len; i++) {
+			uint entityId = entityIds[i];
+			entityIdWithAddr[i] = StructLib.IdWithAddress({id: entityId, addr: _getEntityFeeOwner(entityId)});
+		}
 	}
 
 	function symbol() external view returns (string memory _symbol) {
@@ -227,5 +248,9 @@ contract StErc20Facet {
 		returns (uint256 spendAllowance)
 	{
 		spendAllowance = LibMainStorage.getStorage().erc20d._allowances[sender][spender];
+	}
+
+	function _getEntityFeeOwner(uint entityId) internal view returns(address) {
+		return LibMainStorage.getStorage3().feeAddrPerEntity[entityId];
 	}
 }

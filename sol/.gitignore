@@ -6,4 +6,3 @@ PROD_MNEMONIC.js
 !.env.example
 data
 DEV_MNEMONIC.js
-migrations/_3_update.js

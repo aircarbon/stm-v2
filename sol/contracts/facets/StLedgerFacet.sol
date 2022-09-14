@@ -136,7 +136,12 @@ contract StLedgerFacet {
 		secToken = TokenLib.getSecToken(s.ld, s.std, id);
 	}
 
-	function getEntityBatch(address[] calldata addr)
+	function getAccountEntity (address addr) public view returns (uint256) {
+		require(addr != address(0), "getEntity: invalid address");
+		return LibMainStorage.getStorage().entities[addr];
+	}
+
+	function getAccountEntityBatch(address[] calldata addr)
 		external
 		view
 		returns (uint256[] memory results)
@@ -145,7 +150,7 @@ contract StLedgerFacet {
 		results = new uint256[](len);
 
 		for (uint256 i = 0; i < len; i++) {
-			results[i] = getEntity(addr[i]);
+			results[i] = getAccountEntity(addr[i]);
 		}
 	}
 
@@ -169,10 +174,5 @@ contract StLedgerFacet {
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		TokenLib.addSecTokenType(s.ld, s.std, s.ctd, name, settlementType, ft, cashflowBaseAddr);
-	}
-
-	function getEntity(address addr) public view returns (uint256) {
-		require(addr != address(0), "getEntity: invalid address");
-		return LibMainStorage.getStorage().entities[addr];
 	}
 }

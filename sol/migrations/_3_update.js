@@ -21,20 +21,22 @@ const chalk = require('chalk');
 const Web3 = require('web3');
 const web3 = new Web3();
 
+const  db  = require('../../orm/build');
+
 const deployments = {
     LibMainStorage_addr: "0x2de592F086692Ea2d662Ed9eFC5E27D83972C27c",
-    StructLib_addr: "0xE56376d31eAce4A3dd7a90e91Caddb198cAf0338",
+    StructLib_addr: "0xE0765b5A3062778A38d0963353CFCf3fd9307e4C",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
     TransferLib_addr: "0x2Bb920aB1cD98Cf0F3D54393237BD6b65D31465D",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
     StFeesFacet_addr: "0x6e0F251224ae09853478039e45eD96a48C1a2E74",
-    Erc20Lib_addr: "0x8f5192C4e62573550513517617772921048E7879",
+    Erc20Lib_addr: "0x2d3d7C94B56a318aAEFB0D752B2F53289353c871",
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
-    StErc20Facet_addr: "0xe4286C40c78f779f170581F608Ebc5f779B693c2",
-    DataLoadableFacet_addr: "0x20E1Fdadbb25AebE05aD6053CcAc8bb950C68ecf",
+    StErc20Facet_addr: "0x49E9961D9057c3a8f2cF1B6240c5b6075E63eD9c",
+    DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
-    StLedgerFacet_addr: "0xc191A99926FFcc14E9DE70470Fc46dFE87F462cf",
+    StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
     StTransferableFacet_addr: "0x27279B4cBFd62e6498933ca23BB5be2347b82250",
 }
 
@@ -153,49 +155,50 @@ module.exports = async function (deployer) {
     console.log('Cutting 1...');
     await stm.diamondCut([
         {
-            facetAddress: DataLoadableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('DataLoadableFacet', ['createLedgerEntryBatch', 'createLedgerEntry'])
+            facetAddress: CONST.nullAddr,
+            action: CONST.FacetCutAction.Remove,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName(
+                'StErc20Facet', 
+                ['createOrUpdateEntity', 'createOrUpdateEntityBatch', 'setEntityBatch', 'setEntity', 'getEntities']
+            )
         },
-    ], CONST.nullAddr, "0x");
-
-    console.log('Cutting 1.5...');
-    await stm.diamondCut([
+        {
+            facetAddress: StErc20Facet_c.address,
+            action: CONST.FacetCutAction.Replace,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['getEntityFeeOwner'])
+        },
         {
             facetAddress: StErc20Facet_c.address,
             action: CONST.FacetCutAction.Add,
             functionSelectors: CONST.getContractsSelectorsWithFuncName(
                 'StErc20Facet', 
-                ['createOrUpdateEntityBatch', 'createOrUpdateEntity', 'entityExists', 'getEntities', 'getEntityFeeOwner' ]
+                [
+                    'createEntity', 
+                    'createEntityBatch', 
+                    'updateEntity', 
+                    'updateEntityBatch', 
+                    'setAccountEntity', 
+                    'setAccountEntityBatch', 
+                    'getAllEntities', 
+                    'getAllEntitiesWithFeeOwners',
+                ]
             )
-        }
-    ], CONST.nullAddr, "0x");
-
-    console.log('Cutting 2...');
-    await stm.diamondCut([
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['setEntityBatch', 'setEntity'])
         },
         {
-            facetAddress: StFeesFacet_c.address,
+            facetAddress: DataLoadableFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StFeesFacet', ['getFee', 'setFee_TokType', 'setFee_TokTypeBatch', 'setFee_CcyType', 'setFee_CcyTypeBatch'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('DataLoadableFacet', ['createLedgerEntryBatch', 'createLedgerEntry'])
         },
-    ], CONST.nullAddr, "0x");
 
-    console.log('Cutting 3...');
-    await stm.diamondCut([
+        {
+            facetAddress: CONST.nullAddr,
+            action: CONST.FacetCutAction.Remove,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet',  ['getEntityBatch', 'getEntity'])
+        },
         {
             facetAddress: StLedgerFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet', ['getSecTokenTypes'])
-        },
-        {
-            facetAddress: StTransferableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade'])
+            action: CONST.FacetCutAction.Add,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet', ['getAccountEntity', 'getAccountEntityBatch'])
         },
     ], CONST.nullAddr, "0x");
 

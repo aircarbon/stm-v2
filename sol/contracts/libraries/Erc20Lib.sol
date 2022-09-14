@@ -19,40 +19,69 @@ library Erc20Lib {
 	event Transfer(address indexed from, address indexed to, uint256 value);
 	event Approval(address indexed owner, address indexed spender, uint256 value);
 
-	function createOrUpdateEntityBatch(uint[] calldata entityId, address[] calldata transferOrTradeFeesOwner) internal {
-		uint len = entityId.length;
-		require(len == transferOrTradeFeesOwner.length, "createOrUpdateEntityBatch: array lengths don't match");
+	event EntityCreated(uint indexed entityId, address indexed feeOwner);
+	event EntityUpdated(uint indexed entityId, address indexed feeOwner);
+	event EntityAssignedForAccount(address indexed account, uint indexed entityId);
+
+	function createEntity(StructLib.IdWithAddress calldata entityIdWithAddr) internal {
+		uint entityId = entityIdWithAddr.id;
+		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
+
+		require(entityId > 0, 'createEntity: invalid entity id');
+		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
+		require(!s3.entityExists[entityId], 'createEntity: entity already exists');
+
+		s3.entityExists[entityId] = true;
+		s3.entities.push(entityId);
+		s3.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
+
+		emit EntityCreated(entityId, transferOrTradeFeesOwner);
+	}
+
+	function createEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) internal {
+		uint len = entityIdWithAddr.length;
 
 		for(uint i = 0; i < len; i++) {
-			createOrUpdateEntity(entityId[i], transferOrTradeFeesOwner[i]);
+			createEntity(entityIdWithAddr[i]);
 		}
 	}
 
-	function createOrUpdateEntity(uint entityId, address transferOrTradeFeesOwner) internal {
-		require(entityId > 0, 'createOrUpdateEntity: invalid entity id');
-		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
+	function updateEntity(StructLib.IdWithAddress calldata entityIdWithAddr) internal {
+		uint entityId = entityIdWithAddr.id;
+		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
 
-		if(!s3.entityExists[entityId]) {
-			s3.entityExists[entityId] = true;
-			s3.entities.push(entityId);
-		}
+		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
+		require(s3.entityExists[entityId], 'updateEntity: entity does not exist');
 
 		s3.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
+		emit EntityUpdated(entityId, transferOrTradeFeesOwner);
 	}
 
-	function setEntity(address addr, uint256 entityId) internal {
+	function updateEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) internal {
+		uint len = entityIdWithAddr.length;
+
+		for(uint i = 0; i < len; i++) {
+			updateEntity(entityIdWithAddr[i]);
+		}
+	}
+
+	function setAccountEntity(StructLib.IdWithAddress memory entityIdWithAddr) internal {
+		uint entityId = entityIdWithAddr.id;
+		address addr = entityIdWithAddr.addr;
+
 		if (entityId == 0) {
 			return;
 		}
-		require(addr != address(0), "setEntity: invalid entity address");
-		require(entityId > 0, "setEntity: invalid entity id");
+		require(addr != address(0), "setAccountEntity: invalid entity address");
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		require(s.erc20d._whitelisted[addr], "setEntity: address is not white listed");
-		require(s.entities[addr] == 0, "setEntity: address already assigned to an entity");
+		require(s.erc20d._whitelisted[addr], "setAccountEntity: address is not white listed");
+		require(s.entities[addr] == 0, "setAccountEntity: address is already assigned to an entity");
 
 		s.entities[addr] = entityId;
 		s.addressesPerEntity[entityId].push(addr);
+
+		emit EntityAssignedForAccount(addr, entityId);
 	}
 
 	function getWhitelist(

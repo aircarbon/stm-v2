@@ -20,7 +20,7 @@ contract DataLoadableFacet {
 			uint entityId = currParam.entityId;
 			ValidationLib.validateEntityExists(entityId);
 
-			Erc20Lib.setEntity(currParam.ledgerEntryOwner, entityId);
+			Erc20Lib.setAccountEntity(StructLib.IdWithAddress(entityId, currParam.ledgerEntryOwner));
 			LoadLib.createLedgerEntry(
 				ld,
 				currParam.ledgerEntryOwner,
@@ -48,7 +48,7 @@ contract DataLoadableFacet {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateEntityExists(entityId);
 
-		Erc20Lib.setEntity(ledgerEntryOwner, entityId);
+		Erc20Lib.setAccountEntity(StructLib.IdWithAddress(entityId, ledgerEntryOwner));
 		LoadLib.createLedgerEntry(
 			LibMainStorage.getStorage().ld,
 			ledgerEntryOwner,

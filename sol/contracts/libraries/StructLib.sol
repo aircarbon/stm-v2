@@ -103,6 +103,11 @@ library StructLib {
 		SetFeeArgs feeArgs;
 	}
 
+	struct IdWithAddress {
+		uint id;
+		address addr;
+	}
+
 	/**
 	 * @notice Transfers currency across ledger entries
 	 * @param a Transfer arguments
