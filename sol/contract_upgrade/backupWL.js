@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const argv = require('yargs-parser')(process.argv.slice(2));
 // @ts-ignore artifacts from truffle
-const StMaster = artifacts.require('StMaster');
+const StErc20Facet = artifacts.require('StErc20Facet');
+const StMasterFacet = artifacts.require('StMasterFacet');
 const { soliditySha3 } = require('web3-utils');
 
 const CONST = require('../const');
@@ -25,7 +26,8 @@ module.exports = async (callback) => {
     return callback(new Error(`Invalid address: ${contractAddress}`));
   }
 
-  const contract = await StMaster.at(contractAddress);
+  const contract = await StErc20Facet.at(contractAddress);
+  const contractMaster = await StMasterFacet.at(contractAddress);
 
   const whitelistAddresses = await contract.getWhitelist();
   let wlHash = '';
@@ -40,8 +42,8 @@ module.exports = async (callback) => {
   }
 
   const network = argv?.network || 'development';
-  const name = await contract.name();
-  const version = await contract.version();
+  const name = await contractMaster.name();
+  const version = await contractMaster.version();
 
   const info = {
     network,

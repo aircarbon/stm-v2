@@ -75,6 +75,23 @@ module.exports = async (callback) => {
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
+  // add entities data to a new contract
+  let entitiesWithFeeOwnersOnChain = await newContract_StErc20Facet.getAllEntitiesWithFeeOwners();
+  entitiesWithFeeOwnersOnChain = entitiesWithFeeOwnersOnChain.map((obj) => { return {id: obj.id, addr: obj.addr}; });
+  const entitiesOnChain = entitiesWithFeeOwnersOnChain.map((obj) => obj.id);
+
+  const entitiesToAdd = [];
+  data.entitiesWithFeeOwners.forEach((entWithFeeOwn) => {
+    if(!entitiesOnChain.includes(entWithFeeOwn.id)) {
+      entitiesToAdd.push(entWithFeeOwn);
+    }
+  });
+
+  if(entitiesToAdd.length > 0) {
+    console.log('\n Adding entities with fee owners ...');
+    console.log(entitiesToAdd);
+    await newContract_StErc20Facet.createEntityBatch(entitiesToAdd);
+  }
   // add ccy data to new contract
   const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
@@ -375,12 +392,20 @@ module.exports = async (callback) => {
 
     await sleep(1000);
 
-    let allCcyTypesWithFees = data.ccyTypes.map((ccyType, index) => {
+    let allCcyTypesWithFees = data.ccyFees.map((ccyFee, index) => {
       return {
-        ccyType,
-        fee: data.ccyFees[index]
+        ccyType: data.ccyTypes[index % data.ccyTypes.length],
+        fee: ccyFee,
+        entityId: Math.floor(index / data.ccyTypes.length)
       }
     });
+
+    // let allCcyTypesWithFees = data.ccyTypes.map((ccyType, index) => {
+    //   return {
+    //     ccyType,
+    //     fee: data.ccyFees[index]
+    //   }
+    // });
 
     allCcyTypesWithFees = allCcyTypesWithFees.filter((ccyTypeObj) => {
       return Number(ccyTypeObj.fee?.fee_fixed) ||
@@ -401,7 +426,7 @@ module.exports = async (callback) => {
       newContract_StFeesFacet.setFee_CcyTypeBatch(
           tokenBatch.map((ccyTypeObj) => {
             return {
-              entityId: 1,
+              entityId: ccyTypeObj.entityId,
               ccyTypeId: ccyTypeObj.ccyType.id,
               ledgerOwner: CONST.nullAddr,
               feeArgs: ccyTypeObj.fee
@@ -417,12 +442,20 @@ module.exports = async (callback) => {
   await series(ccyTypesPromises);
   await sleep(1000);
 
-    let allTokenTypesWithFees = data.tokenTypes.map((tokenType, index) => {
-      return {
-        tokenType,
-        fee: data.tokenFees[index]
-      }
-    });
+  let allTokenTypesWithFees = data.tokenFees.map((tokenFee, index) => {
+    return {
+      tokenType: data.tokenTypes[index % data.tokenTypes.length],
+      fee: tokenFee,
+      entityId: Math.floor(index / data.tokenTypes.length)
+    }
+  });
+
+    // let allTokenTypesWithFees = data.tokenTypes.map((tokenType, index) => {
+    //   return {
+    //     tokenType,
+    //     fee: data.tokenFees[index]
+    //   }
+    // });
 
     allTokenTypesWithFees = allTokenTypesWithFees.filter((tokenTypeWithFee) => {
       return Number(tokenTypeWithFee.fee?.fee_fixed) ||
@@ -440,7 +473,7 @@ module.exports = async (callback) => {
       console.log(`Setting fee for token types (in batch) - ${index + 1}/${ccyTypesBatches.length}`);
 
       newContract_StFeesFacet.setFee_TokTypeBatch(
-          new Array(tokTypeBatch.length).fill(1),
+        tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.entityId),
           tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.tokenType.id),
           new Array(tokTypeBatch.length).fill(CONST.nullAddr),
           tokTypeBatch.map((tokenTypeObj) => tokenTypeObj.fee),
@@ -486,7 +519,7 @@ module.exports = async (callback) => {
       newContract_StFeesFacet.setFee_CcyTypeBatch(
           feesBatch.map((ccyTypeObj) => {
             return {
-              entityId: 1,
+              entityId: 0,
               ccyTypeId: ccyTypeObj.ccyTypeId,
               ledgerOwner: ccyTypeObj.ledgerOwner,
               feeArgs: ccyTypeObj.fee
@@ -533,7 +566,7 @@ module.exports = async (callback) => {
       console.log(`Setting fee for tokenTypes for owners (in batch) - ${index + 1}/${feesWithOwnerAndTokenTypesBatches.length} - from ${currAddr}`);
 
       newContract_StFeesFacet.setFee_TokTypeBatch(
-        new Array(feesBatch.length).fill(1),
+        new Array(feesBatch.length).fill(0),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.tokenTypeId),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.ledgerOwner),
           feesBatch.map((tokenTypeObj) => tokenTypeObj.fee),

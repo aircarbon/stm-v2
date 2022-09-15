@@ -21,6 +21,7 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
   console.log('getLedgerHashOffChain');
   // hash currency types & exchange currency fees
   let ledgerHash = '';
+  const entitiesWithFeeOwners = data?.entitiesWithFeeOwners ?? [];
   const ccyTypes = data?.ccyTypes ?? [];
   const ccyFees = data?.ccyFees ?? [];
   for (let index = 0; index < ccyTypes.length; index++) {
@@ -244,6 +245,12 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
         token.ft_PL,
       );
     }
+  });
+
+  console.log('ledger hash - secTokens', ledgerHash);
+
+  entitiesWithFeeOwners.forEach((entityWithFeeOwner) => {
+    ledgerHash = soliditySha3(ledgerHash, entityWithFeeOwner.id, entityWithFeeOwner.addr)
   });
 
   console.log('result', ledgerHash);
@@ -535,7 +542,8 @@ async function createBackupData(contracts, contractAddress, contractType) {
 
   // get entities with fee owners
   let entitiesWithFeeOwners = await newContract_StErc20Facet.getAllEntitiesWithFeeOwners();
-  entitiesWithFeeOwners = entitiesWithFeeOwners.map((obj) => helpers.decodeWeb3Object(obj));
+  entitiesWithFeeOwners = entitiesWithFeeOwners.map((obj) => { return {id: obj.id, addr: obj.addr}; });
+
   const entities = entitiesWithFeeOwners.map((obj) => obj.id);
 
   // get all ccy and token types
@@ -557,6 +565,18 @@ async function createBackupData(contracts, contractAddress, contractType) {
     previousGlobalFees = data.globalFees;
     previousLedgerOwnersFees = data.ledgerOwnersFees;
   }
+
+  // get address entities
+  console.log('Retrieving account entities...');
+  const wlAddresses = await newContract_StErc20Facet.getWhitelist();
+  const wlAddressesBatches = createBatches(wlAddresses, 20);
+
+  const entitiesOfWlAddressesFuncs = [];
+  for (let i = 0; i < wlAddressesBatches.length; i++) {
+    entitiesOfWlAddressesFuncs.push(newContract_StLedgerFacet.getAccountEntityBatch.bind(this, wlAddressesBatches[i]));
+  }
+
+  const accountEntities = await retry(entitiesOfWlAddressesFuncs, 2000);
 
   // get ledgers
   const ledgerOwners = previousLedgersOwners || (await newContract_StLedgerFacet.getLedgerOwners());
@@ -725,6 +745,7 @@ async function createBackupData(contracts, contractAddress, contractType) {
     },
     data: {
       entitiesWithFeeOwners: entitiesWithFeeOwners,
+      accountEntities,
       secTokenBaseId: hexToNumberString(secTokenBaseId),
       secTokenMintedCount: hexToNumberString(secTokenMintedCount),
       secTokenBurnedQty: hexToNumberString(secTokenBurnedQty),
