@@ -533,6 +533,11 @@ async function createBackupData(contracts, contractAddress, contractType) {
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
+  // get entities with fee owners
+  let entitiesWithFeeOwners = await newContract_StErc20Facet.getAllEntitiesWithFeeOwners();
+  entitiesWithFeeOwners = entitiesWithFeeOwners.map((obj) => helpers.decodeWeb3Object(obj));
+  const entities = entitiesWithFeeOwners.map((obj) => obj.id);
+
   // get all ccy and token types
   const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
@@ -582,7 +587,8 @@ async function createBackupData(contracts, contractAddress, contractType) {
     });
 
   if (!previousLedgerOwnersFees) {
-    // fetch ledger owner fee for all currencies types and token types
+    // fetch ledger owner fee for all currencies types and token types for every user 
+    // (passing entity id as 0 because it is optional when an address of a specific user is passed)
     console.time('ledgerOwnersFeesPromises');
 
     let results = [];
@@ -590,12 +596,12 @@ async function createBackupData(contracts, contractAddress, contractType) {
       console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${ledgerOwners[i]}`);
       const ccyFeeFuncs = [];
       for (let index = 0; index < currencyTypes.length; index++) {
-        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 1, currencyTypes[index].id, ledgerOwners[i]));
+        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 0, currencyTypes[index].id, ledgerOwners[i]));
       }
 
       const tokenFeeFuncs = [];
       for (let index = 0; index < tokenTypes.length; index++) {
-        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 1, tokenTypes[index].id, ledgerOwners[i]));
+        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 0, tokenTypes[index].id, ledgerOwners[i]));
       }
 
       const ccyFeeFundBatches = createBatches(ccyFeeFuncs, 50);
@@ -653,9 +659,11 @@ async function createBackupData(contracts, contractAddress, contractType) {
   } else {
     const ccyFeePromise = [];
     for (let index = 0; index < currencyTypes.length; index++) {
-      // TODO: for every entity
-      ccyFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.CCY, 1, currencyTypes[index].id, CONST.nullAddr));
+      for(let entityId of entities) {
+        ccyFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.CCY, entityId, currencyTypes[index].id, CONST.nullAddr));
+      }
     }
+    // will be recorded in "ccyFees" field of the backup object
     ccyFees = await Promise.all(ccyFeePromise);
   }
 
@@ -666,9 +674,11 @@ async function createBackupData(contracts, contractAddress, contractType) {
   } else {
     const tokenFeePromise = [];
     for (let index = 0; index < tokenTypes.length; index++) {
-      // TODO: for every entity
-      tokenFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.TOK, 1, tokenTypes[index].id, CONST.nullAddr));
+      for(let entityId of entities) {
+        tokenFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.TOK, entityId, tokenTypes[index].id, CONST.nullAddr));
+      }
     }
+    // will be recorded in "tokenFees" field of the backup object
     tokenFees = await Promise.all(tokenFeePromise);
   }
 
@@ -714,6 +724,7 @@ async function createBackupData(contracts, contractAddress, contractType) {
       decimals,
     },
     data: {
+      entitiesWithFeeOwners: entitiesWithFeeOwners,
       secTokenBaseId: hexToNumberString(secTokenBaseId),
       secTokenMintedCount: hexToNumberString(secTokenMintedCount),
       secTokenBurnedQty: hexToNumberString(secTokenBurnedQty),
