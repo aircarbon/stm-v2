@@ -22,6 +22,7 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
   // hash currency types & exchange currency fees
   let ledgerHash = '';
   const entitiesWithFeeOwners = data?.entitiesWithFeeOwners ?? [];
+  const accountEntities = data?.accountEntities ?? [];
   const ccyTypes = data?.ccyTypes ?? [];
   const ccyFees = data?.ccyFees ?? [];
   for (let index = 0; index < ccyTypes.length; index++) {
@@ -251,6 +252,12 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
 
   entitiesWithFeeOwners.forEach((entityWithFeeOwner) => {
     ledgerHash = soliditySha3(ledgerHash, entityWithFeeOwner.id, entityWithFeeOwner.addr)
+  });
+  
+  console.log('ledger hash - accountEntities', ledgerHash);
+
+  accountEntities.forEach((entityId) => {
+    ledgerHash = soliditySha3(ledgerHash, entityId)
   });
 
   console.log('result', ledgerHash);
@@ -576,7 +583,8 @@ async function createBackupData(contracts, contractAddress, contractType) {
     entitiesOfWlAddressesFuncs.push(newContract_StLedgerFacet.getAccountEntityBatch.bind(this, wlAddressesBatches[i]));
   }
 
-  const accountEntities = await retry(entitiesOfWlAddressesFuncs, 2000);
+  let accountEntities = await retry(entitiesOfWlAddressesFuncs, 2000);
+  accountEntities = accountEntities.flat();
 
   // get ledgers
   const ledgerOwners = previousLedgersOwners || (await newContract_StLedgerFacet.getLedgerOwners());

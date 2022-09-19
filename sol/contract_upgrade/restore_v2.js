@@ -188,7 +188,7 @@ module.exports = async (callback) => {
 
     // get ledgers
     const ledgerOwners = await newContract_StLedgerFacet.getLedgerOwners();
-    const ledgers = (await Promise.all(ledgerOwners.map((owner) => StLedgerFacet.getLedgerEntry(owner))))
+    const ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry(owner))))
       .map((ledger) => helpers.decodeWeb3Object(ledger))
       .map((ledger) => {
         return {
@@ -210,9 +210,13 @@ module.exports = async (callback) => {
 
   for(let i = 0; i < data.ledgerOwners.length; i++) {
     if(!ledgerOwners.includes(data.ledgerOwners[i])) {
+      const entityId = data.accountEntities[i];
       filteredLedgersWithOwners.push({
         ledger: data.ledgers[i],
-        owner: data.ledgerOwners[i]
+        owner: data.ledgerOwners[i],
+        // TODO: cannot set entities because some of the addresses are not whitelisted (ledger entry owner)
+        // This should not be a problem on production data, but needs to be tested
+        entityId: whitelistedAddresses.includes(data.ledgerOwners[i]) ? (entityId == 0 ? 1 : entityId) : 0
       });
     }
   }
@@ -231,7 +235,7 @@ module.exports = async (callback) => {
             ccys: obj.ledger.ccys,
             spot_sumQtyMinted: obj.ledger.spot_sumQtyMinted,
             spot_sumQtyBurned: obj.ledger.spot_sumQtyBurned,
-            entityId: whitelistedAddresses.includes(obj.owner) ? 1 : 0
+            entityId: obj.entityId
           };
         }))
         .then((result) => cb(null, result))
