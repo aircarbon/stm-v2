@@ -27,17 +27,17 @@ const deployments = {
     LibMainStorage_addr: "0x2de592F086692Ea2d662Ed9eFC5E27D83972C27c",
     StructLib_addr: "0xE0765b5A3062778A38d0963353CFCf3fd9307e4C",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
-    TransferLib_addr: "0x2Bb920aB1cD98Cf0F3D54393237BD6b65D31465D",
+    TransferLib_addr: "0x208dBafaecb1091E8d19f047d1E8bc5b24CB1696",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
     StFeesFacet_addr: "0x6e0F251224ae09853478039e45eD96a48C1a2E74",
-    Erc20Lib_addr: "0x2d3d7C94B56a318aAEFB0D752B2F53289353c871",
+    Erc20Lib_addr: "0x09eF5c7A78c2308b9aAa70ce95f4e8EF9A4E3332",
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
-    StErc20Facet_addr: "0x49E9961D9057c3a8f2cF1B6240c5b6075E63eD9c",
+    StErc20Facet_addr: "0xF5c969478b2B7C697f8D3a2A03A4C50d44C5cf60",
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
-    StTransferableFacet_addr: "0x27279B4cBFd62e6498933ca23BB5be2347b82250",
+    StTransferableFacet_addr: "0x9043D3738c12D3c462B9d3d9Db98C9b3FcBA30a6",
 }
 
 const deployOrGetDeployed = async(deployer, addr, contract) => {
@@ -154,53 +154,27 @@ module.exports = async function (deployer) {
     // registering the Facet
     console.log('Cutting 1...');
     await stm.diamondCut([
-        {
-            facetAddress: CONST.nullAddr,
-            action: CONST.FacetCutAction.Remove,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName(
-                'StErc20Facet', 
-                ['createOrUpdateEntity', 'createOrUpdateEntityBatch', 'setEntityBatch', 'setEntity', 'getEntities']
-            )
-        },
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['getEntityFeeOwner'])
-        },
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName(
-                'StErc20Facet', 
-                [
-                    'createEntity', 
-                    'createEntityBatch', 
-                    'updateEntity', 
-                    'updateEntityBatch', 
-                    'setAccountEntity', 
-                    'setAccountEntityBatch', 
-                    'getAllEntities', 
-                    'getAllEntitiesWithFeeOwners',
-                ]
-            )
-        },
-        {
-            facetAddress: DataLoadableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('DataLoadableFacet', ['createLedgerEntryBatch', 'createLedgerEntry'])
-        },
+        // With an OLD ABI - deleting because the function signature changes due to changes in the structure of their arguments
+        // {
+        //     facetAddress: CONST.nullAddr,
+        //     action: CONST.FacetCutAction.Remove,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
+        // },
 
+        // With the new ABI
         {
-            facetAddress: CONST.nullAddr,
-            action: CONST.FacetCutAction.Remove,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet',  ['getEntityBatch', 'getEntity'])
+            facetAddress: StErc20Facet_c.address,
+            action: CONST.FacetCutAction.Replace,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
         },
         {
-            facetAddress: StLedgerFacet_c.address,
+            facetAddress: StTransferableFacet_c.address,
             action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet', ['getAccountEntity', 'getAccountEntityBatch'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         },
     ], CONST.nullAddr, "0x");
 
     console.log('Done.');
+
+    process.exit();
 };

@@ -11,7 +11,7 @@
     "ganache": "INSTANCE_ID=local node ganache",
     "devInitSealContract": "node devInitSealContract",
     "test": "truffle test",
-    "updateABI": "npx truffle exec migrations/updateABI.js",
+    "updateABI": "npx truffle compile && npx truffle exec migrations/updateABI.js",
     "solium:lint": "solium lint -d ./contracts",
     "solhint": "solhint 'contracts/**/*.sol'",
     "prettier": "npx prettier --write 'contracts/**/*.sol'",
