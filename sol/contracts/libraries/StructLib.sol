@@ -139,7 +139,8 @@ library StructLib {
 		uint256 fee_ccy_B; // currency fee paid by B
 		uint256 fee_tok_A; // token fee paid by A
 		uint256 fee_tok_B; // token fee paid by B
-		address fee_to; // fees paid to
+		address fee_to_A; // fees paid to for entity A
+		address fee_to_B; // fees paid to for entity B
 		uint256 origTokFee_qty; // for originator token fees: token quantity from batch being sent by A or B
 		uint64 origTokFee_batchId; // for originator token fees: batch ID supplying the sent token quantity
 		SetFeeArgs origTokFee_struct; // for originator token fees: batch originator token fee structure
@@ -215,7 +216,8 @@ library StructLib {
 		// (signed value: ledger supports -ve balances)
 		uint256 ccyTypeId_B; // currency type moving from B
 		bool applyFees; // apply global fee structure to the transfer (both legs)
-		address feeAddrOwner; // exchange fees: receive address
+		address feeAddrOwner_A; // exchange fees: receive address from entity of ledger_A
+		address feeAddrOwner_B; // exchange fees: receive address from entity of ledger_B
 		TransferType transferType; // reason/type code: applies only to one-sided transfers (not two-sided trades, which are coded automatically)
 	}
 

@@ -118,7 +118,9 @@ contract StTransferableFacet {
 		// v2.TODO split the fees if both ledgers are from diff entities
 		// NOT WORKING for the shared orderbook
 		// At the moment fees go to the fee address of the entity of ledger_A, but if ledger_A and ledger_B are different, it should be split
-		transferArgs.feeAddrOwner = LibMainStorage.getStorage3().feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
+		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
+		transferArgs.feeAddrOwner_A = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
+		transferArgs.feeAddrOwner_B = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_B]];
 		TransferLib.transferOrTrade(s.ld, s.std, s.ctd, s.globalFees, transferArgs);
 	}
 }

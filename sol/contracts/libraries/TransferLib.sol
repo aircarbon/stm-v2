@@ -156,7 +156,8 @@ library TransferLib {
 						ccy_amount_B: a.ccy_amount_B,
 						ccyTypeId_B: a.ccyTypeId_B,
 						applyFees: a.applyFees,
-						feeAddrOwner: a.feeAddrOwner,
+						feeAddrOwner_A: a.feeAddrOwner_A,
+						feeAddrOwner_B: a.feeAddrOwner_B,
 						transferType: a.transferType
 					})
 				);
@@ -178,7 +179,8 @@ library TransferLib {
 						ccy_amount_B: a.ccy_amount_B,
 						ccyTypeId_B: a.ccyTypeId_B,
 						applyFees: a.applyFees,
-						feeAddrOwner: a.feeAddrOwner,
+						feeAddrOwner_A: a.feeAddrOwner_A,
+						feeAddrOwner_B: a.feeAddrOwner_B,
 						transferType: a.transferType
 					})
 				);
@@ -224,27 +226,28 @@ library TransferLib {
 			? ld._ledger[a.ledger_B].spot_customFees
 			: globalFees;
 		StructLib.FeesCalc memory exFees = StructLib.FeesCalc({ // exchange fees (disabled if fee-reciever == fee-payer)
-			fee_ccy_A: a.ledger_A != a.feeAddrOwner
+			fee_ccy_A: a.ledger_A != a.feeAddrOwner_A
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 					uint256(a.ccy_amount_A),
 					a.qty_B
 				)
 				: 0,
-			fee_ccy_B: a.ledger_B != a.feeAddrOwner
+			fee_ccy_B: a.ledger_B != a.feeAddrOwner_B
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 					uint256(a.ccy_amount_B),
 					a.qty_A
 				)
 				: 0,
-			fee_tok_A: a.ledger_A != a.feeAddrOwner
+			fee_tok_A: a.ledger_A != a.feeAddrOwner_A
 				? calcFeeWithCapCollar(exFeeStruct_tok_A.tok[a.tokTypeId_A], a.qty_A, 0)
 				: 0,
-			fee_tok_B: a.ledger_B != a.feeAddrOwner
+			fee_tok_B: a.ledger_B != a.feeAddrOwner_B
 				? calcFeeWithCapCollar(exFeeStruct_tok_B.tok[a.tokTypeId_B], a.qty_B, 0)
 				: 0,
-			fee_to: a.feeAddrOwner,
+			fee_to_A: a.feeAddrOwner_A,
+			fee_to_B: a.feeAddrOwner_B,
 			origTokFee_qty: 0,
 			origTokFee_batchId: 0,
 			origTokFee_struct: StructLib.SetFeeArgs({
@@ -269,7 +272,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
 					: globalFees;
-				exFees.fee_ccy_B = a.ledger_B != a.feeAddrOwner
+				exFees.fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 						uint256(a.ccy_amount_A),
@@ -288,7 +291,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_A].spot_customFees
 					: globalFees;
-				exFees.fee_ccy_A = a.ledger_A != a.feeAddrOwner
+				exFees.fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 						uint256(a.ccy_amount_B),
@@ -450,7 +453,7 @@ library TransferLib {
 					ld,
 					StructLib.TransferCcyArgs({
 						from: a.ledger_A,
-						to: a.feeAddrOwner,
+						to: a.feeAddrOwner_A,
 						ccyTypeId: a.ccyTypeId_A,
 						amount: exFees.fee_ccy_A,
 						transferType: StructLib.TransferType.ExchangeFee
@@ -479,7 +482,7 @@ library TransferLib {
 					ld,
 					StructLib.TransferCcyArgs({
 						from: a.ledger_B,
-						to: a.feeAddrOwner,
+						to: a.feeAddrOwner_B,
 						ccyTypeId: a.ccyTypeId_B,
 						amount: exFees.fee_ccy_B,
 						transferType: StructLib.TransferType.ExchangeFee
@@ -494,9 +497,10 @@ library TransferLib {
 		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
 			//**
 			if (a.applyFees) {
-				uint256 tot_exFee_ccy = exFees.fee_ccy_A + exFees.fee_ccy_B;
+				uint fee_ccy_A = exFees.fee_ccy_A;
+				uint fee_ccy_B = exFees.fee_ccy_B;
 
-				if (tot_exFee_ccy > 0) {
+				if (fee_ccy_A + fee_ccy_B > 0) {
 					require(
 						a.ccyTypeId_A != 0 || a.ccyTypeId_B != 0,
 						"Unexpected: undefined currency types"
@@ -507,27 +511,26 @@ library TransferLib {
 							"Unexpected: mirrored currency type mismatch"
 						);
 					}
+
 					uint256 ccyTypeId = a.ccyTypeId_A != 0 ? a.ccyTypeId_A : a.ccyTypeId_B;
 
-					// apply for A->B token batches
-					applyOriginatorCcyFees(
-						ld,
-						v.ts_previews[0],
-						tot_exFee_ccy,
-						a.qty_A,
-						a.feeAddrOwner,
-						ccyTypeId
-					);
+					if(a.feeAddrOwner_A == a.feeAddrOwner_B) {
+						// apply for A->B token batches
+						applyOriginatorCcyFees(ld, v.ts_previews[0], fee_ccy_A + fee_ccy_B, a.qty_A, a.feeAddrOwner_A, ccyTypeId);
 
-					// apply for B->A token batches
-					applyOriginatorCcyFees(
-						ld,
-						v.ts_previews[1],
-						tot_exFee_ccy,
-						a.qty_B,
-						a.feeAddrOwner,
-						ccyTypeId
-					);
+						// apply for B->A token batches
+						applyOriginatorCcyFees(ld, v.ts_previews[1], fee_ccy_A + fee_ccy_B, a.qty_B, a.feeAddrOwner_A, ccyTypeId);
+					} else {
+						if(fee_ccy_A > 0) {
+							applyOriginatorCcyFees(ld, v.ts_previews[0], fee_ccy_A, a.qty_A, a.feeAddrOwner_A, ccyTypeId);
+							applyOriginatorCcyFees(ld, v.ts_previews[1], fee_ccy_A, a.qty_B, a.feeAddrOwner_A, ccyTypeId);
+						}
+
+						if(fee_ccy_B > 0) {
+							applyOriginatorCcyFees(ld, v.ts_previews[0], fee_ccy_B, a.qty_A, a.feeAddrOwner_B, ccyTypeId);
+							applyOriginatorCcyFees(ld, v.ts_previews[1], fee_ccy_B, a.qty_B, a.feeAddrOwner_B, ccyTypeId);
+						}
+					}
 				}
 			}
 		}
@@ -545,7 +548,7 @@ library TransferLib {
 							ld,
 							TransferSplitArgs({
 								from: a.ledger_A,
-								to: a.feeAddrOwner,
+								to: a.feeAddrOwner_A,
 								tokTypeId: a.tokTypeId_A,
 								qtyUnit: exFees.fee_tok_A,
 								transferType: StructLib.TransferType.ExchangeFee,
@@ -609,7 +612,7 @@ library TransferLib {
 							ld,
 							TransferSplitArgs({
 								from: a.ledger_B,
-								to: a.feeAddrOwner,
+								to: a.feeAddrOwner_B,
 								tokTypeId: a.tokTypeId_B,
 								qtyUnit: exFees.fee_tok_B,
 								transferType: StructLib.TransferType.ExchangeFee,
@@ -766,27 +769,28 @@ library TransferLib {
 			? ld._ledger[a.ledger_B].spot_customFees
 			: globalFees;
 		feesAll[ndx++] = StructLib.FeesCalc({
-			fee_ccy_A: a.ledger_A != a.feeAddrOwner && a.ccy_amount_A > 0
+			fee_ccy_A: a.ledger_A != a.feeAddrOwner_A && a.ccy_amount_A > 0
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 					uint256(a.ccy_amount_A),
 					a.qty_B
 				)
 				: 0,
-			fee_ccy_B: a.ledger_B != a.feeAddrOwner && a.ccy_amount_B > 0
+			fee_ccy_B: a.ledger_B != a.feeAddrOwner_B && a.ccy_amount_B > 0
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 					uint256(a.ccy_amount_B),
 					a.qty_A
 				)
 				: 0,
-			fee_tok_A: a.ledger_A != a.feeAddrOwner && a.qty_A > 0
+			fee_tok_A: a.ledger_A != a.feeAddrOwner_A && a.qty_A > 0
 				? calcFeeWithCapCollar(exFeeStruct_tok_A.tok[a.tokTypeId_A], a.qty_A, 0)
 				: 0,
-			fee_tok_B: a.ledger_B != a.feeAddrOwner && a.qty_B > 0
+			fee_tok_B: a.ledger_B != a.feeAddrOwner_B && a.qty_B > 0
 				? calcFeeWithCapCollar(exFeeStruct_tok_B.tok[a.tokTypeId_B], a.qty_B, 0)
 				: 0,
-			fee_to: feeAddrOwner,
+			fee_to_A: feeAddrOwner,
+			fee_to_B: feeAddrOwner,
 			origTokFee_qty: 0,
 			origTokFee_batchId: 0,
 			origTokFee_struct: StructLib.SetFeeArgs({
@@ -811,7 +815,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
 					: globalFees;
-				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner
+				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 						uint256(a.ccy_amount_A),
@@ -830,7 +834,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_A].spot_customFees
 					: globalFees;
-				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner
+				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 						uint256(a.ccy_amount_B),
@@ -869,7 +873,8 @@ library TransferLib {
 								0
 							),
 							fee_tok_B: 0,
-							fee_to: batch.originator,
+							fee_to_A: batch.originator,
+							fee_to_B: batch.originator,
 							origTokFee_qty: preview.transferQty[i],
 							origTokFee_batchId: preview.batchIds[i],
 							origTokFee_struct: batch.origTokFee
@@ -902,7 +907,8 @@ library TransferLib {
 								preview.transferQty[i],
 								0
 							),
-							fee_to: batch.originator,
+							fee_to_A: batch.originator,
+							fee_to_B: batch.originator,
 							origTokFee_qty: preview.transferQty[i],
 							origTokFee_batchId: preview.batchIds[i],
 							origTokFee_struct: batch.origTokFee
@@ -930,7 +936,8 @@ library TransferLib {
 							ccy_amount_B: a.ccy_amount_B,
 							ccyTypeId_B: a.ccyTypeId_B,
 							applyFees: a.applyFees,
-							feeAddrOwner: a.feeAddrOwner,
+							feeAddrOwner_A: a.feeAddrOwner_A,
+							feeAddrOwner_B: a.feeAddrOwner_B,
 							transferType: a.transferType
 						})
 					);
@@ -958,7 +965,8 @@ library TransferLib {
 							ccy_amount_B: a.ccy_amount_B,
 							ccyTypeId_B: a.ccyTypeId_B,
 							applyFees: a.applyFees,
-							feeAddrOwner: a.feeAddrOwner,
+							feeAddrOwner_A: a.feeAddrOwner_A,
+							feeAddrOwner_B: a.feeAddrOwner_B,
 							transferType: a.transferType
 						})
 					);
@@ -1017,27 +1025,28 @@ library TransferLib {
 			? ld._ledger[a.ledger_B].spot_customFees
 			: globalFees;
 		feesAll[ndx++] = StructLib.FeesCalc({
-			fee_ccy_A: a.ledger_A != a.feeAddrOwner && a.ccy_amount_A > 0
+			fee_ccy_A: a.ledger_A != a.feeAddrOwner_A && a.ccy_amount_A > 0
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 					uint256(a.ccy_amount_A),
 					a.qty_B
 				)
 				: 0,
-			fee_ccy_B: a.ledger_B != a.feeAddrOwner && a.ccy_amount_B > 0
+			fee_ccy_B: a.ledger_B != a.feeAddrOwner_B && a.ccy_amount_B > 0
 				? calcFeeWithCapCollar(
 					exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 					uint256(a.ccy_amount_B),
 					a.qty_A
 				)
 				: 0,
-			fee_tok_A: a.ledger_A != a.feeAddrOwner && a.qty_A > 0
+			fee_tok_A: a.ledger_A != a.feeAddrOwner_A && a.qty_A > 0
 				? calcFeeWithCapCollar(exFeeStruct_tok_A.tok[a.tokTypeId_A], a.qty_A, 0)
 				: 0,
-			fee_tok_B: a.ledger_B != a.feeAddrOwner && a.qty_B > 0
+			fee_tok_B: a.ledger_B != a.feeAddrOwner_B && a.qty_B > 0
 				? calcFeeWithCapCollar(exFeeStruct_tok_B.tok[a.tokTypeId_B], a.qty_B, 0)
 				: 0,
-			fee_to: feeAddrOwner,
+			fee_to_A: feeAddrOwner,
+			fee_to_B: feeAddrOwner,
 			origTokFee_qty: 0,
 			origTokFee_batchId: 0,
 			origTokFee_struct: StructLib.SetFeeArgs({
@@ -1062,7 +1071,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
 					: globalFees;
-				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner
+				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
 						uint256(a.ccy_amount_A),
@@ -1081,7 +1090,7 @@ library TransferLib {
 				]
 					? ld._ledger[a.ledger_A].spot_customFees
 					: globalFees;
-				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner
+				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
 						uint256(a.ccy_amount_B),
