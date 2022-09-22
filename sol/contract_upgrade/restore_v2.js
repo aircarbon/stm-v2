@@ -24,6 +24,8 @@ const { getLedgerHashOffChain, createBackupData, createBatches } = require('./ut
 const CONST = require('../const');
 const { helpers } = require('../../orm/build');
 
+const DEFAULT_ENTITY_ID = 1; // If there are no entities, this default entity will be assigned
+
 process.on('unhandledRejection', console.error);
 
 // how many items to process in one batch
@@ -78,10 +80,15 @@ module.exports = async (callback) => {
   // add entities data to a new contract
   let entitiesWithFeeOwnersOnChain = await newContract_StErc20Facet.getAllEntitiesWithFeeOwners();
   entitiesWithFeeOwnersOnChain = entitiesWithFeeOwnersOnChain.map((obj) => { return {id: obj.id, addr: obj.addr}; });
-  const entitiesOnChain = entitiesWithFeeOwnersOnChain.map((obj) => obj.id);
+  const entitiesOnChain = entitiesWithFeeOwnersOnChain.map((obj) => Number(obj.id));
+
+  let entityIds = [];
+  if(data.entitiesWithFeeOwners) {
+    entityIds = data.entitiesWithFeeOwners.map((obj) => obj.id);
+  }
 
   const entitiesToAdd = [];
-  data.entitiesWithFeeOwners.forEach((entWithFeeOwn) => {
+  data.entitiesWithFeeOwners?.forEach((entWithFeeOwn) => {
     if(!entitiesOnChain.includes(entWithFeeOwn.id)) {
       entitiesToAdd.push(entWithFeeOwn);
     }
@@ -91,6 +98,10 @@ module.exports = async (callback) => {
     console.log('\n Adding entities with fee owners ...');
     console.log(entitiesToAdd);
     await newContract_StErc20Facet.createEntityBatch(entitiesToAdd);
+  } else if (!entitiesOnChain.includes(DEFAULT_ENTITY_ID)) {
+    // NOTE: if no entities, then it will create a new entity with an id "1" and assign all the accounts to it.
+    // Entity fee owner can be updated later.
+    await newContract_StErc20Facet.createEntity({id: DEFAULT_ENTITY_ID, addr: CONST.nullAddr});
   }
   // add ccy data to new contract
   const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
@@ -210,13 +221,21 @@ module.exports = async (callback) => {
 
   for(let i = 0; i < data.ledgerOwners.length; i++) {
     if(!ledgerOwners.includes(data.ledgerOwners[i])) {
-      const entityId = data.accountEntities[i];
+      // if there are no acocunt entities, then we assign 1 by default
+      const entityId = data.accountEntities?.[i] || DEFAULT_ENTITY_ID;
+      const ledgerOwner = data.ledgerOwners[i];
+
+      if(!whitelistedAddresses.includes(ledgerOwner)) {
+          console.log(`ERROR! The ledger owner is not whitelisted: ${ledgerOwner}`);
+          process.exit();
+      }
+
       filteredLedgersWithOwners.push({
         ledger: data.ledgers[i],
-        owner: data.ledgerOwners[i],
+        owner: ledgerOwner,
         // TODO: cannot set entities because some of the addresses are not whitelisted (ledger entry owner)
         // This should not be a problem on production data, but needs to be tested
-        entityId: whitelistedAddresses.includes(data.ledgerOwners[i]) ? (entityId == 0 ? 1 : entityId) : 0
+        entityId: entityId == 0 ? DEFAULT_ENTITY_ID : entityId
       });
     }
   }
@@ -397,10 +416,11 @@ module.exports = async (callback) => {
     await sleep(1000);
 
     let allCcyTypesWithFees = data.ccyFees.map((ccyFee, index) => {
+      const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[Math.floor(index / data.ccyTypes.length)];
       return {
         ccyType: data.ccyTypes[index % data.ccyTypes.length],
         fee: ccyFee,
-        entityId: Math.floor(index / data.ccyTypes.length)
+        entityId
       }
     });
 
@@ -447,10 +467,11 @@ module.exports = async (callback) => {
   await sleep(1000);
 
   let allTokenTypesWithFees = data.tokenFees.map((tokenFee, index) => {
+    const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[Math.floor(index / data.tokenTypes.length)];
     return {
       tokenType: data.tokenTypes[index % data.tokenTypes.length],
       fee: tokenFee,
-      entityId: Math.floor(index / data.tokenTypes.length)
+      entityId
     }
   });
 
@@ -603,7 +624,7 @@ module.exports = async (callback) => {
   const onChainLedgerHash = argv?.h === 'onchain';
   const ledgerHash = onChainLedgerHash
     ? await CONST.getLedgerHashcode(newContract_StTransferableFacet)
-    : getLedgerHashOffChain(backupData.data, data.transferedFullSecTokensEvents, data.whitelistAddresses.length);
+    : getLedgerHashOffChain(backupData.data, data.transferedFullSecTokensEvents, data.whitelistAddresses.length, data.entitiesWithFeeOwners === undefined);
 
   // write backup to json file
   const newBackupFile = path.join(dataDir, `${newContractAddress}.json`);

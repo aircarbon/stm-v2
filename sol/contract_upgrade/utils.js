@@ -17,7 +17,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // implement get ledger hash
 // Refer to: getLedgerHashcode on LedgerLib.sol
-function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtIdx) {
+function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtIdx, ignoreEntities = false) {
   console.log('getLedgerHashOffChain');
   // hash currency types & exchange currency fees
   let ledgerHash = '';
@@ -250,15 +250,19 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
 
   console.log('ledger hash - secTokens', ledgerHash);
 
-  entitiesWithFeeOwners.forEach((entityWithFeeOwner) => {
-    ledgerHash = soliditySha3(ledgerHash, entityWithFeeOwner.id, entityWithFeeOwner.addr)
-  });
-  
-  console.log('ledger hash - accountEntities', ledgerHash);
+  if(!ignoreEntities) {
+    entitiesWithFeeOwners.forEach((entityWithFeeOwner) => {
+      ledgerHash = soliditySha3(ledgerHash, entityWithFeeOwner.id, entityWithFeeOwner.addr)
+    });
+    
+    console.log('ledger hash - accountEntities', ledgerHash);
+  }
 
-  accountEntities.forEach((entityId) => {
-    ledgerHash = soliditySha3(ledgerHash, entityId)
-  });
+  if(!ignoreEntities) {
+    accountEntities.forEach((entityId) => {
+      ledgerHash = soliditySha3(ledgerHash, entityId)
+    });
+  }
 
   console.log('result', ledgerHash);
   return ledgerHash;
@@ -266,35 +270,22 @@ function getLedgerHashOffChain(data, ignoreGlobalStIds = [], wlAddressesStopAtId
 
 // This function will be used for creating backup data for OLD version STM contracts (like the one currently deployed to Polygon mainnet)
 async function createBackupDataFromOldContract(contracts, contractAddress, contractType) {
-  const [
-    newContract_CcyCollateralizableFacet,
-    newContract_DataLoadableFacet,
-    newContract_OwnedFacet,
-    newContract_StBurnableFacet,
-    newContract_StErc20Facet,
-    newContract_StFeesFacet,
-    newContract_StLedgerFacet,
-    newContract_StMasterFacet,
-    newContract_StMintableFacet,
-    newContract_StTransferableFacet,
-  ] = contracts;
-
-  const owners = await newContract_OwnedFacet.getOwners();
-  const unit = await newContract_StMasterFacet.unit();
-  const symbol = await newContract_StErc20Facet.symbol();
-  const decimals = await newContract_StErc20Facet.decimals();
+  const owners = await contracts.getOwners();
+  const unit = await contracts.unit();
+  const symbol = await contracts.symbol();
+  const decimals = await contracts.decimals();
   const network = argv?.network || 'development';
-  const name = await newContract_StMasterFacet.name();
-  const version = await newContract_StMasterFacet.version();
+  const name = await contracts.name();
+  const version = await contracts.version();
   console.log(`Contract address: ${contractAddress}`);
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
   // get all ccy and token types
-  const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
+  const ccyTypes = await contracts.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
 
-  const tokTypes = await newContract_StLedgerFacet.getSecTokenTypes();
+  const tokTypes = await contracts.getSecTokenTypes();
   const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
 
   // open contract file if exist
@@ -311,16 +302,16 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
   }
 
   // get ledgers
-  const ledgerOwners = previousLedgersOwners || (await newContract_StLedgerFacet.getLedgerOwners());
+  const ledgerOwners = previousLedgersOwners || (await contracts.getLedgerOwners());
 
   // this is used due to Ganache limitations
   let ledgers = [];
   if(network === 'development') {
     for(let i = 0; i < ledgerOwners.length; i++) {
-      ledgers.push(await newContract_StLedgerFacet.getLedgerEntry(ledgerOwners[i]));
+      ledgers.push(await contracts.getLedgerEntry(ledgerOwners[i]));
     }
   } else {
-    ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry(owner))));
+    ledgers = (await Promise.all(ledgerOwners.map((owner) => contracts.getLedgerEntry(owner))));
   }
 
   ledgers = ledgers
@@ -347,12 +338,12 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
       console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${ledgerOwners[i]}`);
       const ccyFeeFuncs = [];
       for (let index = 0; index < currencyTypes.length; index++) {
-        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, currencyTypes[index].id, ledgerOwners[i]));
+        ccyFeeFuncs.push(contracts.getFee.bind(this, CONST.getFeeType.CCY, currencyTypes[index].id, ledgerOwners[i]));
       }
 
       const tokenFeeFuncs = [];
       for (let index = 0; index < tokenTypes.length; index++) {
-        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, tokenTypes[index].id, ledgerOwners[i]));
+        tokenFeeFuncs.push(contracts.getFee.bind(this, CONST.getFeeType.TOK, tokenTypes[index].id, ledgerOwners[i]));
       }
 
       const ccyFeeFundBatches = createBatches(ccyFeeFuncs, 50);
@@ -383,11 +374,11 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
 
   // get all batches
   let batches = [];
-  const maxBatchId = await newContract_StLedgerFacet.getSecTokenBatch_MaxId();
+  const maxBatchId = await contracts.getSecTokenBatch_MaxId();
   
   const funcs = [];
   for (let index = 1; index <= maxBatchId; index++) {
-    funcs.push(newContract_StLedgerFacet.getSecTokenBatch.bind(this, index));
+    funcs.push(contracts.getSecTokenBatch.bind(this, index));
   }
 
   const batchedFuncs = createBatches(funcs, 50);
@@ -397,11 +388,11 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
     batches = [...batches, ...newResults];
   }
 
-  const whitelistAddresses = await newContract_StErc20Facet.getWhitelist();
-  const secTokenBaseId = await newContract_StLedgerFacet.getSecToken_BaseId();
-  const secTokenMintedCount = await newContract_StLedgerFacet.getSecToken_MaxId();
-  const secTokenBurnedQty = await newContract_StBurnableFacet.getSecToken_totalBurnedQty();
-  const secTokenMintedQty = await newContract_StMintableFacet.getSecToken_totalMintedQty();
+  const whitelistAddresses = await contracts.getWhitelist();
+  const secTokenBaseId = await contracts.getSecToken_BaseId();
+  const secTokenMintedCount = await contracts.getSecToken_MaxId();
+  const secTokenBurnedQty = await contracts.getSecToken_totalBurnedQty();
+  const secTokenMintedQty = await contracts.getSecToken_totalMintedQty();
 
   // get all currency types fee
   let ccyFees;
@@ -410,7 +401,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
   } else {
     const ccyFeePromise = [];
     for (let index = 0; index < currencyTypes.length; index++) {
-      ccyFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.CCY, currencyTypes[index].id, CONST.nullAddr));
+      ccyFeePromise.push(contracts.getFee(CONST.getFeeType.CCY, currencyTypes[index].id, CONST.nullAddr));
     }
     ccyFees = await Promise.all(ccyFeePromise);
   }
@@ -422,7 +413,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
   } else {
     const tokenFeePromise = [];
     for (let index = 0; index < tokenTypes.length; index++) {
-      tokenFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.TOK, tokenTypes[index].id, CONST.nullAddr));
+      tokenFeePromise.push(contracts.getFee(CONST.getFeeType.TOK, tokenTypes[index].id, CONST.nullAddr));
     }
     tokenFees = await Promise.all(tokenFeePromise);
   }
@@ -442,7 +433,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
   const allFuncs = [];
   for (let index = 0; index < maxStId; index++) {
     if (!existStId.includes(index + 1)) {
-      allFuncs.push(newContract_StLedgerFacet.getSecToken.bind(this, index + 1));
+      allFuncs.push(contracts.getSecToken.bind(this, index + 1));
     }
   }
 
