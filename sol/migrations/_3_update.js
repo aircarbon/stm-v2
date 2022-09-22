@@ -3,6 +3,7 @@ const SpotFeeLib = artifacts.require('SpotFeeLib');
 const StFeesFacet = artifacts.require('StFeesFacet');
 const ValidationLib = artifacts.require('ValidationLib');
 const TransferLib = artifacts.require('TransferLib');
+const TransferLibView = artifacts.require('TransferLibView');
 const DiamondCutFacet = artifacts.require('DiamondCutFacet');
 const StructLib = artifacts.require('StructLib');
 const Erc20Lib = artifacts.require('Erc20Lib');
@@ -24,10 +25,11 @@ const web3 = new Web3();
 const  db  = require('../../orm/build');
 
 const deployments = {
-    LibMainStorage_addr: "0x2de592F086692Ea2d662Ed9eFC5E27D83972C27c",
-    StructLib_addr: "0xE0765b5A3062778A38d0963353CFCf3fd9307e4C",
+    LibMainStorage_addr: "0x00966284eAe04623bA4459aF9798f0b8C9fcB851",
+    StructLib_addr: "0x25B54e4d227F7b7d7096a4d87dbD9A4f494517e2",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
-    TransferLib_addr: "0x208dBafaecb1091E8d19f047d1E8bc5b24CB1696",
+    TransferLib_addr: "0xF0E6446379D2F524f27750B726821d690752062B",
+    TransferLibView_addr: "0xC64aD0c682450b924111c6FBf5Ad7Cb896C878d2",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
     StFeesFacet_addr: "0x6e0F251224ae09853478039e45eD96a48C1a2E74",
@@ -37,7 +39,7 @@ const deployments = {
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
-    StTransferableFacet_addr: "0x9043D3738c12D3c462B9d3d9Db98C9b3FcBA30a6",
+    StTransferableFacet_addr: "0x79cd873aC7EBB661a42b8D3773AB94c96040e8eC",
 }
 
 const deployOrGetDeployed = async(deployer, addr, contract) => {
@@ -51,8 +53,8 @@ module.exports = async function (deployer) {
     console.log('3_update: ', deployer.network);
 
     const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
-    const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
-
+    
+    // const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     // console.log(await stmLoupe.facets());
 
     console.log('\nDeploying new Facets and registering them...');
@@ -64,6 +66,7 @@ module.exports = async function (deployer) {
     deployer.link(LibMainStorage_c, ValidationLib);
     deployer.link(LibMainStorage_c, LibMainStorage);
     deployer.link(LibMainStorage_c, TransferLib);
+    deployer.link(LibMainStorage_c, TransferLibView);
     deployer.link(LibMainStorage_c, Erc20Lib);
     deployer.link(LibMainStorage_c, StErc20Facet);
     deployer.link(LibMainStorage_c, StLedgerFacet);
@@ -83,6 +86,7 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, StLedgerFacet);
     deployer.link(StructLib_c, TokenLib);
     deployer.link(StructLib_c, StTransferableFacet);
+    deployer.link(StructLib_c, TransferLibView);
     deployer.link(StructLib_c, TransferLib);
 
     // deploygin new ValidationLib
@@ -100,6 +104,11 @@ module.exports = async function (deployer) {
     deployer.link(TransferLib_c, Erc20Lib);
     deployer.link(TransferLib_c, StErc20Facet);
     deployer.link(TransferLib_c, StTransferableFacet);
+
+    // deploygin new TransferLibView
+    const TransferLibView_c = await deployOrGetDeployed(deployer, deployments.TransferLibView_addr, TransferLibView);
+    console.log(chalk.green.bold(`TransferLibView_addr: "${TransferLibView_c.address}",`));
+    deployer.link(TransferLibView_c, StTransferableFacet);
 
     // deploygin new SpotFeeLib
     const SpotFeeLib_c = await deployOrGetDeployed(deployer, deployments.SpotFeeLib_addr, SpotFeeLib);
@@ -162,14 +171,14 @@ module.exports = async function (deployer) {
         // },
 
         // With the new ABI
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
-        },
+        // {
+        //     facetAddress: StErc20Facet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
+        // },
         {
             facetAddress: StTransferableFacet_c.address,
-            action: CONST.FacetCutAction.Add,
+            action: CONST.FacetCutAction.Replace,
             functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         },
     ], CONST.nullAddr, "0x");

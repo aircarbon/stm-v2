@@ -47,6 +47,7 @@ module.exports = {
             const TokenLib = artifacts.require('./TokenLib.sol');
             const LedgerLib = artifacts.require('./LedgerLib.sol');
             const TransferLib = artifacts.require('./TransferLib.sol');
+            const TransferLibView = artifacts.require('TransferLibView');
             const SpotFeeLib = artifacts.require('./SpotFeeLib.sol');
             const Erc20Lib = artifacts.require('./Erc20Lib.sol');
             const LoadLib = artifacts.require('./LoadLib.sol');
@@ -75,6 +76,7 @@ module.exports = {
             deployer.link(StructLib, LedgerLib);
             deployer.link(StructLib, Erc20Lib);
             deployer.link(StructLib, TransferLib);
+            deployer.link(StructLib, TransferLibView);
             deployer.link(StructLib, LoadLib);
             deployer.link(StructLib, SpotFeeLib);
             deployer.link(StructLib, CcyCollateralizableFacet);
@@ -141,6 +143,10 @@ module.exports = {
             deployer.link(TransferLib, StErc20Facet);
             deployer.link(TransferLib, StTransferableFacet);
             deployer.link(TransferLib, Erc20Lib);
+
+            // deploying TransferLibView
+            await deployImpl(TransferLibView, 'TransferLibView');
+            deployer.link(TransferLibView, StTransferableFacet);
 
             // deploying Erc20Lib
             await deployImpl(Erc20Lib, 'Erc20Lib');
@@ -350,6 +356,7 @@ module.exports = {
             console.log(`TokenLib: '${TokenLib.address}',`);
             console.log(`LedgerLib: '${LedgerLib.address}',`);
             console.log(`TransferLib: '${TransferLib.address}',`);
+            console.log(`TransferLibView: '${TransferLibView.address}',`);
             console.log(`SpotFeeLib: '${SpotFeeLib.address}',`);
             console.log(`Erc20Lib: '${Erc20Lib.address}',`);
             console.log(`LoadLib: '${LoadLib.address}',`);

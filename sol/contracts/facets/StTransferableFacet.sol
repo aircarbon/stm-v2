@@ -3,6 +3,7 @@ pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
 import { TransferLib } from "../libraries/TransferLib.sol";
+import { TransferLibView } from "../libraries/TransferLibView.sol";
 import { LedgerLib } from "../libraries/LedgerLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
@@ -49,7 +50,7 @@ contract StTransferableFacet {
 	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		return
-			TransferLib.transfer_feePreview_ExchangeOnly(
+			TransferLibView.transfer_feePreview_ExchangeOnly(
 				s.ld,
 				s.globalFees,
 				s.deploymentOwner,
@@ -70,7 +71,7 @@ contract StTransferableFacet {
 	{
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		return
-			TransferLib.transfer_feePreview(
+			TransferLibView.transfer_feePreview(
 				s.ld,
 				s.std,
 				s.globalFees,
