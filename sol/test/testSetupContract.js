@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only - (c) AirCarbon Pte Ltd - see /LICENSE.md for Terms
 // Author: https://github.com/7-of-9
 
-const st = artifacts.require('StMaster');
 const truffleAssert = require('truffle-assertions');
 const BN = require('bn.js');
 const Big = require('big.js');
@@ -14,29 +13,38 @@ module.exports = {
     // (truffle version -- see devSetupContract.js for master web3 implementation)
     //
     setDefaults: async (a) => {
-        const { stm, accounts,
+        const { 
+            StErc20Facet, 
+            stmStMaster, 
+            stmStLedger, 
+            stmCcyCollateralizable, 
+            stmFees, 
+            accounts,
         } = a;
 
+        // create an entity
+        await StErc20Facet.createEntity({id: 1, addr: CONST.nullAddr});
+
         // setup default currencies and spot token types
-        if (await stm.getContractType() == CONST.contractType.COMMODITY) {
+        if (await stmStMaster.getContractType() == CONST.contractType.COMMODITY) {
             console.log('truffle setDefaults (COMMODITY)...');
-            const spotTypes = (await stm.getSecTokenTypes()).tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT);
+            const spotTypes = (await stmStLedger.getSecTokenTypes()).tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT);
             if (spotTypes.length == 0) {
-                await stm.addSecTokenType(`AirCarbon CORSIA Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
-                await stm.addSecTokenType(`AirCarbon Nature Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
-                await stm.addSecTokenType(`AirCarbon Premium Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`AirCarbon CORSIA Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`AirCarbon Nature Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`AirCarbon Premium Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
             }
 
-            const ccyTypes = (await stm.getCcyTypes()).ccyTypes;
+            const ccyTypes = (await stmCcyCollateralizable.getCcyTypes()).ccyTypes;
             if (ccyTypes.length == 0) {
-                await stm.addCcyType('USD', 'cents', 2);
-                await stm.addCcyType('ETH', 'Wei', 18);
-                await stm.addCcyType('BTC', 'Satoshi', 8);
+                await stmCcyCollateralizable.addCcyType('USD', 'cents', 2);
+                await stmCcyCollateralizable.addCcyType('ETH', 'Wei', 18);
+                await stmCcyCollateralizable.addCcyType('BTC', 'Satoshi', 8);
             }
 
-            stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } );
+            stmFees.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, {...CONST.nullFees, ccy_perMillion: 300, ccy_mirrorFee: true, fee_min: 300 } );
         }
-        else if (await stm.getContractType() == CONST.contractType.CASHFLOW_BASE) {
+        else if (await stmStMaster.getContractType() == CONST.contractType.CASHFLOW_BASE) {
             // console.log('truffle setDefaults (CASHFLOW_BASE)...');
             // await stm.sealContract(); // always sealed - the controller governs the whitelist
             // const spotTypes = (await stm.getSecTokenTypes()).tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT);
@@ -45,14 +53,14 @@ module.exports = {
             // }
             // stm.setFee_TokType(1, accounts[0], CONST.nullFees);
         }
-        else if (await stm.getContractType() == CONST.contractType.CASHFLOW_CONTROLLER) {
+        else if (await stmStMaster.getContractType() == CONST.contractType.CASHFLOW_CONTROLLER) {
             console.log('truffle setDefaults (CASHFLOW_CONTROLLER)...');
-            const ccyTypes = (await stm.getCcyTypes()).ccyTypes;
+            const ccyTypes = (await stmCcyCollateralizable.getCcyTypes()).ccyTypes;
             if (ccyTypes.length == 0) {
-                await stm.addCcyType('USD', 'cents', 2);
-                await stm.addCcyType('ETH', 'Wei', 18);
+                await stmCcyCollateralizable.addCcyType('USD', 'cents', 2);
+                await stmCcyCollateralizable.addCcyType('ETH', 'Wei', 18);
             }
-            stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, CONST.nullFees);
+            stmFees.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, CONST.nullFees);
         }
 
         // setup default owner ledger entry

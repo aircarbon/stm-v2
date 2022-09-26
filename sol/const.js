@@ -113,10 +113,22 @@ module.exports = {
     testAddr3: "0x0000000000000000000000000000000000000003",
     testAddr4: "0x0000000000000000000000000000000000000004",
     testAddr5: "0x0000000000000000000000000000000000000005",
+    testAddr6: "0x0000000000000000000000000000000000000006",
+    testAddr7: "0x0000000000000000000000000000000000000007",
+    testAddr8: "0x0000000000000000000000000000000000000008",
+    testAddr9: "0x0000000000000000000000000000000000000009",
+    testAddr10: "0x000000000000000000000000000000000000000A",
 
     testId1: 1,
     testId2: 2,
     testId3: 3,
+    testId4: 4,
+    testId5: 5,
+    testId6: 6,
+    testId7: 7,
+    testId8: 8,
+    testId9: 9,
+    testId10: 10,
 
     FacetCutAction: {
         Add: 0,
@@ -190,6 +202,16 @@ module.exports = {
             return; 
         }
         assert.fail('expected contract exception');
+    },
+
+    getEvent: (tx, eventName) => {
+        const event = tx?.logs?.filter((obj) => obj.event === eventName)[0];
+        return event.args;
+    },
+
+    getEvents: (tx, eventName) => {
+        const events = tx?.logs?.filter((obj) => obj.event === eventName).map((obj) => obj.args);
+        return events;
     },
 
     // If the address is not whitelisted, it will be whitelisted.
