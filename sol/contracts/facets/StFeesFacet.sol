@@ -65,8 +65,11 @@ contract StFeesFacet {
 	) public {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
-		ValidationLib.validateEntityExists(entityId);
-		ValidationLib.validateHasEntity(ledgerOwner);
+		if(ledgerOwner != address(0)) {
+			ValidationLib.validateHasEntity(ledgerOwner);
+		} else {
+			ValidationLib.validateEntityExists(entityId);
+		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		SpotFeeLib.setFee_TokType(s.ld, s.std, LibMainStorage.getStorage2().feesPerEntity, entityId, tokTypeId, ledgerOwner, feeArgs);
@@ -83,8 +86,11 @@ contract StFeesFacet {
 
 		uint256 len = ledgerOwner.length;
 		for (uint256 i = 0; i < len; i++) {
-			ValidationLib.validateEntityExists(entityId[i]);
-			ValidationLib.validateHasEntity(ledgerOwner[i]);
+			if(ledgerOwner[i] != address(0)) {
+				ValidationLib.validateHasEntity(ledgerOwner[i]);
+			} else {
+				ValidationLib.validateEntityExists(entityId[i]);
+			}
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
@@ -110,8 +116,11 @@ contract StFeesFacet {
 	) public {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
-		ValidationLib.validateEntityExists(entityId);
-		ValidationLib.validateHasEntity(ledgerOwner);
+		if(ledgerOwner != address(0)) {
+			ValidationLib.validateHasEntity(ledgerOwner);
+		} else {
+			ValidationLib.validateEntityExists(entityId);
+		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, LibMainStorage.getStorage2().feesPerEntity, entityId, ccyTypeId, ledgerOwner, feeArgs);
@@ -123,8 +132,11 @@ contract StFeesFacet {
 
 		uint256 len = params.length;
 		for (uint256 i = 0; i < len; i++) {
-			ValidationLib.validateHasEntity(params[i].ledgerOwner);
-			ValidationLib.validateEntityExists(params[i].entityId);
+			if(params[i].ledgerOwner != address(0)) {
+				ValidationLib.validateHasEntity(params[i].ledgerOwner);
+			} else {
+				ValidationLib.validateEntityExists(params[i].entityId);
+			}
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();

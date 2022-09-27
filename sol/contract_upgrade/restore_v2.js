@@ -89,7 +89,7 @@ module.exports = async (callback) => {
 
   const entitiesToAdd = [];
   data.entitiesWithFeeOwners?.forEach((entWithFeeOwn) => {
-    if(!entitiesOnChain.includes(entWithFeeOwn.id)) {
+    if(!entitiesOnChain.includes(Number(entWithFeeOwn.id))) {
       entitiesToAdd.push(entWithFeeOwn);
     }
   });

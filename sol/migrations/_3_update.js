@@ -32,7 +32,7 @@ const deployments = {
     TransferLibView_addr: "0xC64aD0c682450b924111c6FBf5Ad7Cb896C878d2",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
-    StFeesFacet_addr: "0x6e0F251224ae09853478039e45eD96a48C1a2E74",
+    StFeesFacet_addr: "0xfba1fc72a8EBfA0Aaf3f43D29dA8cF558Ed76d14",
     Erc20Lib_addr: "0x09eF5c7A78c2308b9aAa70ce95f4e8EF9A4E3332",
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
     StErc20Facet_addr: "0xF5c969478b2B7C697f8D3a2A03A4C50d44C5cf60",
@@ -177,9 +177,9 @@ module.exports = async function (deployer) {
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
         // },
         {
-            facetAddress: StTransferableFacet_c.address,
+            facetAddress: StFeesFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StFeesFacet', ['setFee_CcyType', 'setFee_CcyTypeBatch', 'setFee_TokType', 'setFee_TokTypeBatch'])
         },
     ], CONST.nullAddr, "0x");
 
