@@ -198,7 +198,7 @@ library Erc20Lib {
 						feeAddrOwner_B: a.deploymentOwner, //address(0x0) // fees: disabled for erc20 - not used
 						transferType: StructLib.TransferType.ERC20
 					});
-					TransferLib.transferOrTrade(ld, std, ctd, globalFees, transferOrTradeArgs);
+					TransferLib.transferOrTrade(ld, std, ctd, globalFees, transferOrTradeArgs, StructLib.CustomFee(0, 0, false));
 					remainingToTransfer -= qtyTransfer;
 				}
 			}

@@ -26,20 +26,20 @@ const  db  = require('../../orm/build');
 
 const deployments = {
     LibMainStorage_addr: "0x00966284eAe04623bA4459aF9798f0b8C9fcB851",
-    StructLib_addr: "0x25B54e4d227F7b7d7096a4d87dbD9A4f494517e2",
+    StructLib_addr: "0x0A47396D860C3d1D94fdad6b76319EEbC5D381ed",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
-    TransferLib_addr: "0xF0E6446379D2F524f27750B726821d690752062B",
+    TransferLib_addr: "0xEC59282623A120D8b5c8e1BaCABA3e734bCb7B3C",
     TransferLibView_addr: "0xC64aD0c682450b924111c6FBf5Ad7Cb896C878d2",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
     StFeesFacet_addr: "0xfba1fc72a8EBfA0Aaf3f43D29dA8cF558Ed76d14",
-    Erc20Lib_addr: "0x09eF5c7A78c2308b9aAa70ce95f4e8EF9A4E3332",
+    Erc20Lib_addr: "0x59CebB662422226DD3F2dA0a0E3e1DCffD76A475",
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
-    StErc20Facet_addr: "0xF5c969478b2B7C697f8D3a2A03A4C50d44C5cf60",
+    StErc20Facet_addr: "0x854e492DA6c9E642170335bEC9113daab7f2E2C4",
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
-    StTransferableFacet_addr: "0x79cd873aC7EBB661a42b8D3773AB94c96040e8eC",
+    StTransferableFacet_addr: "0xFAcaa238DFb30046Ec6859CD7c36e76E1C061B23",
 }
 
 const deployOrGetDeployed = async(deployer, addr, contract) => {
@@ -52,7 +52,8 @@ const deployOrGetDeployed = async(deployer, addr, contract) => {
 module.exports = async function (deployer) {
     console.log('3_update: ', deployer.network);
 
-    const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
+    // const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
+    const stm = await DiamondCutFacet.at('0x9b197e9FbB891Ef0484439581aA8430983405F90');
     
     // const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     // console.log(await stmLoupe.facets());
@@ -163,23 +164,25 @@ module.exports = async function (deployer) {
     // registering the Facet
     console.log('Cutting 1...');
     await stm.diamondCut([
-        // With an OLD ABI - deleting because the function signature changes due to changes in the structure of their arguments
         // {
         //     facetAddress: CONST.nullAddr,
         //     action: CONST.FacetCutAction.Remove,
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
-
-        // With the new ABI
-        // {
-        //     facetAddress: StErc20Facet_c.address,
-        //     action: CONST.FacetCutAction.Replace,
-        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
-        // },
         {
-            facetAddress: StFeesFacet_c.address,
+            facetAddress: StTransferableFacet_c.address,
+            action: CONST.FacetCutAction.Add,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTradeCustomFee'])
+        },
+        {
+            facetAddress: StTransferableFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StFeesFacet', ['setFee_CcyType', 'setFee_CcyTypeBatch', 'setFee_TokType', 'setFee_TokTypeBatch'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade'])
+        },
+        {
+            facetAddress: StErc20Facet_c.address,
+            action: CONST.FacetCutAction.Replace,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
         },
     ], CONST.nullAddr, "0x");
 

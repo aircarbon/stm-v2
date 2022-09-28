@@ -221,6 +221,12 @@ library StructLib {
 		TransferType transferType; // reason/type code: applies only to one-sided transfers (not two-sided trades, which are coded automatically)
 	}
 
+	struct CustomFee {
+		uint feeA;
+		uint feeB;
+		bool applyCustomFee;
+	}
+
 	struct Ccy {
 		uint256 id;
 		string name; // e.g. "USD", "BTC"

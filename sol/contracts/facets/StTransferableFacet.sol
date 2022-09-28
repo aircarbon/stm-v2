@@ -100,6 +100,19 @@ contract StTransferableFacet {
 	 */
 
 	function transferOrTrade(StructLib.TransferArgs memory transferArgs) public {
+		_transferOrTradeImpl(transferArgs, 0, 0, false);
+	}
+
+	function transferOrTradeCustomFee(StructLib.TransferArgs memory transferArgs, uint custFeeA, uint custFeeB) public {
+		_transferOrTradeImpl(transferArgs, custFeeA, custFeeB, true);
+	}
+
+	function _transferOrTradeImpl(
+		StructLib.TransferArgs memory transferArgs, 
+		uint custFeeA, 
+		uint custFeeB, 
+		bool applyFees
+	) internal {
 		ValidationLib.validateOnlyCustodian();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(transferArgs.ledger_A);
@@ -116,12 +129,9 @@ contract StTransferableFacet {
 			"Not whitelisted (B)"
 		);
 
-		// v2.TODO split the fees if both ledgers are from diff entities
-		// NOT WORKING for the shared orderbook
-		// At the moment fees go to the fee address of the entity of ledger_A, but if ledger_A and ledger_B are different, it should be split
 		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
 		transferArgs.feeAddrOwner_A = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
 		transferArgs.feeAddrOwner_B = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_B]];
-		TransferLib.transferOrTrade(s.ld, s.std, s.ctd, s.globalFees, transferArgs);
+		TransferLib.transferOrTrade(s.ld, s.std, s.ctd, s.globalFees, transferArgs, StructLib.CustomFee(custFeeA, custFeeB, applyFees));
 	}
 }
