@@ -3,6 +3,7 @@
 pragma solidity 0.8.5;
 
 import { StructLib } from "../libraries/StructLib.sol";
+import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 
 library CcyLib {
 	event AddedCcyType(uint256 id, string name, string unit);
@@ -73,12 +74,14 @@ library CcyLib {
 		uint256 ccyTypeId,
 		int256 amount,
 		address ledgerOwner,
-		string calldata desc
+		string calldata desc,
+		uint fee,
+		bool applyFee
 	) public {
 		if (direction == StructLib.FundWithdrawType.FUND) {
-			fund(ld, ctd, ccyTypeId, amount, ledgerOwner, desc);
+			fund(ld, ctd, ccyTypeId, amount, ledgerOwner, desc, fee, applyFee);
 		} else if (direction == StructLib.FundWithdrawType.WITHDRAW) {
-			withdraw(ld, ctd, ccyTypeId, amount, ledgerOwner, desc);
+			withdraw(ld, ctd, ccyTypeId, amount, ledgerOwner, desc, fee, applyFee);
 		} else revert("Bad direction");
 	}
 
@@ -109,7 +112,9 @@ library CcyLib {
 		uint256 ccyTypeId,
 		int256 amount, // signed value: ledger supports -ve balances
 		address ledgerOwner,
-		string calldata desc
+		string calldata desc,
+		uint fee,
+		bool applyFee
 	) private {
 		// allow funding while not sealed - for initialization of owner ledger (see testSetupContract.js)
 		//require(ld._contractSealed, "Contract is not sealed");
@@ -126,6 +131,11 @@ library CcyLib {
 		ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] += amount;
 
 		emit CcyFundedLedger(ccyTypeId, ledgerOwner, amount, desc);
+
+		// pay the fee if applicable
+		if(applyFee) {
+			_transferFees(ld, ledgerOwner, ccyTypeId, fee);
+		}
 	}
 
 	function withdraw(
@@ -134,20 +144,25 @@ library CcyLib {
 		uint256 ccyTypeId,
 		int256 amount,
 		address ledgerOwner,
-		string calldata desc
+		string calldata desc,
+		uint fee,
+		bool applyFee
 	) private {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(ccyTypeId >= 1 && ccyTypeId <= ctd._ct_Count, "Bad ccyTypeId");
 		require(amount > 0, "Bad amount");
-		// Certik: CLL-06 | Comparison with literal true
-		// Resolved (AD): Substituted the literal true comparison with the expression itself
 		require(ld._ledger[ledgerOwner].exists, "Bad ledgerOwner");
 
 		require(
 			(ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -
-				ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount,
+				ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount + int((applyFee ? fee : 0)),
 			"Insufficient balance"
 		);
+
+		// pay the fee if applicable
+		if(applyFee) {
+			_transferFees(ld, ledgerOwner, ccyTypeId, fee);
+		}
 
 		// update ledger balance
 		ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -= amount;
@@ -157,5 +172,20 @@ library CcyLib {
 		//ld._ccyType_totalWithdrawn[ccyTypeId] += uint256(amount);
 
 		emit CcyWithdrewLedger(ccyTypeId, ledgerOwner, amount, desc);
+	}
+
+	function _transferFees(StructLib.LedgerStruct storage ld,address ledgerOwner, uint ccyTypeId, uint fee) internal {
+		address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[ledgerOwner]];
+
+		StructLib.transferCcy(
+			ld,
+			StructLib.TransferCcyArgs({
+				from: ledgerOwner,
+				to: feeOwner,
+				ccyTypeId: ccyTypeId,
+				amount: fee,
+				transferType: StructLib.TransferType.ExchangeFee
+			})
+		);
 	}
 }

@@ -60,11 +60,43 @@ contract CcyCollateralizableFacet {
 		address ledgerOwner,
 		string calldata desc
 	) public {
+		_fundOrWithdraw(direction, ccyTypeId, amount, ledgerOwner, desc, 0, false);
+	}
+
+	/**
+	 * @dev fund or withdraw currency type collaterised tokens from a ledger owner address
+	 * @param direction 0: FUND<br/>1: WITHDRAW
+	 * @param ccyTypeId currency type identifier
+	 * @param amount amount to be funded or withdrawn
+	 * @param ledgerOwner account address to be funded or withdrawn from
+	 * @param desc supporting evidence like bank wire reference or comments
+	 * @param fee custom fee
+	 */
+	 function fundOrWithdrawCustomFee(
+		StructLib.FundWithdrawType direction,
+		uint256 ccyTypeId,
+		int256 amount,
+		address ledgerOwner,
+		string calldata desc,
+		uint fee
+	) public {
+		_fundOrWithdraw(direction, ccyTypeId, amount, ledgerOwner, desc, fee, true);
+	}
+
+	function _fundOrWithdraw(
+		StructLib.FundWithdrawType direction,
+		uint256 ccyTypeId,
+		int256 amount,
+		address ledgerOwner,
+		string calldata desc,
+		uint fee,
+		bool applyFee
+	) internal {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(ledgerOwner);
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		CcyLib.fundOrWithdraw(s.ld, s.ctd, direction, ccyTypeId, amount, ledgerOwner, desc);
+		CcyLib.fundOrWithdraw(s.ld, s.ctd, direction, ccyTypeId, amount, ledgerOwner, desc, fee, applyFee);
 	}
 }

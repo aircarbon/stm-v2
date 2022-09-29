@@ -14,6 +14,8 @@ const LoadLib = artifacts.require('LoadLib');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const TokenLib = artifacts.require('TokenLib');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
+const CcyLib = artifacts.require('CcyLib');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const DiamondLoupeFacet = artifacts.require('DiamondLoupeFacet');
 
 const CONST = require('../const.js');
@@ -40,6 +42,8 @@ const deployments = {
     TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
     StTransferableFacet_addr: "0xFAcaa238DFb30046Ec6859CD7c36e76E1C061B23",
+    CcyLib_addr: "0x2245Ff07a30597BdD678Ad4dCc322408d2919f7b",
+    CcyCollateralizableFacet_addr: "0xb9B440F880896f9E387F846c6a1CBEBcb50FBdEb",
 }
 
 const deployOrGetDeployed = async(deployer, addr, contract) => {
@@ -73,6 +77,8 @@ module.exports = async function (deployer) {
     deployer.link(LibMainStorage_c, StLedgerFacet);
     deployer.link(LibMainStorage_c, StTransferableFacet);
     deployer.link(LibMainStorage_c, DataLoadableFacet);
+    deployer.link(LibMainStorage_c, CcyLib);
+    deployer.link(LibMainStorage_c, CcyCollateralizableFacet);
 
     // deploying new StructLib (because don't have address of an old one)
     const StructLib_c = await deployOrGetDeployed(deployer, deployments.StructLib_addr, StructLib);
@@ -89,6 +95,13 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, StTransferableFacet);
     deployer.link(StructLib_c, TransferLibView);
     deployer.link(StructLib_c, TransferLib);
+    deployer.link(StructLib_c, CcyLib);
+    deployer.link(StructLib_c, CcyCollateralizableFacet);
+
+    // deploying new CcyLib
+    const CcyLib_c = await deployOrGetDeployed(deployer, deployments.CcyLib_addr, CcyLib);
+    console.log(chalk.green.bold(`CcyLib_addr: "${CcyLib_c.address}",`));
+    deployer.link(CcyLib_c, CcyCollateralizableFacet);
 
     // deploygin new ValidationLib
     const ValidationLib_c = await deployOrGetDeployed(deployer, deployments.ValidationLib_addr, ValidationLib);
@@ -98,8 +111,13 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, DataLoadableFacet);
     deployer.link(ValidationLib_c, StLedgerFacet);
     deployer.link(ValidationLib_c, StTransferableFacet);
-    
-    // deploygin new ValidationLib
+    deployer.link(ValidationLib_c, CcyCollateralizableFacet);
+
+    // deploying new CcyCollateralizableFacet
+    const CcyCollateralizableFacet_c  = await deployOrGetDeployed(deployer, deployments.CcyCollateralizableFacet_addr, CcyCollateralizableFacet);
+    console.log(chalk.green.bold(`CcyCollateralizableFacet_addr: "${CcyCollateralizableFacet_c.address}",`));
+
+    // deploygin new TransferLib
     const TransferLib_c = await deployOrGetDeployed(deployer, deployments.TransferLib_addr, TransferLib);
     console.log(chalk.green.bold(`TransferLib_addr: "${TransferLib_c.address}",`));
     deployer.link(TransferLib_c, Erc20Lib);
@@ -170,19 +188,14 @@ module.exports = async function (deployer) {
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
         {
-            facetAddress: StTransferableFacet_c.address,
+            facetAddress: CcyCollateralizableFacet_c.address,
             action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTradeCustomFee'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdrawCustomFee'])
         },
         {
-            facetAddress: StTransferableFacet_c.address,
+            facetAddress: CcyCollateralizableFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade'])
-        },
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transferFrom', 'transfer'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdraw'])
         },
     ], CONST.nullAddr, "0x");
 
