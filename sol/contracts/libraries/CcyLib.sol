@@ -9,8 +9,8 @@ library CcyLib {
 	uint256 constant MAX_INT = 2**256 - 1;
 
 	event AddedCcyType(uint256 id, string name, string unit);
-	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc);
-	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc);
+	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc, bool customFee);
+	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc,  bool customFee);
 
 	// CCY TYPES
 
@@ -132,7 +132,7 @@ library CcyLib {
 		// update ledger balance
 		ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] += amount;
 
-		emit CcyFundedLedger(ccyTypeId, ledgerOwner, amount, desc);
+		emit CcyFundedLedger(ccyTypeId, ledgerOwner, amount, desc, applyFee);
 
 		// pay the fee if applicable
 		if(applyFee) {
@@ -185,7 +185,7 @@ library CcyLib {
 		// 24k
 		//ld._ccyType_totalWithdrawn[ccyTypeId] += uint256(amount);
 
-		emit CcyWithdrewLedger(ccyTypeId, ledgerOwner, amount, desc);
+		emit CcyWithdrewLedger(ccyTypeId, ledgerOwner, amount, desc, applyFee);
 	}
 
 	function _transferFees(StructLib.LedgerStruct storage ld,address ledgerOwner, uint ccyTypeId, uint fee) internal {

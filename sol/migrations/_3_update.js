@@ -44,8 +44,8 @@ const deployments = {
     TokenLib_addr: "0xA0ab84b0426368eC505BB8ab220D46f245162bBF",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
     StTransferableFacet_addr: "0xFAcaa238DFb30046Ec6859CD7c36e76E1C061B23",
-    CcyLib_addr: "0x2B7510842cbf973f14e9909a27e935FC95fE6a30",
-    CcyCollateralizableFacet_addr: "0xd64736c80F6358AFe05edBC788C8F167a3A05ae2",
+    CcyLib_addr: "0x5610cc200f4fEED193fd68C0877C0aAa5d2b59f2",
+    CcyCollateralizableFacet_addr: "0xbf54dbea8905209b149e8753e9709ae94bebb09b",
     StMintableFacet_addr: "0xCFB4EE03CE7864BdDe5595fE4C50918e7e957e1a",
     StBurnableFacet_addr: "0xD5F365396dD2a421eEfFf006B3d96D49be2B50b5"
 }
@@ -211,25 +211,15 @@ module.exports = async function (deployer) {
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
         {
-            facetAddress: StMintableFacet_c.address,
+            facetAddress: CcyCollateralizableFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatch'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdraw', 'fundOrWithdrawCustomFee'])
         },
-        {
-            facetAddress: StBurnableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokens'])
-        },
-        {
-            facetAddress: StMintableFacet_c.address,
-            action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatchCustomFee'])
-        },
-        {
-            facetAddress: StBurnableFacet_c.address,
-            action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokensCustomFee'])
-        },
+        // {
+        //     facetAddress: StMintableFacet_c.address,
+        //     action: CONST.FacetCutAction.Add,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatchCustomFee'])
+        // },
     ], CONST.nullAddr, "0x");
 
     console.log('Done.');
