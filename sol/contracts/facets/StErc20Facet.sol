@@ -10,6 +10,11 @@ import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StErc20Facet {
 
+	function setVersion(string calldata version) external {
+		ValidationLib.validateOnlyOwner();
+		LibMainStorage.getStorage().version = version;
+	}
+
 	function createEntity(StructLib.IdWithAddress calldata entityIdWithAddr) external {
 		ValidationLib.validateOnlyOwner();
 		Erc20Lib.createEntity(entityIdWithAddr);

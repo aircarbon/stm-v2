@@ -39,7 +39,7 @@ const deployments = {
     StFeesFacet_addr: "0xfba1fc72a8EBfA0Aaf3f43D29dA8cF558Ed76d14",
     Erc20Lib_addr: "0x59CebB662422226DD3F2dA0a0E3e1DCffD76A475",
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
-    StErc20Facet_addr: "0x854e492DA6c9E642170335bEC9113daab7f2E2C4",
+    StErc20Facet_addr: "0x751867abE47bB6ecC103E132Ee79920716055386",
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0xA0ab84b0426368eC505BB8ab220D46f245162bBF",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
@@ -62,6 +62,7 @@ module.exports = async function (deployer) {
 
     // const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     const stm = await DiamondCutFacet.at('0x9b197e9FbB891Ef0484439581aA8430983405F90');
+    // const stm = await DiamondCutFacet.at('0x4Dba44Bbd8A7D940C2453B6686fB435C469e64E4');
     
     // const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     // console.log(await stmLoupe.facets());
@@ -210,16 +211,16 @@ module.exports = async function (deployer) {
         //     action: CONST.FacetCutAction.Remove,
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
-        {
-            facetAddress: CcyCollateralizableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdraw', 'fundOrWithdrawCustomFee'])
-        },
         // {
-        //     facetAddress: StMintableFacet_c.address,
-        //     action: CONST.FacetCutAction.Add,
-        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatchCustomFee'])
+        //     facetAddress: CcyCollateralizableFacet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdraw', 'fundOrWithdrawCustomFee'])
         // },
+        {
+            facetAddress: StErc20Facet_c.address,
+            action: CONST.FacetCutAction.Add,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['setVersion'])
+        },
     ], CONST.nullAddr, "0x");
 
     console.log('Done.');
