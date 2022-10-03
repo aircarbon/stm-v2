@@ -10,9 +10,12 @@ import { DataLoadableFacet } from "../facets/DataLoadableFacet.sol";
 import { StLedgerFacet } from "../facets/StLedgerFacet.sol";
 import { StBurnableFacet } from "../facets/StBurnableFacet.sol";
 import { StMintableFacet } from "../facets/StMintableFacet.sol";
+import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 
 library TokenLib {
 	using strings for *;
+
+	uint256 constant MAX_INT = 2**256 - 1;
 
 	struct MintSecTokenBatchArgs {
 		uint256 tokTypeId;
@@ -47,7 +50,7 @@ library TokenLib {
 
 	event SetFutureFeePerContract(uint256 tokenTypeId, uint256 feePerContract);
 
-	event Burned(uint256 tokenTypeId, address indexed from, uint256 burnedQty);
+	event Burned(uint256 tokenTypeId, address indexed from, uint256 burnedQty, bool customFee);
 
 	event BurnedFullSecToken(
 		uint256 indexed stId,
@@ -68,7 +71,8 @@ library TokenLib {
 		uint256 tokenTypeId,
 		address indexed to,
 		uint256 mintQty,
-		uint256 mintSecTokenCount
+		uint256 mintSecTokenCount,
+		bool customFee
 	);
 
 	event MintedSecToken(
@@ -242,7 +246,10 @@ library TokenLib {
 	function mintSecTokenBatch(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
-		MintSecTokenBatchArgs memory a
+		MintSecTokenBatchArgs memory a,
+		bool applyCustFee,
+		uint ccyTypeId,
+		uint fee
 	) public {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(a.tokTypeId >= 1 && a.tokTypeId <= std._tt_Count, "Bad tokTypeId");
@@ -276,6 +283,30 @@ library TokenLib {
 			); // max 192-bits trailing bits
 		}
 
+		// paying fees
+		if(applyCustFee) {
+			// check that fee fits int type
+			require(fee <= MAX_INT, "fund: fee overflow");
+			require(ccyTypeId >= 1, "Bad ccyTypeId");
+			require(
+				(ld._ledger[a.batchOwner].ccyType_balance[ccyTypeId] -
+					ld._ledger[a.batchOwner].ccyType_reserved[ccyTypeId]) >= int(fee),
+				"mintSecTokenBatch: not enough currency to pay for the fee"
+			);
+
+			address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[a.batchOwner]];
+			StructLib.transferCcy(
+				ld,
+				StructLib.TransferCcyArgs({
+					from: a.batchOwner,
+					to: feeOwner,
+					ccyTypeId: ccyTypeId,
+					amount: fee,
+					transferType: StructLib.TransferType.ExchangeFee
+				})
+			);
+		}
+
 		// ### string[] param lengths are reported as zero!
 		/*require(metaKeys.length == 0, "At least one metadata key must be provided");
         require(metaKeys.length <= 42, "Maximum metadata KVP length is 42");
@@ -307,7 +338,8 @@ library TokenLib {
 				a.tokTypeId,
 				a.batchOwner,
 				uint256(a.mintQty),
-				uint256(uint64(a.mintSecTokenCount))
+				uint256(uint64(a.mintSecTokenCount)),
+				applyCustFee
 			);
 		}
 
@@ -334,16 +366,32 @@ library TokenLib {
 			}
 
 			// mint - passthrough to base
-			StMintableFacet(std._tt_addr[a.tokTypeId]).mintSecTokenBatch(
-				1, /*tokTypeId*/ // base: UNI_TOKEN (controller does type ID mapping for clients)
-				a.mintQty,
-				a.mintSecTokenCount,
-				a.batchOwner,
-				a.origTokFee,
-				a.origCcyFee_percBips_ExFee,
-				a.metaKeys,
-				a.metaValues
-			);
+			if(applyCustFee) {
+				StMintableFacet(std._tt_addr[a.tokTypeId]).mintSecTokenBatchCustomFee(
+					1, /*tokTypeId*/ // base: UNI_TOKEN (controller does type ID mapping for clients)
+					a.mintQty,
+					a.mintSecTokenCount,
+					a.batchOwner,
+					a.origTokFee,
+					a.origCcyFee_percBips_ExFee,
+					a.metaKeys,
+					a.metaValues,
+					ccyTypeId,
+					fee
+				);
+			} else {
+				StMintableFacet(std._tt_addr[a.tokTypeId]).mintSecTokenBatch(
+					1, /*tokTypeId*/ // base: UNI_TOKEN (controller does type ID mapping for clients)
+					a.mintQty,
+					a.mintSecTokenCount,
+					a.batchOwner,
+					a.origTokFee,
+					a.origCcyFee_percBips_ExFee,
+					a.metaKeys,
+					a.metaValues
+				);
+			}
+			
 		} else {
 			for (int256 ndx = 0; ndx < a.mintSecTokenCount; ndx++) {
 				uint256 newId = ld._tokens_currentMax_id + 1 + uint256(ndx);
@@ -387,11 +435,39 @@ library TokenLib {
 	function burnTokens(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
-		BurnTokenArgs memory a
+		BurnTokenArgs memory a,
+		StructLib.CustomCcyFee memory customFee
 	) public {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(ld._ledger[a.ledgerOwner].exists == true, "Bad ledgerOwner");
 		require(a.burnQty >= 0x1 && a.burnQty <= 0x7fffffffffffffff, "Bad burnQty"); // max int64
+
+		// paying fees
+		if(customFee.applyCustomFee) {
+			uint ccyTypeId = customFee.ccyTypeId;
+			uint fee = customFee.fee;
+
+			// checking that fee fits int type
+			require(fee <= MAX_INT, "burnTokens: fee overflow");
+			require(ccyTypeId >= 1, "burnTokens: Bad ccyTypeId"); 
+			require(
+				(ld._ledger[a.ledgerOwner].ccyType_balance[ccyTypeId] -
+					ld._ledger[a.ledgerOwner].ccyType_reserved[ccyTypeId]) >= int(fee),
+				"burnTokens: not enough currency to pay for the fee"
+			);
+
+			address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[a.ledgerOwner]];
+			StructLib.transferCcy(
+				ld,
+				StructLib.TransferCcyArgs({
+					from: a.ledgerOwner,
+					to: feeOwner,
+					ccyTypeId: ccyTypeId,
+					amount: fee,
+					transferType: StructLib.TransferType.ExchangeFee
+				})
+			);
+		}
 
 		// core - update global totals, preemptively; note - totals are maintained on base AND on controller/commodity
 		//if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
@@ -401,7 +477,7 @@ library TokenLib {
 
 		// emit burn event (core & controller)
 		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
-			emit Burned(a.tokTypeId, a.ledgerOwner, uint256(a.burnQty));
+			emit Burned(a.tokTypeId, a.ledgerOwner, uint256(a.burnQty), customFee.applyCustomFee);
 		}
 
 		// controller: delegate burn op. to base

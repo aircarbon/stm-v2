@@ -104,6 +104,7 @@ module.exports = {
             deployer.link(LibMainStorage, StTransferableFacet);
             deployer.link(LibMainStorage, ValidationLib);
             deployer.link(LibMainStorage, Erc20Lib);
+            deployer.link(LibMainStorage, TokenLib);
 
             // deploying ValidationLib
             await deployImpl(ValidationLib, 'ValidationLib');

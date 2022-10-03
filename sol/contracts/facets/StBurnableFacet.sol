@@ -29,6 +29,29 @@ contract StBurnableFacet {
 		int256 burnQty,
 		uint256[] memory stIds // IFF supplied (len > 0): sum of supplied STs current qty must == supplied burnQty
 	) public {
+		_burnTokens(ledgerOwner, tokTypeId, burnQty, stIds, false, 0, 0);
+	}
+
+	function burnTokensCustomFee(
+		address ledgerOwner,
+		uint256 tokTypeId,
+		int256 burnQty,
+		uint256[] memory stIds,
+		uint ccyTypeId,
+		uint fee
+	) public {
+		_burnTokens(ledgerOwner, tokTypeId, burnQty, stIds, true, ccyTypeId, fee);
+	}
+
+	function _burnTokens(
+		address ledgerOwner,
+		uint256 tokTypeId,
+		int256 burnQty,
+		uint256[] memory stIds,
+		bool applyCustomFee,
+		uint ccyTypeId,
+		uint fee
+	) internal {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(ledgerOwner);
@@ -42,6 +65,11 @@ contract StBurnableFacet {
 				tokTypeId: tokTypeId,
 				burnQty: burnQty,
 				k_stIds: stIds
+			}),
+			StructLib.CustomCcyFee({
+				ccyTypeId: ccyTypeId,
+				fee: fee,
+				applyCustomFee: applyCustomFee
 			})
 		);
 	}

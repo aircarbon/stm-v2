@@ -11,4 +11,5 @@ module.exports = async function (deployer) {
     });
 
     console.log('Done.');
+    process.exit();
 };

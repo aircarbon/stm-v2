@@ -227,6 +227,12 @@ library StructLib {
 		bool applyCustomFee;
 	}
 
+	struct CustomCcyFee {
+		uint ccyTypeId;
+		uint fee;
+		bool applyCustomFee;
+	}
+
 	struct Ccy {
 		uint256 id;
 		string name; // e.g. "USD", "BTC"

@@ -6,6 +6,8 @@ import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 
 library CcyLib {
+	uint256 constant MAX_INT = 2**256 - 1;
+
 	event AddedCcyType(uint256 id, string name, string unit);
 	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc);
 	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc);
@@ -134,6 +136,12 @@ library CcyLib {
 
 		// pay the fee if applicable
 		if(applyFee) {
+			require(fee <= MAX_INT, "fund: fee overflow");
+			require(
+				(ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -
+					ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount + int(fee),
+				"fund: not enough balance for the fee"
+			);
 			_transferFees(ld, ledgerOwner, ccyTypeId, fee);
 		}
 	}
@@ -153,15 +161,21 @@ library CcyLib {
 		require(amount > 0, "Bad amount");
 		require(ld._ledger[ledgerOwner].exists, "Bad ledgerOwner");
 
-		require(
-			(ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -
-				ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount + int((applyFee ? fee : 0)),
-			"Insufficient balance"
-		);
-
-		// pay the fee if applicable
 		if(applyFee) {
+			// check fee validity and pay the fee
+			require(fee <= MAX_INT, "fund: fee overflow");
+			require(
+				(ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -
+					ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount + int(fee),
+				"Insufficient balance"
+			);
 			_transferFees(ld, ledgerOwner, ccyTypeId, fee);
+		} else {
+			require(
+				(ld._ledger[ledgerOwner].ccyType_balance[ccyTypeId] -
+					ld._ledger[ledgerOwner].ccyType_reserved[ccyTypeId]) >= amount,
+				"Insufficient balance"
+			);
 		}
 
 		// update ledger balance

@@ -16,6 +16,8 @@ const TokenLib = artifacts.require('TokenLib');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
 const CcyLib = artifacts.require('CcyLib');
 const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StMintableFacet = artifacts.require('StMintableFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
 const DiamondLoupeFacet = artifacts.require('DiamondLoupeFacet');
 
 const CONST = require('../const.js');
@@ -28,7 +30,7 @@ const  db  = require('../../orm/build');
 
 const deployments = {
     LibMainStorage_addr: "0x00966284eAe04623bA4459aF9798f0b8C9fcB851",
-    StructLib_addr: "0x0A47396D860C3d1D94fdad6b76319EEbC5D381ed",
+    StructLib_addr: "0x8fc8810a56F9Bdb2fC44E25C7580055B69Cf22D9",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
     TransferLib_addr: "0xEC59282623A120D8b5c8e1BaCABA3e734bCb7B3C",
     TransferLibView_addr: "0xC64aD0c682450b924111c6FBf5Ad7Cb896C878d2",
@@ -39,11 +41,13 @@ const deployments = {
     LedgerLib_addr: "0x9020Ca55873D29bb1DeCF4841E2D3059cE1604b8",
     StErc20Facet_addr: "0x854e492DA6c9E642170335bEC9113daab7f2E2C4",
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
-    TokenLib_addr: "0x936F25BaB9362EB468f9aFFF285Def326b08B919",
+    TokenLib_addr: "0xA0ab84b0426368eC505BB8ab220D46f245162bBF",
     StLedgerFacet_addr: "0xeEa7e1ef5f77A9CE43acA45D534046DB87175433",
     StTransferableFacet_addr: "0xFAcaa238DFb30046Ec6859CD7c36e76E1C061B23",
-    CcyLib_addr: "0x2245Ff07a30597BdD678Ad4dCc322408d2919f7b",
-    CcyCollateralizableFacet_addr: "0xb9B440F880896f9E387F846c6a1CBEBcb50FBdEb",
+    CcyLib_addr: "0x2B7510842cbf973f14e9909a27e935FC95fE6a30",
+    CcyCollateralizableFacet_addr: "0xd64736c80F6358AFe05edBC788C8F167a3A05ae2",
+    StMintableFacet_addr: "0xCFB4EE03CE7864BdDe5595fE4C50918e7e957e1a",
+    StBurnableFacet_addr: "0xD5F365396dD2a421eEfFf006B3d96D49be2B50b5"
 }
 
 const deployOrGetDeployed = async(deployer, addr, contract) => {
@@ -79,6 +83,9 @@ module.exports = async function (deployer) {
     deployer.link(LibMainStorage_c, DataLoadableFacet);
     deployer.link(LibMainStorage_c, CcyLib);
     deployer.link(LibMainStorage_c, CcyCollateralizableFacet);
+    deployer.link(LibMainStorage_c, TokenLib);
+    deployer.link(LibMainStorage_c, StMintableFacet);
+    deployer.link(LibMainStorage_c, StBurnableFacet);
 
     // deploying new StructLib (because don't have address of an old one)
     const StructLib_c = await deployOrGetDeployed(deployer, deployments.StructLib_addr, StructLib);
@@ -97,6 +104,8 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, TransferLib);
     deployer.link(StructLib_c, CcyLib);
     deployer.link(StructLib_c, CcyCollateralizableFacet);
+    deployer.link(StructLib_c, StMintableFacet);
+    deployer.link(StructLib_c, StBurnableFacet);
 
     // deploying new CcyLib
     const CcyLib_c = await deployOrGetDeployed(deployer, deployments.CcyLib_addr, CcyLib);
@@ -112,6 +121,8 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, StLedgerFacet);
     deployer.link(ValidationLib_c, StTransferableFacet);
     deployer.link(ValidationLib_c, CcyCollateralizableFacet);
+    deployer.link(ValidationLib_c, StMintableFacet);
+    deployer.link(ValidationLib_c, StBurnableFacet);
 
     // deploying new CcyCollateralizableFacet
     const CcyCollateralizableFacet_c  = await deployOrGetDeployed(deployer, deployments.CcyCollateralizableFacet_addr, CcyCollateralizableFacet);
@@ -134,6 +145,7 @@ module.exports = async function (deployer) {
     console.log(chalk.green.bold(`SpotFeeLib_addr: "${SpotFeeLib_c.address}",`));
     deployer.link(SpotFeeLib_c, StFeesFacet);  
     deployer.link(SpotFeeLib_c, TokenLib);  
+    deployer.link(SpotFeeLib_c, StMintableFacet);  
     
     // deploygin new LoadLib
     const LoadLib_c = await deployOrGetDeployed(deployer, deployments.LoadLib_addr, LoadLib);
@@ -156,6 +168,7 @@ module.exports = async function (deployer) {
     deployer.link(LedgerLib_c, StErc20Facet);
     deployer.link(LedgerLib_c, StLedgerFacet);
     deployer.link(LedgerLib_c, StTransferableFacet);
+    deployer.link(LedgerLib_c, StMintableFacet);
 
     // deploying new StErc20Facets
     const StErc20Facet_c = await deployOrGetDeployed(deployer, deployments.StErc20Facet_addr, StErc20Facet);
@@ -170,6 +183,8 @@ module.exports = async function (deployer) {
     const TokenLib_c = await deployOrGetDeployed(deployer, deployments.TokenLib_addr, TokenLib);
     console.log(chalk.green.bold(`TokenLib_addr: "${TokenLib_c.address}",`));
     deployer.link(TokenLib_c, StLedgerFacet);
+    deployer.link(TokenLib_c, StMintableFacet);
+    deployer.link(TokenLib_c, StBurnableFacet);
 
     // deploying new StLedgerFacet
     const StLedgerFacet_c = await deployOrGetDeployed(deployer, deployments.StLedgerFacet_addr, StLedgerFacet);
@@ -178,6 +193,14 @@ module.exports = async function (deployer) {
     // deploying new StTransferableFacet
     const StTransferableFacet_c = await deployOrGetDeployed(deployer, deployments.StTransferableFacet_addr, StTransferableFacet);
     console.log(chalk.green.bold(`StTransferableFacet_addr: "${StTransferableFacet_c.address}",`));
+
+    // deploying new StMintableFacet
+    const StMintableFacet_c = await deployOrGetDeployed(deployer, deployments.StMintableFacet_addr, StMintableFacet);
+    console.log(chalk.green.bold(`StMintableFacet_addr: "${StMintableFacet_c.address}",`));
+
+    // deploying new StBurnableFacet
+    const StBurnableFacet_c = await deployOrGetDeployed(deployer, deployments.StBurnableFacet_addr, StBurnableFacet);
+    console.log(chalk.green.bold(`StBurnableFacet_addr: "${StBurnableFacet_c.address}",`));
 
     // registering the Facet
     console.log('Cutting 1...');
@@ -188,14 +211,24 @@ module.exports = async function (deployer) {
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
         {
-            facetAddress: CcyCollateralizableFacet_c.address,
-            action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdrawCustomFee'])
+            facetAddress: StMintableFacet_c.address,
+            action: CONST.FacetCutAction.Replace,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatch'])
         },
         {
-            facetAddress: CcyCollateralizableFacet_c.address,
+            facetAddress: StBurnableFacet_c.address,
             action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('CcyCollateralizableFacet', ['fundOrWithdraw'])
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokens'])
+        },
+        {
+            facetAddress: StMintableFacet_c.address,
+            action: CONST.FacetCutAction.Add,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatchCustomFee'])
+        },
+        {
+            facetAddress: StBurnableFacet_c.address,
+            action: CONST.FacetCutAction.Add,
+            functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokensCustomFee'])
         },
     ], CONST.nullAddr, "0x");
 

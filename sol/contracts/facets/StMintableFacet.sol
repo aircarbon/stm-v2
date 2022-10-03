@@ -94,6 +94,61 @@ contract StMintableFacet {
 		string[] memory metaKeys,
 		string[] memory metaValues
 	) public {
+		_mintSecTokenBatch(
+			tokTypeId, 
+			mintQty,
+			mintSecTokenCount,
+			batchOwner,
+			originatorFee,
+			origCcyFee_percBips_ExFee,
+			metaKeys,
+			metaValues,
+			false,
+			0,
+			0
+		);
+	}
+
+	function mintSecTokenBatchCustomFee(
+		uint256 tokTypeId,
+		uint256 mintQty,
+		int64 mintSecTokenCount,
+		address payable batchOwner,
+		StructLib.SetFeeArgs memory originatorFee,
+		uint16 origCcyFee_percBips_ExFee,
+		string[] memory metaKeys,
+		string[] memory metaValues,
+		uint ccyTypeId,
+		uint fee
+	) public {
+		_mintSecTokenBatch(
+			tokTypeId, 
+			mintQty,
+			mintSecTokenCount,
+			batchOwner,
+			originatorFee,
+			origCcyFee_percBips_ExFee,
+			metaKeys,
+			metaValues,
+			true,
+			ccyTypeId,
+			fee
+		);
+	}
+
+	 function _mintSecTokenBatch(
+		uint256 tokTypeId,
+		uint256 mintQty,
+		int64 mintSecTokenCount,
+		address payable batchOwner,
+		StructLib.SetFeeArgs memory originatorFee,
+		uint16 origCcyFee_percBips_ExFee,
+		string[] memory metaKeys,
+		string[] memory metaValues,
+		bool applyCustFee,
+		uint ccyTypeId,
+		uint fee
+	) internal {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(batchOwner);
@@ -110,6 +165,6 @@ contract StMintableFacet {
 		});
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		TokenLib.mintSecTokenBatch(s.ld, s.std, args);
+		TokenLib.mintSecTokenBatch(s.ld, s.std, args, applyCustFee, ccyTypeId, fee);
 	}
 }
