@@ -83,6 +83,18 @@ library TokenLib {
 		uint256 mintedQty
 	);
 
+	event RetokenizedToken(
+		address indexed owner,
+		uint indexed oldTokenTypeId,
+		uint indexed newTokenTypeId,
+		uint oldBatchId,
+		uint newBatchId,
+		uint oldStId,
+		uint newStId,
+		uint oldQty,
+		uint newQty
+	);
+
 	event AddedBatchMetadata(uint256 indexed batchId, string key, string value);
 	event SetBatchOriginatorFee_Token(uint256 indexed batchId, StructLib.SetFeeArgs originatorFee);
 	event SetBatchOriginatorFee_Currency(uint256 indexed batchId, uint16 origCcyFee_percBips_ExFee);
@@ -249,7 +261,8 @@ library TokenLib {
 		MintSecTokenBatchArgs memory a,
 		bool applyCustFee,
 		uint ccyTypeId,
-		uint fee
+		uint fee,
+		bool suppressEvents
 	) public {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(a.tokTypeId >= 1 && a.tokTypeId <= std._tt_Count, "Bad tokTypeId");
@@ -332,7 +345,7 @@ library TokenLib {
 		ld._batches_currentMax_id++;
 
 		// emit batch create event (commodity & controller - not base; its batch and tok-type IDs are local)
-		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
+		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE && !suppressEvents) {
 			emit Minted(
 				newBatch.id,
 				a.tokTypeId,
@@ -356,13 +369,16 @@ library TokenLib {
 			for (int256 ndx = 0; ndx < a.mintSecTokenCount; ndx++) {
 				uint256 newId = base.getSecToken_MaxId() + 1 + uint256(ndx);
 				int64 stQty = int64(uint64(a.mintQty)) / int64(a.mintSecTokenCount);
-				emit MintedSecToken(
-					newId,
-					newBatch.id,
-					a.tokTypeId,
-					a.batchOwner,
-					uint256(uint64(stQty))
-				);
+
+				if(!suppressEvents) {
+					emit MintedSecToken(
+						newId,
+						newBatch.id,
+						a.tokTypeId,
+						a.batchOwner,
+						uint256(uint64(stQty))
+					);
+				}
 			}
 
 			// mint - passthrough to base
@@ -401,7 +417,7 @@ library TokenLib {
 				ld._sts[newId].currentQty = stQty; // mint ST
 
 				// emit token minted event(s) (core)
-				if (ld.contractType == StructLib.ContractType.COMMODITY) {
+				if (ld.contractType == StructLib.ContractType.COMMODITY && !suppressEvents) {
 					emit MintedSecToken(
 						newId,
 						newBatch.id,
@@ -436,7 +452,8 @@ library TokenLib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		BurnTokenArgs memory a,
-		StructLib.CustomCcyFee memory customFee
+		StructLib.CustomCcyFee memory customFee,
+		bool suppressEvents
 	) public {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(ld._ledger[a.ledgerOwner].exists == true, "Bad ledgerOwner");
@@ -476,7 +493,7 @@ library TokenLib {
 		//}
 
 		// emit burn event (core & controller)
-		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
+		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE && !suppressEvents) {
 			emit Burned(a.tokTypeId, a.ledgerOwner, uint256(a.burnQty), customFee.applyCustomFee);
 		}
 
@@ -556,14 +573,16 @@ library TokenLib {
 
 					remainingToBurn -= stQty;
 
-					emit BurnedFullSecToken(
-						stId,
-						ld.contractType == StructLib.ContractType.CASHFLOW_BASE
-							? stId >> 192
-							: a.tokTypeId,
-						a.ledgerOwner,
-						uint256(uint64(stQty))
-					);
+					if(!suppressEvents) {
+						emit BurnedFullSecToken(
+							stId,
+							ld.contractType == StructLib.ContractType.CASHFLOW_BASE
+								? stId >> 192
+								: a.tokTypeId,
+							a.ledgerOwner,
+							uint256(uint64(stQty))
+						);
+					}
 				} else {
 					// resize the ST (partial burn)
 					//ld._sts_currentQty[stId] -= remainingToBurn;
@@ -575,16 +594,93 @@ library TokenLib {
 					// burn from batch
 					ld._batches[batchId].burnedQty += uint256(uint64(remainingToBurn));
 
-					emit BurnedPartialSecToken(
-						stId,
-						ld.contractType == StructLib.ContractType.CASHFLOW_BASE
-							? stId >> 192
-							: a.tokTypeId,
-						a.ledgerOwner,
-						uint256(uint64(remainingToBurn))
-					);
+					if(!suppressEvents) {
+						emit BurnedPartialSecToken(
+							stId,
+							ld.contractType == StructLib.ContractType.CASHFLOW_BASE
+								? stId >> 192
+								: a.tokTypeId,
+							a.ledgerOwner,
+							uint256(uint64(remainingToBurn))
+						);
+					}
 					remainingToBurn = 0;
 				}
+			}
+		}
+	}
+
+	// note: for now we assume that only one stId will be passed
+	function retokenizeSecToken(
+		StructLib.LedgerStruct storage ld,
+		StructLib.StTypesStruct storage std,
+		MintSecTokenBatchArgs memory a,
+		StructLib.IdAndQuantity[] memory idWithQty
+	) public {
+		// check if the owner has enough of the tokens
+		address batchOwner = a.batchOwner;
+		uint len = idWithQty.length;
+		require(len == 1, "retokenizeSecToken: retokenization only with one st id is allowed at the moment");
+		
+		for(uint i = 0; i < len; i++) {
+			uint[] memory tokenTypeStIds = ld._ledger[batchOwner].tokenType_stIds[idWithQty[i].tokenTypeId];
+			uint currStId = idWithQty[i].stId;
+			uint currQty = idWithQty[i].qty;
+
+			require(_arrayIncludes(tokenTypeStIds, currStId), "retokenizeSecToken: account does not own some of the tokens");
+			require(currQty <= MAX_INT, "retokenizeSecToken: type overflow");
+			require(uint(int(ld._sts[currStId].currentQty)) >= currQty, "retokenizeSecToken: not sufficient tokens");
+		}
+
+		// burn tokens (suppress events)
+		for(uint i = 0; i < len; i++) {
+			uint[] memory k_stIds = new uint[](1);
+			k_stIds[0] = idWithQty[i].stId;
+
+			burnTokens(
+				ld,
+				std,
+				BurnTokenArgs({
+					ledgerOwner: batchOwner,
+					tokTypeId: idWithQty[i].tokenTypeId,
+					burnQty: int(idWithQty[i].qty),
+					k_stIds: k_stIds
+				}),
+				StructLib.CustomCcyFee({
+					ccyTypeId: 0,
+					fee: 0,
+					applyCustomFee: false
+				}),
+				true
+			);
+		}
+
+		// mint tokens (suppress events)
+		require(a.mintSecTokenCount == 1, "retokenizeSecToken: expected mintSecTokenCount to be 1");
+		mintSecTokenBatch(ld, std, a, false, 0, 0, true);
+
+		// emit event
+		uint oldStId = idWithQty[0].stId;
+		emit RetokenizedToken(
+			batchOwner, // owner
+			idWithQty[0].tokenTypeId, // oldTokenTypeId
+			a.tokTypeId, // newTokenTypeId
+			ld._sts[oldStId].batchId, // oldBatchId
+			ld._batches_currentMax_id, // newBatchId
+			oldStId, // oldStId
+			ld._tokens_currentMax_id, // newStId
+			idWithQty[0].qty, // oldQty
+			a.mintQty // newQty
+		);
+	}
+
+	function _arrayIncludes(uint[] memory arr, uint value) internal returns(bool result) {
+		result = false;
+		uint len = arr.length;
+
+		for (uint i = 0; i < len; i++) {
+			if(arr[i] == value) {
+				return true;
 			}
 		}
 	}

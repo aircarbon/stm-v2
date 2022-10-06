@@ -70,7 +70,8 @@ contract StBurnableFacet {
 				ccyTypeId: ccyTypeId,
 				fee: fee,
 				applyCustomFee: applyCustomFee
-			})
+			}),
+			false
 		);
 	}
 }

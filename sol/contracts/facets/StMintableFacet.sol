@@ -165,6 +165,6 @@ contract StMintableFacet {
 		});
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		TokenLib.mintSecTokenBatch(s.ld, s.std, args, applyCustFee, ccyTypeId, fee);
+		TokenLib.mintSecTokenBatch(s.ld, s.std, args, applyCustFee, ccyTypeId, fee, false);
 	}
 }

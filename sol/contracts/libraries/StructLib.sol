@@ -399,6 +399,12 @@ library StructLib {
 		//uint256 _nextWhitelistNdx;
 	}
 
+	struct IdAndQuantity {
+		uint tokenTypeId;
+		uint stId;
+		uint qty;
+	}
+
 	event TransferedLedgerCcy(
 		address indexed from,
 		address indexed to,

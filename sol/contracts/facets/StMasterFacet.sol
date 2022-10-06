@@ -38,8 +38,8 @@ contract StMasterFacet {
 	// need to be defined (duplicated) here - web3 can't see event signatures in libraries
 	// CcyLib events
 	event AddedCcyType(uint256 id, string name, string unit);
-	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc);
-	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc);
+	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc, bool customFee);
+	event CcyWithdrewLedger(uint256 ccyTypeId, address indexed from, int256 amount, string desc, bool customFee);
 	// TokenLib events
 	event AddedSecTokenType(
 		uint256 id,
@@ -53,7 +53,7 @@ contract StMasterFacet {
 	);
 	event SetFutureVariationMargin(uint256 tokTypeId, uint16 varMarginBips);
 	event SetFutureFeePerContract(uint256 tokTypeId, uint256 feePerContract);
-	event Burned(uint256 tokTypeId, address indexed from, uint256 burnedQty);
+	event Burned(uint256 tokTypeId, address indexed from, uint256 burnedQty, bool customFee);
 	event BurnedFullSecToken(
 		uint256 indexed stId,
 		uint256 tokTypeId,
@@ -71,7 +71,8 @@ contract StMasterFacet {
 		uint256 tokTypeId,
 		address indexed to,
 		uint256 mintQty,
-		uint256 mintSecTokenCount
+		uint256 mintSecTokenCount,
+		bool customFee
 	);
 	event MintedSecToken(
 		uint256 indexed stId,
@@ -109,8 +110,22 @@ contract StMasterFacet {
 		address indexed to, // tokens
 		uint256 tokQty,
 		uint256 ccyFeeFrom,
-		uint256 ccyFeeTo
+		uint256 ccyFeeTo,
+		bool customFee
 	);
+
+	event RetokenizedToken(
+		address indexed owner,
+		uint indexed oldTokenTypeId,
+		uint indexed newTokenTypeId,
+		uint oldBatchId,
+		uint newBatchId,
+		uint oldStId,
+		uint newStId,
+		uint oldQty,
+		uint newQty
+	);
+
 	// StructLib events
 	enum TransferType {
 		Undefined,

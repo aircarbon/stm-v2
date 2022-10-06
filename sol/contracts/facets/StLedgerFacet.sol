@@ -8,6 +8,37 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StLedgerFacet {
+
+	function retokenizeSecToken(
+		uint256 tokTypeId,
+		uint256 mintQty,
+		int64 mintSecTokenCount,
+		address payable batchOwner,
+		StructLib.SetFeeArgs memory originatorFee,
+		uint16 origCcyFee_percBips_ExFee,
+		string[] memory metaKeys,
+		string[] memory metaValues,
+		StructLib.IdAndQuantity[] memory idWithQty
+	) external {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(batchOwner);
+
+		TokenLib.MintSecTokenBatchArgs memory args = TokenLib.MintSecTokenBatchArgs({
+			tokTypeId: tokTypeId,
+			mintQty: mintQty,
+			mintSecTokenCount: mintSecTokenCount,
+			batchOwner: batchOwner,
+			origTokFee: originatorFee,
+			origCcyFee_percBips_ExFee: origCcyFee_percBips_ExFee,
+			metaKeys: metaKeys,
+			metaValues: metaValues
+		});
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		TokenLib.retokenizeSecToken(s.ld, s.std, args, idWithQty);
+	}
+
 	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) external {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
