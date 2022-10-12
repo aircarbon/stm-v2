@@ -66,7 +66,7 @@ const blocksFromMonths = (months) => Math.ceil(blocksFromDays(months * 30.42));
 //
 // MAIN: deployer definitions -- contract ctor() params
 //
-const contractVer = process.env.CONTRACT_VERSION || "1.1e";
+const contractVer = process.env.CONTRACT_VERSION || "2.1";
 const contractProps = {
     COMMODITY: {
         contractVer: contractVer,
@@ -309,6 +309,11 @@ module.exports = {
         "80001": { // Matic Mumbai Testnet
             btcUsd: '0x0000000000000000000000000000000000000000',
             ethUsd: '0x58bbdbfb6fca3129b91f0dbe372098123b38b5e9',
+            bnbUsd: '0x0000000000000000000000000000000000000000',
+        },
+        "1402": { // zkEVM Testnet
+            btcUsd: '0x0000000000000000000000000000000000000000',
+            ethUsd: '0x0000000000000000000000000000000000000000',
             bnbUsd: '0x0000000000000000000000000000000000000000',
         },
     },
@@ -640,6 +645,22 @@ function getTestContextWeb3(useWs) {
             },
             'petersburg'
         ) } }
+
+        // zkEVM Testnet
+        : process.env.WEB3_NETWORK_ID == 1402 ? { web3: new Web3(
+            useWs ?
+            'wss://public.zkevm-test.net:2083' :
+            'https://public.zkevm-test.net:2083',
+            options
+        ),
+        ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
+        'ropsten', // forCustomChain() requires a "known" name!?
+        {
+            name: 'zkevm_testnet',
+            networkId: 1402,
+            chainId: 1402,
+        },
+    ) } }
         
         // Fantom Testnet
         : process.env.WEB3_NETWORK_ID == 4002 ? { web3: new Web3(
