@@ -100,11 +100,43 @@ contract StTransferableFacet {
 	 */
 
 	function transferOrTrade(StructLib.TransferArgs memory transferArgs) public {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
 		_transferOrTradeImpl(transferArgs, 0, 0, false);
 	}
 
 	function transferOrTradeCustomFee(StructLib.TransferArgs memory transferArgs, uint custFeeA, uint custFeeB) public {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		transferArgs.applyFees = true;
 		_transferOrTradeImpl(transferArgs, custFeeA, custFeeB, true);
+	}
+
+	function transferOrTradeBatch(StructLib.TransferArgs[] memory transferArgs) public {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		uint len = transferArgs.length;
+		require(len > 0, "transferOrTradeBatch: empty array of args");
+
+		for(uint i = 0; i < len; i++) {
+			_transferOrTradeImpl(transferArgs[i], 0, 0, false);
+		}
+	}
+
+	function transferOrTradeBatchCustomFee(StructLib.TransferArgs[] memory transferArgs, uint[] memory custFeeA, uint[] memory custFeeB) public {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		uint len = transferArgs.length;
+		require(len > 0, "transferOrTradeBatchCustomFee: empty array of args");
+		require(custFeeA.length == len && custFeeB.length == len, "transferOrTradeBatchCustomFee: args array lengths dont match");
+
+		for(uint i = 0; i < len; i++) {
+			transferArgs[i].applyFees = true;
+			_transferOrTradeImpl(transferArgs[i], custFeeA[i], custFeeB[i], true);
+		}
 	}
 
 	function _transferOrTradeImpl(
@@ -113,8 +145,6 @@ contract StTransferableFacet {
 		uint custFeeB, 
 		bool applyFees
 	) internal {
-		ValidationLib.validateOnlyCustodian();
-		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(transferArgs.ledger_A);
 		ValidationLib.validateHasEntity(transferArgs.ledger_B);
 

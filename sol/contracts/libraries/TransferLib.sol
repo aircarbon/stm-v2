@@ -441,19 +441,6 @@ library TransferLib {
 					})
 				);
 			}
-			if (a.applyFees && exFees.fee_ccy_A > 0) {
-				// exchange fee transfer from A
-				StructLib.transferCcy(
-					ld,
-					StructLib.TransferCcyArgs({
-						from: a.ledger_A,
-						to: a.feeAddrOwner_A,
-						ccyTypeId: a.ccyTypeId_A,
-						amount: exFees.fee_ccy_A,
-						transferType: StructLib.TransferType.ExchangeFee
-					})
-				);
-			}
 
 			if (a.ccy_amount_B > 0) {
 				// user transfer from B
@@ -470,18 +457,37 @@ library TransferLib {
 					})
 				);
 			}
-			if (a.applyFees && exFees.fee_ccy_B > 0) {
-				// exchange fee transfer from B
-				StructLib.transferCcy(
-					ld,
-					StructLib.TransferCcyArgs({
-						from: a.ledger_B,
-						to: a.feeAddrOwner_B,
-						ccyTypeId: a.ccyTypeId_B,
-						amount: exFees.fee_ccy_B,
-						transferType: StructLib.TransferType.ExchangeFee
-					})
-				);
+
+			if(a.applyFees) {
+				if (exFees.fee_ccy_A > 0) {
+					uint ccyTypeId = customFee.applyCustomFee && a.ccyTypeId_A == 0 ? a.ccyTypeId_B : a.ccyTypeId_A;
+					// exchange fee transfer from A
+					StructLib.transferCcy(
+						ld,
+						StructLib.TransferCcyArgs({
+							from: a.ledger_A,
+							to: a.feeAddrOwner_A,
+							ccyTypeId: ccyTypeId,
+							amount: exFees.fee_ccy_A,
+							transferType: StructLib.TransferType.ExchangeFee
+						})
+					);
+				}
+	
+				if (exFees.fee_ccy_B > 0) {
+					uint ccyTypeId = customFee.applyCustomFee && a.ccyTypeId_B == 0 ? a.ccyTypeId_A : a.ccyTypeId_B;
+					// exchange fee transfer from B
+					StructLib.transferCcy(
+						ld,
+						StructLib.TransferCcyArgs({
+							from: a.ledger_B,
+							to: a.feeAddrOwner_B,
+							ccyTypeId: a.ccyTypeId_B,
+							amount: exFees.fee_ccy_B,
+							transferType: StructLib.TransferType.ExchangeFee
+						})
+					);
+				}
 			}
 		}
 

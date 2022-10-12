@@ -32,7 +32,7 @@ const deployments = {
     LibMainStorage_addr: "0x00966284eAe04623bA4459aF9798f0b8C9fcB851",
     StructLib_addr: "0x65Ae3Bccf7F579E194efDC8C15792A18F9fDF4eE",
     ValidationLib_addr: "0x8Ce6Bd995D83495a8f8f4e6DaB855ca2856ef561",
-    TransferLib_addr: "0xEC59282623A120D8b5c8e1BaCABA3e734bCb7B3C",
+    TransferLib_addr: "0x11227f46AbFbcc487c57BE0900A07A3870fDec04",
     TransferLibView_addr: "0xC64aD0c682450b924111c6FBf5Ad7Cb896C878d2",
     SpotFeeLib_addr: "0xdA43e5B40a8B42b2C30E44fd4caEEc7cd09413b3",
     LoadLib_addr: "0x5114bB766858e0f14cD94Bb93712A3312aE2Cc26",
@@ -43,7 +43,7 @@ const deployments = {
     DataLoadableFacet_addr: "0xdB8dd60515F0211a1995D0CB1a7545C57B00FB1E",
     TokenLib_addr: "0x8515bAD7e01Df998c6E89A34C6f02C8c3681a58f",
     StLedgerFacet_addr: "0xB70C04F39507b07Da9D13aB05DDf066d42CE51A2",
-    StTransferableFacet_addr: "0xFAcaa238DFb30046Ec6859CD7c36e76E1C061B23",
+    StTransferableFacet_addr: "0x84d57DdA3eFAEc9d5d8DE2939675cee2b07c811D",
     CcyLib_addr: "0x5610cc200f4fEED193fd68C0877C0aAa5d2b59f2",
     CcyCollateralizableFacet_addr: "0xbf54dbea8905209b149e8753e9709ae94bebb09b",
     StMintableFacet_addr: "0xf036Df64a6dc3816eF78D38350c5788417AC2Ead",
@@ -59,7 +59,6 @@ const deployOrGetDeployed = async(deployer, addr, contract) => {
 
 module.exports = async function (deployer) {
     console.log('3_update: ', deployer.network);
-
     // const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     const stm = await DiamondCutFacet.at('0x9b197e9FbB891Ef0484439581aA8430983405F90');
     // const stm = await DiamondCutFacet.at('0x4Dba44Bbd8A7D940C2453B6686fB435C469e64E4');
@@ -211,21 +210,40 @@ module.exports = async function (deployer) {
         //     action: CONST.FacetCutAction.Remove,
         //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
         // },
-        {
-            facetAddress: StBurnableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokens', 'burnTokensCustomFee'])
-        },
-        {
-            facetAddress: StMintableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatch', 'mintSecTokenBatchCustomFee'])
-        },
-        {
-            facetAddress: StLedgerFacet_c.address,
-            action: CONST.FacetCutAction.Add,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet', ['retokenizeSecToken'])
-        },
+        
+        // 1) UPDATE DEV STM with the following:
+        // {
+        //     facetAddress: StBurnableFacet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StBurnableFacet', ['burnTokens', 'burnTokensCustomFee'])
+        // },
+        // {
+        //     facetAddress: StMintableFacet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StMintableFacet', ['mintSecTokenBatch', 'mintSecTokenBatchCustomFee'])
+        // },
+        // {
+        //     facetAddress: StLedgerFacet_c.address,
+        //     action: CONST.FacetCutAction.Add,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StLedgerFacet', ['retokenizeSecToken'])
+        // },
+
+        // 2) UPDATE DEV STM with the following:
+        // {
+        //     facetAddress: StTransferableFacet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transferOrTradeCustomFee'])
+        // },
+        // {
+        //     facetAddress: StTransferableFacet_c.address,
+        //     action: CONST.FacetCutAction.Add,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTradeBatch'])
+        // },
+        // {
+        //     facetAddress: StTransferableFacet_c.address,
+        //     action: CONST.FacetCutAction.Replace,
+        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTradeBatchCustomFee'])
+        // },
     ], CONST.nullAddr, "0x");
 
     console.log('Done.');
