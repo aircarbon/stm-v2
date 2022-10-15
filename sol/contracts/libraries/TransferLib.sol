@@ -744,6 +744,8 @@ library TransferLib {
 			);
 			v.originatorFeesPaidQty += uint80(tokFee);
 		}
+
+		return maxStId;
 	}
 
 	//
