@@ -9,7 +9,7 @@ const CONST = require('../const.js');
 module.exports = {
 
     transferLedger: async(a) => {
-        const { stm, accounts,
+        const { stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
             ledger_A,     ledger_B, 
             qty_A,        tokTypeId_A, k_stIds_A,
             qty_B,        tokTypeId_B, k_stIds_B,
@@ -26,9 +26,9 @@ module.exports = {
         var ledgerA_before, ledgerA_after;
         var ledgerB_before, ledgerB_after;
         var owner_before, owner_after;
-        ledgerA_before = await stm.getLedgerEntry(ledger_A);
-        ledgerB_before = await stm.getLedgerEntry(ledger_B);
-        owner_before = await stm.getLedgerEntry(accounts[0]);
+        ledgerA_before = await stmStLedgerFacet.getLedgerEntry(ledger_A);
+        ledgerB_before = await stmStLedgerFacet.getLedgerEntry(ledger_B);
+        owner_before = await stmStLedgerFacet.getLedgerEntry(accounts[0]);
         
         // global totals: transferred before
         //var totalTokQty_tfd_before, totalTokQty_tfd_after;
@@ -59,8 +59,8 @@ module.exports = {
         // expected currency fees paid by A and B - (ledger fees >0 overrides global fees)
         var fee_ccy_A = 0;
         if (ccy_amount_A > 0 && applyFees && ledger_A != accounts[0]) { // fees not applied by contract if fee-sender == fee-receiver
-            const gf = await stm.getFee(CONST.getFeeType.CCY, ccyTypeId_A, CONST.nullAddr);
-            const lf = await stm.getFee(CONST.getFeeType.CCY, ccyTypeId_A, ledger_A);
+            const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ccyTypeId_A, CONST.nullAddr);
+            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ccyTypeId_A, ledger_A);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips); 
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -74,11 +74,13 @@ module.exports = {
             if (fee_ccy_A.lt(min) && min.gt(0)) fee_ccy_A = min;
             //console.log('fee_ccy_A', fee_ccy_A.toFixed());
         }
+
+        
         
         var fee_ccy_B = 0;
         if (ccy_amount_B > 0 && applyFees && ledger_B != accounts[0]) { // fees not applied by contract if fee-sender == fee-receiver
-            const gf = await stm.getFee(CONST.getFeeType.CCY, ccyTypeId_B, CONST.nullAddr);
-            const lf = await stm.getFee(CONST.getFeeType.CCY, ccyTypeId_B, ledger_B);
+            const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ccyTypeId_B, CONST.nullAddr);
+            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ccyTypeId_B, ledger_B);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips);
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -94,7 +96,7 @@ module.exports = {
         }
 
         // fee preview
-        const feesPreview = await stm.transfer_feePreview({ 
+        const feesPreview = await stmStTransferableFacet.transfer_feePreview({ 
                 ledger_A,                             ledger_B, 
                    qty_A: qty_A.toString(),           tokTypeId_A, 
                    qty_B: qty_B.toString(),           tokTypeId_B, 
@@ -135,7 +137,9 @@ module.exports = {
         }});
         //console.log(`originatorFeeData.length=${originatorFeeData.length}`, originatorFeeData);
         for (let i = 0; i < originatorFeeData.length; i++)
-            originatorFeeData[i].ledgerBefore = await stm.getLedgerEntry(originatorFeeData[i].fee_to);
+            originatorFeeData[i].ledgerBefore = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to);
+
+        return;
 
         // ** TRANSFER **
         const transferTx = await transferWrapped( { stm, accounts,
@@ -165,11 +169,11 @@ module.exports = {
         }
 
         // ledger entries after
-        ledgerA_after = await stm.getLedgerEntry(ledger_A);
-        ledgerB_after = await stm.getLedgerEntry(ledger_B);
-        owner_after = await stm.getLedgerEntry(accounts[0]);
+        ledgerA_after = await stmStLedgerFacet.getLedgerEntry(ledger_A);
+        ledgerB_after = await stmStLedgerFacet.getLedgerEntry(ledger_B);
+        owner_after = await stmStLedgerFacet.getLedgerEntry(accounts[0]);
         for (let i = 0; i < originatorFeeData.length; i++)
-            originatorFeeData[i].ledgerAfter = await stm.getLedgerEntry(originatorFeeData[i].fee_to);
+            originatorFeeData[i].ledgerAfter = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to);
         //console.log('originatorFeeData', originatorFeeData);
 
         // global totals: transferred after
@@ -496,8 +500,8 @@ module.exports = {
 
         // calculate expected exchange token fees separately from fee preview
         var gf, lf, fix, bps, min, max;
-        gf = await stm.getFee(CONST.getFeeType.TOK, tokTypeId_A, CONST.nullAddr);
-        lf = await stm.getFee(CONST.getFeeType.TOK, tokTypeId_A, ledger_A);
+        gf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, tokTypeId_A, CONST.nullAddr);
+        lf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, tokTypeId_A, ledger_A);
         // globalFee_Fix = Big(await stm.globalFee_tokType_Fix(tokTypeId_A));
         // ledgerFee_Fix = Big(await stm.ledgerFee_tokType_Fix(tokTypeId_A, ledger_A));
         // globalFee_Bps = Big(await stm.globalFee_tokType_Bps(tokTypeId_A));
@@ -519,8 +523,8 @@ module.exports = {
         //console.log('ex_eeuFee_A', ex_eeuFee_A); 
         assert(exchangeFee_tok_A.eq(Big(ex_tokFee_A)), 'unexpected fee preview exchange token fee (A)');
 
-        gf = await stm.getFee(CONST.getFeeType.TOK, tokTypeId_B, CONST.nullAddr);
-        lf = await stm.getFee(CONST.getFeeType.TOK, tokTypeId_B, ledger_B);
+        gf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, tokTypeId_B, CONST.nullAddr);
+        lf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, tokTypeId_B, ledger_B);
         // globalFee_Fix = Big(await stm.globalFee_tokType_Fix(tokTypeId_B));
         // ledgerFee_Fix = Big(await stm.ledgerFee_tokType_Fix(tokTypeId_B, ledger_B));
         // globalFee_Bps = Big(await stm.globalFee_tokType_Bps(tokTypeId_B));
@@ -702,7 +706,7 @@ async function transferWrapped({
     //        k_stIds_B: k_stIds_B || [],
     //     transferType: transferType || CONST.transferType.UNDEFINED,
     // });
-    const tx = await stm.transferOrTrade({ 
+    const tx = await stmStTransferableFacet.transferOrTrade({ 
                 ledger_A,                          ledger_B, 
                    qty_A: qty_A.toString(),        tokTypeId_A, 
                    qty_B: qty_B.toString(),        tokTypeId_B, 
@@ -712,7 +716,7 @@ async function transferWrapped({
             feeAddrOwner: CONST.nullAddr,
                k_stIds_A: k_stIds_A || [],
                k_stIds_B: k_stIds_B || [],
-            transferType: transferType || CONST.transferType.UNDEFINED,
+            transferType: transferType || CONST.transferType.UNDEFINED, // TODO: add new variable from the transferArgs here
         },
         from //{ from: accounts[0] }
     );
