@@ -169,7 +169,7 @@ contract StLedgerFacet {
 
 	function getAccountEntity (address addr) public view returns (uint256) {
 		require(addr != address(0), "getEntity: invalid address");
-		return LibMainStorage.getStorage().entities[addr];
+		return LibMainStorage.getStorage().entitiesPerAddress[addr];
 	}
 
 	function getAccountEntityBatch(address[] calldata addr)

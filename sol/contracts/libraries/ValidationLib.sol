@@ -50,12 +50,12 @@ library ValidationLib {
 
 	function validateHasEntity(address addr) external view {
 		require(
-			addr == address(0) || LibMainStorage.getStorage().entities[addr] != 0,
+			addr == address(0) || LibMainStorage.getStorage().entitiesPerAddress[addr] != 0,
 			"The address is not assigned to any entity"
 		);
 	}
 
 	function validateEntityExists(uint entityId) external view {
-		require(LibMainStorage.getStorage3().entityExists[entityId], "Entity does not exist");
+		require(LibMainStorage.getStorage().entityExists[entityId], "Entity does not exist");
 	}
 }

@@ -28,12 +28,12 @@ library Erc20Lib {
 		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
 
 		require(entityId > 0, 'createEntity: invalid entity id');
-		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
-		require(!s3.entityExists[entityId], 'createEntity: entity already exists');
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		require(!s.entityExists[entityId], 'createEntity: entity already exists');
 
-		s3.entityExists[entityId] = true;
-		s3.entities.push(entityId);
-		s3.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
+		s.entityExists[entityId] = true;
+		s.entities.push(entityId);
+		s.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
 
 		emit EntityCreated(entityId, transferOrTradeFeesOwner);
 	}
@@ -50,10 +50,10 @@ library Erc20Lib {
 		uint entityId = entityIdWithAddr.id;
 		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
 
-		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
-		require(s3.entityExists[entityId], 'updateEntity: entity does not exist');
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		require(s.entityExists[entityId], 'updateEntity: entity does not exist');
 
-		s3.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
+		s.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
 		emit EntityUpdated(entityId, transferOrTradeFeesOwner);
 	}
 
@@ -76,9 +76,9 @@ library Erc20Lib {
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		require(s.erc20d._whitelisted[addr], "setAccountEntity: address is not white listed");
-		require(s.entities[addr] == 0, "setAccountEntity: address is already assigned to an entity");
+		require(s.entitiesPerAddress[addr] == 0, "setAccountEntity: address is already assigned to an entity");
 
-		s.entities[addr] = entityId;
+		s.entitiesPerAddress[addr] = entityId;
 		s.addressesPerEntity[entityId].push(addr);
 
 		emit EntityAssignedForAccount(addr, entityId);
@@ -137,6 +137,7 @@ library Erc20Lib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
+
 		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
 		mapping(address => uint256) storage entities,
 		StructLib.Erc20Struct storage erc20d,

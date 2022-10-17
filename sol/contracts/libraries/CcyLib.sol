@@ -189,7 +189,8 @@ library CcyLib {
 	}
 
 	function _transferFees(StructLib.LedgerStruct storage ld,address ledgerOwner, uint ccyTypeId, uint fee) internal {
-		address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[ledgerOwner]];
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		address feeOwner = s.feeAddrPerEntity[s.entitiesPerAddress[ledgerOwner]];
 
 		StructLib.transferCcy(
 			ld,

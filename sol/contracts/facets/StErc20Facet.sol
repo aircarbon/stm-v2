@@ -53,11 +53,11 @@ contract StErc20Facet {
 	}
 
 	function entityExists(uint entityId) public view returns(bool) {
-		return LibMainStorage.getStorage3().entityExists[entityId];
+		return LibMainStorage.getStorage().entityExists[entityId];
 	}
 
 	function getAllEntities() public view returns(uint[] memory) {
-		return LibMainStorage.getStorage3().entities;
+		return LibMainStorage.getStorage().entities;
 	}
 
 	function getEntityFeeOwner(uint entityId) external view returns(address) {
@@ -167,8 +167,8 @@ contract StErc20Facet {
 			s.ld,
 			s.std,
 			s.ctd,
-			LibMainStorage.getStorage2().entityGlobalFees, 
-			s.entities, 
+			s.entityGlobalFees, 
+			s.entitiesPerAddress, 
 			Erc20Lib.transferErc20Args({
 				deploymentOwner: s.deploymentOwner,
 				recipient: recipient,
@@ -196,8 +196,8 @@ contract StErc20Facet {
 			s.ld,
 			s.std,
 			s.ctd,
-			LibMainStorage.getStorage2().entityGlobalFees, 
-			s.entities, 
+			s.entityGlobalFees, 
+			s.entitiesPerAddress, 
 			s.erc20d,
 			sender,
 			Erc20Lib.transferErc20Args({
@@ -258,6 +258,6 @@ contract StErc20Facet {
 	}
 
 	function _getEntityFeeOwner(uint entityId) internal view returns(address) {
-		return LibMainStorage.getStorage3().feeAddrPerEntity[entityId];
+		return LibMainStorage.getStorage().feeAddrPerEntity[entityId];
 	}
 }

@@ -307,7 +307,8 @@ library TokenLib {
 				"mintSecTokenBatch: not enough currency to pay for the fee"
 			);
 
-			address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[a.batchOwner]];
+			LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+			address feeOwner = s.feeAddrPerEntity[s.entitiesPerAddress[a.batchOwner]];
 			StructLib.transferCcy(
 				ld,
 				StructLib.TransferCcyArgs({
@@ -473,7 +474,8 @@ library TokenLib {
 				"burnTokens: not enough currency to pay for the fee"
 			);
 
-			address feeOwner = LibMainStorage.getStorage3().feeAddrPerEntity[LibMainStorage.getStorage().entities[a.ledgerOwner]];
+			LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+			address feeOwner = s.feeAddrPerEntity[s.entitiesPerAddress[a.ledgerOwner]];
 			StructLib.transferCcy(
 				ld,
 				StructLib.TransferCcyArgs({

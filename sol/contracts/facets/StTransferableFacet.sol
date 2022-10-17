@@ -31,7 +31,7 @@ contract StTransferableFacet {
 				s.ctd,
 				s.erc20d,
 				//cashflowData,
-				LibMainStorage.getStorage2().entityGlobalFees[1], // note: just passing global fees for entity 1 at the moment
+				s.entityGlobalFees[1], // note: just passing global fees for entity 1 at the moment
 				mod,
 				n
 			);
@@ -52,8 +52,8 @@ contract StTransferableFacet {
 		return
 			TransferLibView.transfer_feePreview_ExchangeOnly(
 				s.ld,
-				LibMainStorage.getStorage2().entityGlobalFees,
-				s.entities,
+				s.entityGlobalFees,
+				s.entitiesPerAddress,
 				s.deploymentOwner,
 				transferArgs
 			);
@@ -75,8 +75,8 @@ contract StTransferableFacet {
 			TransferLibView.transfer_feePreview(
 				s.ld,
 				s.std,
-				LibMainStorage.getStorage2().entityGlobalFees,
-				s.entities,
+				s.entityGlobalFees,
+				s.entitiesPerAddress,
 				s.deploymentOwner,
 				transferArgs
 			);
@@ -161,15 +161,14 @@ contract StTransferableFacet {
 			"Not whitelisted (B)"
 		);
 
-		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
-		transferArgs.feeAddrOwner_A = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
-		transferArgs.feeAddrOwner_B = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_B]];
+		transferArgs.feeAddrOwner_A = s.feeAddrPerEntity[s.entitiesPerAddress[transferArgs.ledger_A]];
+		transferArgs.feeAddrOwner_B = s.feeAddrPerEntity[s.entitiesPerAddress[transferArgs.ledger_B]];
 		TransferLib.transferOrTrade(
 			s.ld, 
 			s.std, 
 			s.ctd, 
-			LibMainStorage.getStorage2().entityGlobalFees, 
-			s.entities, 
+			s.entityGlobalFees, 
+			s.entitiesPerAddress, 
 			transferArgs, 
 			StructLib.CustomFee(custFeeA, custFeeB, applyFees)
 		);
