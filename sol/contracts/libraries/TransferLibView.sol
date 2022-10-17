@@ -86,7 +86,8 @@ library TransferLibView {
 	function transfer_feePreview(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		address feeAddrOwner,
 		StructLib.TransferArgs memory a
 	)
@@ -121,25 +122,25 @@ library TransferLibView {
 			.spot_customFees
 			.ccyType_Set[a.ccyTypeId_A]
 			? ld._ledger[a.ledger_A].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_A]];
 		StructLib.FeeStruct storage exFeeStruct_tok_A = ld
 			._ledger[a.ledger_A]
 			.spot_customFees
 			.tokType_Set[a.tokTypeId_A]
 			? ld._ledger[a.ledger_A].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_A]];
 		StructLib.FeeStruct storage exFeeStruct_ccy_B = ld
 			._ledger[a.ledger_B]
 			.spot_customFees
 			.ccyType_Set[a.ccyTypeId_B]
 			? ld._ledger[a.ledger_B].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_B]];
 		StructLib.FeeStruct storage exFeeStruct_tok_B = ld
 			._ledger[a.ledger_B]
 			.spot_customFees
 			.tokType_Set[a.tokTypeId_B]
 			? ld._ledger[a.ledger_B].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_B]];
 		feesAll[ndx++] = StructLib.FeesCalc({
 			fee_ccy_A: a.ledger_A != a.feeAddrOwner_A && a.ccy_amount_A > 0
 				? TransferLib.calcFeeWithCapCollar(
@@ -186,7 +187,7 @@ library TransferLibView {
 					a.ccyTypeId_B
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_B]];
 				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? TransferLib.calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
@@ -205,7 +206,7 @@ library TransferLibView {
 					a.ccyTypeId_A
 				]
 					? ld._ledger[a.ledger_A].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_A]];
 				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? TransferLib.calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
@@ -356,7 +357,8 @@ library TransferLibView {
 	//
 	function transfer_feePreview_ExchangeOnly(
 		StructLib.LedgerStruct storage ld,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		address feeAddrOwner,
 		StructLib.TransferArgs memory a
 	) public view returns (StructLib.FeesCalc[1] memory feesAll) {
@@ -377,25 +379,25 @@ library TransferLibView {
 			.spot_customFees
 			.ccyType_Set[a.ccyTypeId_A]
 			? ld._ledger[a.ledger_A].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_A]];
 		StructLib.FeeStruct storage exFeeStruct_tok_A = ld
 			._ledger[a.ledger_A]
 			.spot_customFees
 			.tokType_Set[a.tokTypeId_A]
 			? ld._ledger[a.ledger_A].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_A]];
 		StructLib.FeeStruct storage exFeeStruct_ccy_B = ld
 			._ledger[a.ledger_B]
 			.spot_customFees
 			.ccyType_Set[a.ccyTypeId_B]
 			? ld._ledger[a.ledger_B].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_B]];
 		StructLib.FeeStruct storage exFeeStruct_tok_B = ld
 			._ledger[a.ledger_B]
 			.spot_customFees
 			.tokType_Set[a.tokTypeId_B]
 			? ld._ledger[a.ledger_B].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_B]];
 		feesAll[ndx++] = StructLib.FeesCalc({
 			fee_ccy_A: a.ledger_A != a.feeAddrOwner_A && a.ccy_amount_A > 0
 				? TransferLib.calcFeeWithCapCollar(
@@ -442,7 +444,7 @@ library TransferLibView {
 					a.ccyTypeId_B
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_B]];
 				feesAll[0].fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? TransferLib.calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
@@ -457,11 +459,10 @@ library TransferLibView {
 				//feesAll[0].fee_ccy_A = feesAll[0].fee_ccy_B; // symmetric mirror
 
 				// asymmetric mirror
-				exFeeStruct_ccy_A = ld._ledger[a.ledger_A].spot_customFees.ccyType_Set[
-					a.ccyTypeId_A
-				]
+				exFeeStruct_ccy_A = ld._ledger[a.ledger_A].spot_customFees.ccyType_Set[a.ccyTypeId_A]
 					? ld._ledger[a.ledger_A].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_A]];
+
 				feesAll[0].fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? TransferLib.calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],

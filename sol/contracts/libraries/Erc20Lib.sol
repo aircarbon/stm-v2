@@ -108,11 +108,12 @@ library Erc20Lib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		transferErc20Args memory a
 	) public returns (bool) {
 		require(ld._contractSealed, "Contract is not sealed");
-		transferInternal(ld, std, ctd, globalFees, msg.sender, a);
+		transferInternal(ld, std, ctd, entityGlobalFees, entities, msg.sender, a);
 		return true;
 	}
 
@@ -136,7 +137,8 @@ library Erc20Lib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		StructLib.Erc20Struct storage erc20d,
 		address sender,
 		transferErc20Args memory a
@@ -145,7 +147,7 @@ library Erc20Lib {
 		require(ld._contractSealed, "Contract is not sealed");
 		require(allowance >= a.amount, "No allowance"); //**
 
-		transferInternal(ld, std, ctd, globalFees, sender, a);
+		transferInternal(ld, std, ctd, entityGlobalFees, entities, sender, a);
 		if (allowance < MAX_UINT256) {
 			erc20d._allowances[sender][msg.sender] -= a.amount;
 		}
@@ -156,7 +158,8 @@ library Erc20Lib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		address sender,
 		transferErc20Args memory a
 	) private {
@@ -198,7 +201,7 @@ library Erc20Lib {
 						feeAddrOwner_B: a.deploymentOwner, //address(0x0) // fees: disabled for erc20 - not used
 						transferType: StructLib.TransferType.ERC20
 					});
-					TransferLib.transferOrTrade(ld, std, ctd, globalFees, transferOrTradeArgs, StructLib.CustomFee(0, 0, false));
+					TransferLib.transferOrTrade(ld, std, ctd, entityGlobalFees, entities, transferOrTradeArgs, StructLib.CustomFee(0, 0, false));
 					remainingToTransfer -= qtyTransfer;
 				}
 			}

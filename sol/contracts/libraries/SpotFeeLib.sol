@@ -23,7 +23,7 @@ library SpotFeeLib {
 	function setFee_TokTypeBatch(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
-		mapping(uint => StructLib.FeeStruct) storage feesPerEntity,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
 		uint256[] calldata entityId,
 		uint256[] calldata tokTypeId,
 		address[] calldata ledgerOwner,
@@ -36,14 +36,14 @@ library SpotFeeLib {
 		);
 
 		for (uint256 i = 0; i < len; i++) {
-			setFee_TokType(ld, std, feesPerEntity, entityId[i], tokTypeId[i], ledgerOwner[i], a[i]);
+			setFee_TokType(ld, std, entityGlobalFees, entityId[i], tokTypeId[i], ledgerOwner[i], a[i]);
 		}
 	}
 
 	function setFee_TokType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
-		mapping(uint => StructLib.FeeStruct) storage feesPerEntity,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
 		uint entityId,
 		uint256 tokTypeId,
 		address ledgerOwner,
@@ -64,7 +64,7 @@ library SpotFeeLib {
 			feeStruct = ld._ledger[ledgerOwner].spot_customFees;
 		} else {
 			require(entityId > 0, "setFee_TokType: invalid entity id");
-			feeStruct = feesPerEntity[entityId];
+			feeStruct = entityGlobalFees[entityId];
 		}
 
 		feeStruct.tokType_Set[tokTypeId] =
@@ -105,21 +105,21 @@ library SpotFeeLib {
 	function setFee_CcyTypeBatch(
 		StructLib.LedgerStruct storage ld,
 		StructLib.CcyTypesStruct storage ctd,
-		mapping(uint => StructLib.FeeStruct) storage feesPerEntity,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
 		StructLib.SetFeeCcyTypeBatchArgs[] calldata params
 	) public {
 		uint256 len = params.length;
 
 		for (uint256 i = 0; i < len; i++) {
 			StructLib.SetFeeCcyTypeBatchArgs calldata param = params[i];
-			setFee_CcyType(ld, ctd, feesPerEntity, param.entityId, param.ccyTypeId, param.ledgerOwner, param.feeArgs);
+			setFee_CcyType(ld, ctd, entityGlobalFees, param.entityId, param.ccyTypeId, param.ledgerOwner, param.feeArgs);
 		}
 	}
 
 	function setFee_CcyType(
 		StructLib.LedgerStruct storage ld,
 		StructLib.CcyTypesStruct storage ctd,
-		mapping(uint => StructLib.FeeStruct) storage feesPerEntity,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
 		uint256 entityId,
 		uint256 ccyTypeId,
 		address ledgerOwner,
@@ -134,7 +134,7 @@ library SpotFeeLib {
 			feeStruct = ld._ledger[ledgerOwner].spot_customFees;
 		} else {
 			require(entityId > 0, "setFee_CcyType: invalid entity id");
-			feeStruct = feesPerEntity[entityId];
+			feeStruct = entityGlobalFees[entityId];
 		}
 
 		feeStruct.ccyType_Set[ccyTypeId] =

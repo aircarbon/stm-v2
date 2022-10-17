@@ -27,7 +27,7 @@ contract StFeesFacet {
 
 		if(ledgerOwner == address(0x0)) {
 			ValidationLib.validateEntityExists(entityId);
-			fs = LibMainStorage.getStorage2().feesPerEntity[entityId];
+			fs = LibMainStorage.getStorage2().entityGlobalFees[entityId];
 		} else {
 			fs = s.ld._ledger[ledgerOwner].spot_customFees;
 		}
@@ -72,7 +72,7 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_TokType(s.ld, s.std, LibMainStorage.getStorage2().feesPerEntity, entityId, tokTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_TokType(s.ld, s.std, LibMainStorage.getStorage2().entityGlobalFees, entityId, tokTypeId, ledgerOwner, feeArgs);
 	}
 
 	function setFee_TokTypeBatch(
@@ -94,7 +94,7 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_TokTypeBatch(s.ld, s.std, LibMainStorage.getStorage2().feesPerEntity, entityId, tokTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_TokTypeBatch(s.ld, s.std, LibMainStorage.getStorage2().entityGlobalFees, entityId, tokTypeId, ledgerOwner, feeArgs);
 	}
 
 	/**
@@ -123,7 +123,7 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, LibMainStorage.getStorage2().feesPerEntity, entityId, ccyTypeId, ledgerOwner, feeArgs);
+		SpotFeeLib.setFee_CcyType(s.ld, s.ctd, LibMainStorage.getStorage2().entityGlobalFees, entityId, ccyTypeId, ledgerOwner, feeArgs);
 	}
 
 	function setFee_CcyTypeBatch(StructLib.SetFeeCcyTypeBatchArgs[] calldata params) external {
@@ -140,6 +140,6 @@ contract StFeesFacet {
 		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		SpotFeeLib.setFee_CcyTypeBatch(s.ld, s.ctd, LibMainStorage.getStorage2().feesPerEntity, params);
+		SpotFeeLib.setFee_CcyTypeBatch(s.ld, s.ctd, LibMainStorage.getStorage2().entityGlobalFees, params);
 	}
 }

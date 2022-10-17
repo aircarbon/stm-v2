@@ -23,7 +23,7 @@ library LibMainStorage {
 	}
 
 	struct MainStorage2 {
-		mapping(uint => StructLib.FeeStruct) feesPerEntity;
+		mapping(uint => StructLib.FeeStruct) entityGlobalFees;
 	}
 
 	struct MainStorage3 {

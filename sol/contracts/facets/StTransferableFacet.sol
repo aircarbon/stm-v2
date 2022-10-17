@@ -31,7 +31,7 @@ contract StTransferableFacet {
 				s.ctd,
 				s.erc20d,
 				//cashflowData,
-				s.globalFees,
+				LibMainStorage.getStorage2().entityGlobalFees[1], // note: just passing global fees for entity 1 at the moment
 				mod,
 				n
 			);
@@ -52,7 +52,8 @@ contract StTransferableFacet {
 		return
 			TransferLibView.transfer_feePreview_ExchangeOnly(
 				s.ld,
-				s.globalFees,
+				LibMainStorage.getStorage2().entityGlobalFees,
+				s.entities,
 				s.deploymentOwner,
 				transferArgs
 			);
@@ -74,7 +75,8 @@ contract StTransferableFacet {
 			TransferLibView.transfer_feePreview(
 				s.ld,
 				s.std,
-				s.globalFees,
+				LibMainStorage.getStorage2().entityGlobalFees,
+				s.entities,
 				s.deploymentOwner,
 				transferArgs
 			);
@@ -162,6 +164,14 @@ contract StTransferableFacet {
 		LibMainStorage.MainStorage3 storage s3 = LibMainStorage.getStorage3();
 		transferArgs.feeAddrOwner_A = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_A]];
 		transferArgs.feeAddrOwner_B = s3.feeAddrPerEntity[s.entities[transferArgs.ledger_B]];
-		TransferLib.transferOrTrade(s.ld, s.std, s.ctd, s.globalFees, transferArgs, StructLib.CustomFee(custFeeA, custFeeB, applyFees));
+		TransferLib.transferOrTrade(
+			s.ld, 
+			s.std, 
+			s.ctd, 
+			LibMainStorage.getStorage2().entityGlobalFees, 
+			s.entities, 
+			transferArgs, 
+			StructLib.CustomFee(custFeeA, custFeeB, applyFees)
+		);
 	}
 }

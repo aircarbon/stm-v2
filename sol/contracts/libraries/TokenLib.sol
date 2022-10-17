@@ -674,7 +674,7 @@ library TokenLib {
 		);
 	}
 
-	function _arrayIncludes(uint[] memory arr, uint value) internal returns(bool result) {
+	function _arrayIncludes(uint[] memory arr, uint value) internal pure returns(bool result) {
 		result = false;
 		uint len = arr.length;
 

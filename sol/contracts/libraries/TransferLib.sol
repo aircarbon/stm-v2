@@ -84,7 +84,8 @@ library TransferLib {
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
-		StructLib.FeeStruct storage globalFees,
+		mapping(uint => StructLib.FeeStruct) storage entityGlobalFees,
+		mapping(address => uint256) storage entities,
 		StructLib.TransferArgs memory a,
 		StructLib.CustomFee memory customFee
 	) public {
@@ -213,10 +214,10 @@ library TransferLib {
 		//
 		StructLib.FeeStruct storage exFeeStruct_tok_A = ld._ledger[a.ledger_A].spot_customFees.tokType_Set[a.tokTypeId_A]
 			? ld._ledger[a.ledger_A].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_A]];
 		StructLib.FeeStruct storage exFeeStruct_tok_B = ld._ledger[a.ledger_B].spot_customFees.tokType_Set[a.tokTypeId_B]
 			? ld._ledger[a.ledger_B].spot_customFees
-			: globalFees;
+			: entityGlobalFees[entities[a.ledger_B]];
 
 		StructLib.FeesCalc memory exFees = StructLib.FeesCalc({ // exchange fees (disabled if fee-reciever == fee-payer)
 			fee_ccy_A: 0,
@@ -248,10 +249,10 @@ library TransferLib {
 		} else {
 			StructLib.FeeStruct storage exFeeStruct_ccy_A = ld._ledger[a.ledger_A].spot_customFees.ccyType_Set[a.ccyTypeId_A]
 				? ld._ledger[a.ledger_A].spot_customFees
-				: globalFees;
+				: entityGlobalFees[entities[a.ledger_A]];
 			StructLib.FeeStruct storage exFeeStruct_ccy_B = ld._ledger[a.ledger_B].spot_customFees.ccyType_Set[a.ccyTypeId_B]
 				? ld._ledger[a.ledger_B].spot_customFees
-				: globalFees;
+				: entityGlobalFees[entities[a.ledger_B]];
 
 			exFees.fee_ccy_A = a.ledger_A != a.feeAddrOwner_A 
 				? calcFeeWithCapCollar(exFeeStruct_ccy_A.ccy[a.ccyTypeId_A], uint256(a.ccy_amount_A), a.qty_B) : 0;
@@ -267,7 +268,7 @@ library TransferLib {
 					a.ccyTypeId_B
 				]
 					? ld._ledger[a.ledger_B].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_B]];
 				exFees.fee_ccy_B = a.ledger_B != a.feeAddrOwner_B
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_B.ccy[a.ccyTypeId_B],
@@ -284,7 +285,7 @@ library TransferLib {
 					a.ccyTypeId_A
 				]
 					? ld._ledger[a.ledger_A].spot_customFees
-					: globalFees;
+					: entityGlobalFees[entities[a.ledger_A]];
 				exFees.fee_ccy_A = a.ledger_A != a.feeAddrOwner_A
 					? calcFeeWithCapCollar(
 						exFeeStruct_ccy_A.ccy[a.ccyTypeId_A],
@@ -482,7 +483,7 @@ library TransferLib {
 						StructLib.TransferCcyArgs({
 							from: a.ledger_B,
 							to: a.feeAddrOwner_B,
-							ccyTypeId: a.ccyTypeId_B,
+							ccyTypeId: ccyTypeId,
 							amount: exFees.fee_ccy_B,
 							transferType: StructLib.TransferType.ExchangeFee
 						})

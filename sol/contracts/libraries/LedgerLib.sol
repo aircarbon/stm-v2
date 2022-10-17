@@ -146,13 +146,14 @@ library LedgerLib {
 		});
 	}
 
+	// TODO: need refactoring since global fees are now per entity
 	function getLedgerHashcode(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		StructLib.CcyTypesStruct storage ctd,
 		StructLib.Erc20Struct storage erc20d,
 		//StructLib.CashflowStruct storage cashflowData,
-		StructLib.FeeStruct storage globalFees,
+		StructLib.FeeStruct storage globalFees, // note: so far just passing a global fee for entity 1
 		uint256 mod,
 		uint256 n
 	) public view returns (bytes32 ledgerHash) {

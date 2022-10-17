@@ -167,7 +167,8 @@ contract StErc20Facet {
 			s.ld,
 			s.std,
 			s.ctd,
-			s.globalFees,
+			LibMainStorage.getStorage2().entityGlobalFees, 
+			s.entities, 
 			Erc20Lib.transferErc20Args({
 				deploymentOwner: s.deploymentOwner,
 				recipient: recipient,
@@ -195,7 +196,8 @@ contract StErc20Facet {
 			s.ld,
 			s.std,
 			s.ctd,
-			s.globalFees,
+			LibMainStorage.getStorage2().entityGlobalFees, 
+			s.entities, 
 			s.erc20d,
 			sender,
 			Erc20Lib.transferErc20Args({
