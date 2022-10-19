@@ -76,7 +76,7 @@ contract("DiamondProxy", accounts => {
         assert(data.tokFullEvents[0].stId == data.ledgerA_before.tokens[0].stId, 'unexpected event eeu id vs. ledger A before');
         assert(data.ledgerA_after.tokens.length == 0, 'unexpected eeu count ledger A after');
         assert(data.ledgerB_after.tokens.length == 1, 'unexpected eeu count ledger B after');
-        assert(data.ledgerB_after.tokens[0].stId == data.ledgerA_before.tokens[0].stId, 'unexpected eeu id ledger B after vs. ledger A before');
+        assert(data.ledgerB_after.tokens[0].stId == data.ledgerA_before.tokens[0].stId, 'unexpected eeu id ledger B after vs. ledger A before')
     });
 
     it(`transferring tok - should allow one-sided transfer (B -> A) of 1.0 vST (CORSIA) across ledger entries`, async () => {
@@ -223,12 +223,11 @@ contract("DiamondProxy", accounts => {
         });
     });
 
-    // ***
     // one-sided kg transfer, no consideration, full + partial ST (split), receiver owns same type
     it(`transferring tok - should allow one-sided transfer (A -> B) of 1.5 vSTs (NATURE) across ledger entries, receiver owns same type`, async () => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
-        await ststmStMintableFacetm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts, 
                 ledger_A: accounts[global.TaddrNdx + 0],         ledger_B: accounts[global.TaddrNdx + 1],
                    qty_A: 1500000,                            tokTypeId_A: CONST.tokenType.TOK_T2,
@@ -378,7 +377,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 -1,                          // qty_A
                 CONST.tokenType.TOK_T2,      // tokTypeId_A
@@ -387,7 +386,7 @@ contract("DiamondProxy", accounts => {
                 0, 0, 0, 0, 
                 false, CONST.transferType.ADJUSTMENT, 
                 { from: accounts[0] });
-        } catch (ex) { 
+        } catch (ex) {
             assert(ex.reason == 'value out-of-bounds', `unexpected: ${ex.reason}`);
             return;
         }
@@ -398,7 +397,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 0,                           // qty_A
                 0,                           // tokTypeId_A
@@ -418,7 +417,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.GT_CARBON,  1,     accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 CONST.KT_CARBON + 1,         // qty_A
                 CONST.tokenType.TOK_T2,      // tokTypeId_A
@@ -438,7 +437,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.GT_CARBON,  1,     accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 CONST.KT_CARBON,             // qty_A
                 CONST.tokenType.TOK_T1,      // tokTypeId_A
@@ -458,7 +457,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 0,                           // qty_A
                 0,                           // tokTypeId_A
@@ -473,12 +472,12 @@ contract("DiamondProxy", accounts => {
         }
         assert.fail('expected contract exception');
     });
-    
+
     it(`transferring tok - should not allow one-sided transfer (B -> A) of tokens in excess of the amount held, incorrect type held`, async () => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
         try {
-            await transferHelper.transferWrapper(stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts,
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts,
                 accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1],
                 0,                           // qty_A
                 0,                           // tokTypeId_A
