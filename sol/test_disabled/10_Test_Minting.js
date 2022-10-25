@@ -2,27 +2,68 @@
 // Author: https://github.com/7-of-9
 
 // Re: StMintable.sol => LedgerLib.sol, SpotFeeLib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const StMintableFacet = artifacts.require('StMintableFacet');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+
 const truffleAssert = require('truffle-assertions');
 const Big = require('big.js');
 const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
+    var stmStMasterFacet;
+    var stmStErc20Facet;
+    var stmStMintableFacet;
+    var stmCcyCollateralizableFacet;
+    var stmStLedgerFacet;
+    var stmStFeesFacet;
+    var stmStTransferableFacet;
+    var stmStBurnableFacet;
+    var stmOwnedFacet;
 
     before(async function () {
         stm = await st.deployed();
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+        stmStBurnableFacet = await StBurnableFacet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmOwnedFacet = await OwnedFacet.at(addr);
         
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
-        await stm.sealContract();
-        await setupHelper.setDefaults({ stm, accounts });
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;
+
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 50));
+        await stmStMasterFacet.sealContract();
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts });
     });
 
     beforeEach(async () => {
         global.TaddrNdx++;
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx + 0]});
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
@@ -65,19 +106,19 @@ contract("StMaster", accounts => {
         var totalBatchQtyTok = 0;
         for (i = 0; i < batchIds.length; i++) {
             const batchId = batchIds[i];
-            const batch = await stm.getSecTokenBatch(batchId);
+            const batch = await stmStLedgerFacet.getSecTokenBatch(batchId);
             totalBatchQtyTok += Number(batch.mintedQty);
         }
         assert(totalBatchQtyTok == totalMintedQty, 'invalid total kg in minted batches');
 
-        const ledgerEntryAfter = await stm.getLedgerEntry(accounts[global.TaddrNdx]);
+        const ledgerEntryAfter = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
         assert(ledgerEntryAfter.tokens.length == totalMintedSecTokens, 'invalid eeu qty in ledger entry');
     });
 
 
     it(`minting - should not allow non-owner to mint vST batches`, async () => {
         try {
-            await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[10], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[10], });
         } catch (ex) { 
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
             return;
@@ -87,7 +128,7 @@ contract("StMaster", accounts => {
 
     it(`minting - should not allow non-existent vST-type to be minted`, async () => {
         try {
-            await stm.mintSecTokenBatch(999, CONST.KT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0] });
+            await stmStMintableFacet.mintSecTokenBatch(999, CONST.KT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad tokTypeId', `unexpected: ${ex.reason}`);
             return;
@@ -166,26 +207,26 @@ contract("StMaster", accounts => {
 
     it(`minting - should not allow minting when contract is read only`, async () => {
         try {
-            await stm.setReadOnly(true, { from: accounts[0] });
+            await stmOwnedFacet.setReadOnly(true, { from: accounts[0] });
             await mintBatch({ tokenType: CONST.tokenType.TOK_T1, qtyUnit: CONST.KT_CARBON, qtySecTokens: 1, receiver: accounts[global.TaddrNdx], });
         } catch (ex) {
             assert(ex.reason == 'Read-only', `unexpected: ${ex.reason}`);
-            await stm.setReadOnly(false, { from: accounts[0] });
+            await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
             return;
         }
-        await stm.setReadOnly(false, { from: accounts[0] });
+        await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
         assert.fail('expected contract exception');
     });
 
     async function mintBatch({ tokenType, qtyUnit, qtySecTokens, receiver }) {
         var batchId = -1;
 
-        const ledgerEntryBefore = await stm.getLedgerEntry(receiver);
-        const ledgerOwnersBefore = await stm.getLedgerOwners();
+        const ledgerEntryBefore = await stmStLedgerFacet.getLedgerEntry(receiver);
+        const ledgerOwnersBefore = await stmStLedgerFacet.getLedgerOwners();
 
         // mint new vST match
-        const maxBatchIdBefore = (await stm.getSecTokenBatch_MaxId.call()).toNumber();
-        const mintTx = await stm.mintSecTokenBatch(
+        const maxBatchIdBefore = (await stmStLedgerFacet.getSecTokenBatch_MaxId.call()).toNumber();
+        const mintTx = await stmStMintableFacet.mintSecTokenBatch(
             tokenType, 
             qtyUnit, 
             qtySecTokens, 
@@ -195,31 +236,32 @@ contract("StMaster", accounts => {
         { from: accounts[0] });
 
         // validate batch ID
-        const maxBatchIdAfter = (await stm.getSecTokenBatch_MaxId.call()).toNumber();
+        const maxBatchIdAfter = (await stmStLedgerFacet.getSecTokenBatch_MaxId.call()).toNumber();
         assert(maxBatchIdAfter == maxBatchIdBefore + 1, 'unexpected batch id after minting');
 
         // validate batch minted event
         truffleAssert.eventEmitted(mintTx, 'Minted', ev => {
             batchId = Number(ev.batchId);
             return ev.batchId == maxBatchIdAfter
-                && ev.tokTypeId == tokenType
+                && ev.tokenTypeId == tokenType
                 && ev.to == receiver
                 && ev.mintQty == qtyUnit
                 && ev.mintSecTokenCount == qtySecTokens
                 ;
         });
-        const batch = await stm.getSecTokenBatch(batchId);
+
+        const batch = await stmStLedgerFacet.getSecTokenBatch(batchId);
         assert(batch.mintedQty == qtyUnit, 'invalid batch minted kg');
         assert(batch.tokTypeId == tokenType, 'invalid batch eeu-type');
 
         // validate vST(s) minted events
-        const curMaxSecTokenId = (await stm.getSecToken_MaxId.call()).toNumber();
+        const curMaxSecTokenId = (await stmStLedgerFacet.getSecToken_MaxId.call()).toNumber();
         for (var eeuCount = 1; eeuCount < 1 + qtySecTokens; eeuCount++) {
             truffleAssert.eventEmitted(mintTx, 'MintedSecToken', ev => {
                 //console.log(`event: MintedSecToken ev.id=${ev.id} curMaxSecTokenId=${curMaxSecTokenId} ev.mintedQty=${ev.mintedQty}`);
                 return ev.stId > curMaxSecTokenId - qtySecTokens && ev.stId <= curMaxSecTokenId
                     && ev.batchId == batchId
-                    && ev.tokTypeId == tokenType
+                    && ev.tokenTypeId == tokenType
                     && ev.to == receiver
                     && ev.mintedQty == qtyUnit / qtySecTokens
                     ;
@@ -227,11 +269,11 @@ contract("StMaster", accounts => {
         }
 
         // validate ledger owner list
-        const ledgerOwnersAfter = await stm.getLedgerOwners();
+        const ledgerOwnersAfter = await stmStLedgerFacet.getLedgerOwners();
         assert(ledgerOwnersAfter.some(p => p == receiver), 'invalid ledger owners list data');
 
         // validate the ledger entry
-        const ledgerEntryAfter = await stm.getLedgerEntry(receiver);
+        const ledgerEntryAfter = await stmStLedgerFacet.getLedgerEntry(receiver);
         assert(ledgerEntryAfter.exists == true, 'missing ledger entry for receiver');
         assert(ledgerEntryAfter.tokens.length == ledgerEntryBefore.tokens.length + qtySecTokens, 'invalid eeu qty in ledger entry');
         assert(ledgerEntryAfter.tokens.map(p => p.currentQty).reduce((a,b) => Number(a) + Number(b), 0) ==
@@ -242,7 +284,7 @@ contract("StMaster", accounts => {
         // validate STs minted
         for (var ndx = ledgerEntryBefore.tokens.length; ndx < ledgerEntryAfter.tokens.length; ndx++) {
             const stId = ledgerEntryAfter.tokens[ndx].stId;
-            const eeu = await stm.getSecToken(stId);
+            const eeu = await stmStLedgerFacet.getSecToken(stId);
             assert(eeu.exists == true, 'missing vST after minting');
             assert(eeu.batchId == batchId, 'unexpected vST batch after minting');
             //assert(eeu.mintedTimestamp != 0, 'missing mint timestamp on vST after minting');
