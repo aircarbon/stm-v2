@@ -2,25 +2,67 @@
 // Author: https://github.com/7-of-9
 
 // Re: StBurnable.sol => TokenLib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const StMintableFacet = artifacts.require('StMintableFacet');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+
 const truffleAssert = require('truffle-assertions');
 const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
+    var stmStMasterFacet;
+    var stmStErc20Facet;
+    var stmStMintableFacet;
+    var stmCcyCollateralizableFacet;
+    var stmStLedgerFacet;
+    var stmStFeesFacet;
+    var stmStTransferableFacet;
+    var stmStBurnableFacet;
+    var stmOwnedFacet;
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
-        await stm.sealContract();
-        await setupHelper.setDefaults({ stm, accounts });
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+        stmStBurnableFacet = await StBurnableFacet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmOwnedFacet = await OwnedFacet.at(addr);
+
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;
+
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 50));
+        await stmStMasterFacet.sealContract();
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts });
     });
 
     beforeEach(async () => {
         global.TaddrNdx += 2;
+        await stmStErc20Facet.setAccountEntityBatch([{id: 1, addr: accounts[global.TaddrNdx + 0]}, {id: 1, addr: accounts[global.TaddrNdx + 1]}]);
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
@@ -29,16 +71,16 @@ contract("StMaster", accounts => {
         const A = accounts[global.TaddrNdx];
 
         // mint STs for A
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
 
-        const le_before = await stm.getLedgerEntry(A);
+        const le_before = await stmStLedgerFacet.getLedgerEntry(A);
 
         // define tokens to burn
         const burnType = CONST.tokenType.TOK_T1;
@@ -48,21 +90,21 @@ contract("StMaster", accounts => {
         const burnQty = burnSts.map(p => p.currentQty).reduce((a,b) => a.add(new BN(b)), new BN(0));
                         
         // burn baby
-        const burnTx = await stm.burnTokens(accounts[global.TaddrNdx], burnType, burnQty.toString(), burnStIds);
+        const burnTx = await stmStBurnableFacet.burnTokens(accounts[global.TaddrNdx], burnType, burnQty.toString(), burnStIds);
         await CONST.logGas(web3, burnTx, `Burn STs of type ${burnType} IDs: [${burnStIds.join(',')}]`);
 
         // validate burn full ST events
         //truffleAssert.prettyPrintEmittedEvents(burnTx);
         truffleAssert.eventEmitted(burnTx, 'BurnedFullSecToken', ev => {
             return burnStIds.includes(ev.stId.toString())
-                && ev.tokTypeId == burnType
+                && ev.tokenTypeId == burnType
                 && ev.from == A
                 && ev.burnedQty == CONST.GT_CARBON
             ;
         });
 
         // check ledger
-        const le_after = await stm.getLedgerEntry(A);
+        const le_after = await stmStLedgerFacet.getLedgerEntry(A);
         assert(le_after.tokens.length == le_before.tokens.length - burnStIds.length, 'unexpected ledger token count after burn');
 
         // check ledger total burned
@@ -70,7 +112,7 @@ contract("StMaster", accounts => {
 
         // check batches
         for (var st of burnSts) {
-            const batch = await stm.getSecTokenBatch(st.batchId);
+            const batch = await stmStLedgerFacet.getSecTokenBatch(st.batchId);
             assert(batch.burnedQty == CONST.GT_CARBON, `unexpected batch (stid=${st.stId}) after burn`);
         }
     });
@@ -79,16 +121,16 @@ contract("StMaster", accounts => {
         const A = accounts[global.TaddrNdx];
 
         // mint STs for A
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
 
-        const le_before = await stm.getLedgerEntry(A);
+        const le_before = await stmStLedgerFacet.getLedgerEntry(A);
 
         // define tokens to burn
         const burnType = CONST.tokenType.TOK_T3;
@@ -105,21 +147,21 @@ contract("StMaster", accounts => {
         //console.log('le_before.tokens', le_before.tokens);
         //console.log('burnStIds', burnStIds);
         //console.log('burnQty.toString()', burnQty.toString());
-        const burnTx = await stm.burnTokens(accounts[global.TaddrNdx], burnType, burnQty.toString(), burnStIds);
+        const burnTx = await stmStBurnableFacet.burnTokens(accounts[global.TaddrNdx], burnType, burnQty.toString(), burnStIds);
         await CONST.logGas(web3, burnTx, `Burn STs of type ${burnType} IDs: [${burnStIds.join(',')}]`);
 
         // validate burn full ST events
         //truffleAssert.prettyPrintEmittedEvents(burnTx);
         truffleAssert.eventEmitted(burnTx, 'BurnedPartialSecToken', ev => {
             return burnStIds.includes(ev.stId.toString())
-                && ev.tokTypeId == burnType
+                && ev.tokenTypeId == burnType
                 && ev.from == A
                 && ev.burnedQty.toString() == burnQty.toString()
             ;
         });
 
         // check ledger
-        const le_after = await stm.getLedgerEntry(A);
+        const le_after = await stmStLedgerFacet.getLedgerEntry(A);
         //console.log('le_after.tokens', le_after.tokens);
         assert(le_after.tokens.length == le_before.tokens.length, 'unexpected ledger token count after burn');
 
@@ -128,7 +170,7 @@ contract("StMaster", accounts => {
 
         // check batches
         for (var st of burnSts) {
-            const batch = await stm.getSecTokenBatch(st.batchId);
+            const batch = await stmStLedgerFacet.getSecTokenBatch(st.batchId);
             assert(batch.burnedQty == burnQty.toString(), `unexpected batch (stid=${st.stId}) after burn`);
         }
     });
