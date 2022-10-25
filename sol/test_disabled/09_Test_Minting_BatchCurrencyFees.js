@@ -17,7 +17,7 @@ const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
     var stmStErc20Facet;
