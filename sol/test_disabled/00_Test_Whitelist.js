@@ -2,18 +2,29 @@
 // Author: https://github.com/7-of-9
 
 // Re: StErc20.sol => Erc20Lib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
 const CONST = require('../const.js');
 
 contract("StMaster", accounts => {
     var stm;
+    var stmStMasterFacet;
+    var stmStErc20Facet;
+
     const WHITELIST_COUNT = 20;
     const WHITELIST_RESERVED_COUNT = 10; // the contract reserves the first ten addresses for internal/test/exchange use
     const ALLOCATABLE_COUNT = WHITELIST_COUNT - WHITELIST_RESERVED_COUNT;
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
     });
 
     // -- ORDERED TESTS --
@@ -21,17 +32,17 @@ contract("StMaster", accounts => {
     it(`whitelist - should be able to add whitelist addresses`, async () => {
         // whitelist (exchange-controlled accounts) all accounts up to graylist test start
         var totalCostUsd = 0;
-        await stm.whitelistMany(accounts.slice(0,WHITELIST_COUNT));
+        await stmStErc20Facet.whitelistMany(accounts.slice(0,WHITELIST_COUNT));
         global.TaddrNdx += WHITELIST_COUNT;
         //console.log('TOTAL COST USD $: ', totalCostUsd.toFixed(2)); // 50 = $10 one by one
 
-        const whitelist = await stm.getWhitelist();
+        const whitelist = await stmStErc20Facet.getWhitelist();
         // console.log(`*** WHITELIST ***\n`, whitelist);
     });
 
     // whitelist & retrieve-next: owner-only & read-only 
     it(`whitelist - should not allow non-owner to add a whitelist address`, async () => {
-        try { await stm.whitelistMany([accounts[WHITELIST_COUNT]], { from: accounts[10] }); } catch (ex) {
+        try { await stmStErc20Facet.whitelistMany([accounts[WHITELIST_COUNT]], { from: accounts[10] }); } catch (ex) {
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`); return;
         }
         assert.fail('expected contract exception');
@@ -71,7 +82,7 @@ contract("StMaster", accounts => {
 
     // whitelist: already added
     it(`whitelist - should not be able to add already whitelisted address`, async () => {
-        try { await stm.whitelistMany([accounts[0]]); } catch (ex) {
+        try { await stmStErc20Facet.whitelistMany([accounts[0]]); } catch (ex) {
             assert(ex.reason == 'Already whitelisted', `unexpected: ${ex.reason}`); return;
         }
         assert.fail('expected contract exception');
@@ -86,7 +97,7 @@ contract("StMaster", accounts => {
 
     // seal
     it(`whitelist - should be able to seal the whitelist`, async () => {
-        const sealTx = await stm.sealContract();
+        const sealTx = await stmStMasterFacet.sealContract();
         //console.log('*** WHITELIST SEALED *** tx=', sealTx.tx);
     });
 
@@ -114,7 +125,7 @@ contract("StMaster", accounts => {
 
     // whitelist: disallow after sealing
     it(`whitelist - should not be able to add to whitelist after sealing`, async () => {
-        try { await stm.whitelistMany([accounts[WHITELIST_COUNT]]); } catch (ex) {
+        try { await stmStErc20Facet.whitelistMany([accounts[WHITELIST_COUNT]]); } catch (ex) {
             assert(ex.reason == 'Contract is sealed', `unexpected: ${ex.reason}`); return;
         }
         assert.fail('expected contract exception');
