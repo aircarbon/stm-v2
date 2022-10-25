@@ -2,13 +2,31 @@
 // Author: https://github.com/7-of-9
 
 // Re: StMintable.sol => LedgerLib.sol, SpotFeeLib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const StMintableFacet = artifacts.require('StMintableFacet');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+const StBurnableFacet = artifacts.require('StBurnableFacet');
+
 const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
 contract("StMaster", accounts => {
     var stm;
+    var stmStMasterFacet;
+    var stmStErc20Facet;
+    var stmStMintableFacet;
+    var stmCcyCollateralizableFacet;
+    var stmStLedgerFacet;
+    var stmStFeesFacet;
+    var stmStTransferableFacet;
+    var stmStBurnableFacet;
 
     // 0.96e
     const corsia_ExampleKvps = [
@@ -35,20 +53,41 @@ contract("StMaster", accounts => {
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
-        await stm.sealContract();
-        await setupHelper.setDefaults({ stm, accounts });
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+        stmStBurnableFacet = await StBurnableFacet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;
+
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 50));
+        await stmStMasterFacet.sealContract();
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts });
     });
 
     beforeEach(async () => {
         global.TaddrNdx++;
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx + 0]});
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
 
     it(`minting metadata - mint/burn/chk`, async () => {
-        console.log('hash0', await stm.getLedgerHashcode(1,0));
+        console.log('hash0', await stmStTransferableFacet.getLedgerHashcode(1,0));
 
         const M = accounts[global.TaddrNdx];
         const batchId = await mintBatchWithMetadata( 
@@ -57,10 +96,10 @@ contract("StMaster", accounts => {
            metaValues: []
         });
         //console.log('getSecToken_totalMintedQty', await getSecToken_totalMintedQty())
-        console.log('hash1', await stm.getLedgerHashcode(1,0));
+        console.log('hash1', await stmStTransferableFacet.getLedgerHashcode(1,0));
 
-        const burnTx = await stm.burnTokens(M, CONST.tokenType.TOK_T1, 1000, []);
-        console.log('hash2', await stm.getLedgerHashcode(1,0));
+        const burnTx = await stmStBurnableFacet.burnTokens(M, CONST.tokenType.TOK_T1, 1000, []);
+        console.log('hash2', await stmStTransferableFacet.getLedgerHashcode(1,0));
     });
 
     it(`minting metadata - should allow metadata no KVP minting`, async () => {
@@ -199,12 +238,12 @@ contract("StMaster", accounts => {
            metaValues: corsia_ExampleKvps.map(p => p.v),
         });
 
-        const batchBefore = await stm.getSecTokenBatch(batchId);
+        const batchBefore = await stmStLedgerFacet.getSecTokenBatch(batchId);
 
         const testKey = 'TEST_NEW_KEY', testValue = 'TEST_NEW_VALUE';
-        const addKvpTx = await stm.addMetaSecTokenBatch(batchId, testKey, testValue);
+        const addKvpTx = await stmStMintableFacet.addMetaSecTokenBatch(batchId, testKey, testValue);
         truffleAssert.eventEmitted(addKvpTx, 'AddedBatchMetadata', ev => ev.batchId == batchId && ev.key == testKey && ev.value == testValue);
-        const batchAfter = await stm.getSecTokenBatch(batchId);
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(batchId);
 
         //console.log('batchBefore', batchBefore);
         //console.log('batchAfter', batchAfter);
@@ -223,7 +262,7 @@ contract("StMaster", accounts => {
 
         try {
             const testKey = 'TEST_NEW_KEY', testValue = 'TEST_NEW_VALUE';
-            const addKvpTx = await stm.addMetaSecTokenBatch(batchId, 'testKey', testValue, {from: accounts[10] });
+            const addKvpTx = await stmStMintableFacet.addMetaSecTokenBatch(batchId, 'testKey', testValue, {from: accounts[10] });
         } catch (ex) { 
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
             return;
@@ -238,11 +277,11 @@ contract("StMaster", accounts => {
            metaValues: corsia_ExampleKvps.map(p => p.v),
         });
 
-        const batchBefore = await stm.getSecTokenBatch(batchId);
+        const batchBefore = await stmStLedgerFacet.getSecTokenBatch(batchId);
 
         const testKey = corsia_ExampleKvps[0].k, testValue = corsia_ExampleKvps[0].v;
         try {
-            await stm.addMetaSecTokenBatch(batchId, testKey, testValue);
+            await stmStMintableFacet.addMetaSecTokenBatch(batchId, testKey, testValue);
         } catch (ex) {
             assert(ex.reason == 'Duplicate key', `unexpected: ${ex.reason}`);
             return;
@@ -251,10 +290,10 @@ contract("StMaster", accounts => {
     });
 
     async function mintBatchWithMetadata({ tokenType, qtyUnit, qtySecTokens, receiver, metaKeys, metaValues }) {
-        const mintTx = await stm.mintSecTokenBatch(tokenType, qtyUnit, qtySecTokens, receiver, CONST.nullFees, 0, metaKeys, metaValues, { from: accounts[0] });
+        const mintTx = await stmStMintableFacet.mintSecTokenBatch(tokenType, qtyUnit, qtySecTokens, receiver, CONST.nullFees, 0, metaKeys, metaValues, { from: accounts[0] });
 
-        const batchId = (await stm.getSecTokenBatch_MaxId.call()).toNumber();
-        const batch = await stm.getSecTokenBatch(batchId);
+        const batchId = (await stmStLedgerFacet.getSecTokenBatch_MaxId.call()).toNumber();
+        const batch = await stmStLedgerFacet.getSecTokenBatch(batchId);
         
         const batchKeys = batch.metaKeys;
         const batchValues = batch.metaValues;
