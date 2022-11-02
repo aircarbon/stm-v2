@@ -207,6 +207,10 @@ module.exports = async function (deployer) {
       // deploy a singleton COMMODITY contract
       await deploymentHelper.Deploy({ deployer, artifacts, contractType: 'COMMODITY', custodyType: process.env.CUSTODY_TYPE });
       if (!deployer.network.includes('-fork') && process.env.RESTORE_CONTRACT !== 'YES') {
+
+        if(process.env.ISTEST === 'true') {
+          return;
+        }
         await setup.setDefaults();
       }
       break;

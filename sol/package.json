@@ -10,7 +10,7 @@
   "scripts": {
     "ganache": "INSTANCE_ID=local node ganache",
     "devInitSealContract": "node devInitSealContract",
-    "test": "truffle test",
+    "test": "ISTEST=true truffle test",
     "updateABI": "npx truffle compile && npx truffle exec migrations/updateABI.js",
     "solium:lint": "solium lint -d ./contracts",
     "solhint": "solhint 'contracts/**/*.sol'",

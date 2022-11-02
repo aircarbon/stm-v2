@@ -56,19 +56,19 @@ contract StMasterFacet {
 	event Burned(uint256 tokTypeId, address indexed from, uint256 burnedQty, bool customFee);
 	event BurnedFullSecToken(
 		uint256 indexed stId,
-		uint256 tokenTypeId,
+		uint256 tokTypeId,
 		address indexed from,
 		uint256 burnedQty
 	);
 	event BurnedPartialSecToken(
 		uint256 indexed stId,
-		uint256 tokenTypeId,
+		uint256 tokTypeId,
 		address indexed from,
 		uint256 burnedQty
 	);
 	event Minted(
 		uint256 indexed batchId,
-		uint256 tokenTypeId,
+		uint256 tokTypeId,
 		address indexed to,
 		uint256 mintQty,
 		uint256 mintSecTokenCount,
@@ -77,7 +77,7 @@ contract StMasterFacet {
 	event MintedSecToken(
 		uint256 indexed stId,
 		uint256 indexed batchId,
-		uint256 tokenTypeId,
+		uint256 tokTypeId,
 		address indexed to,
 		uint256 mintedQty
 	);
