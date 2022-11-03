@@ -77,7 +77,7 @@ contract("StMaster", accounts => {
             0, 0,                      // qty_B, tokTypeId_B, 
             0, 0,                      // ccy_amount_A, ccyTypeId_A, 
             1, CONST.ccyType.USD,      // ccy_amount_B, ccyTypeId_B, 
-        false, CONST.transferType.UNDEFINED, { from: accounts[1] }); // custody account address [check Owned.sol for more info]
+        false, CONST.nullAddr, CONST.transferType.UNDEFINED, { from: accounts[1] }); // custody account address [check Owned.sol for more info]
         assert.exists(txConfirmationHash, `third-party custody transferOrTrade missing tx hash`);
     });
 
@@ -93,7 +93,7 @@ contract("StMaster", accounts => {
                 0, 0,                      // qty_B, tokTypeId_B, 
                 0, 0,                      // ccy_amount_A, ccyTypeId_A, 
                 1, CONST.ccyType.USD,      // ccy_amount_B, ccyTypeId_B, 
-            false, CONST.transferType.UNDEFINED, { from: accounts[0] }); // root account address
+            false, CONST.nullAddr, CONST.transferType.UNDEFINED, { from: accounts[0] }); // root account address
         } catch(ex) {
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
         }

@@ -243,7 +243,7 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(mintTx, 'Minted', ev => {
             batchId = Number(ev.batchId);
             return ev.batchId == maxBatchIdAfter
-                && ev.tokenTypeId == tokenType
+                && ev.tokTypeId == tokenType
                 && ev.to == receiver
                 && ev.mintQty == qtyUnit
                 && ev.mintSecTokenCount == qtySecTokens
@@ -261,7 +261,7 @@ contract("DiamondProxy", accounts => {
                 //console.log(`event: MintedSecToken ev.id=${ev.id} curMaxSecTokenId=${curMaxSecTokenId} ev.mintedQty=${ev.mintedQty}`);
                 return ev.stId > curMaxSecTokenId - qtySecTokens && ev.stId <= curMaxSecTokenId
                     && ev.batchId == batchId
-                    && ev.tokenTypeId == tokenType
+                    && ev.tokTypeId == tokenType
                     && ev.to == receiver
                     && ev.mintedQty == qtyUnit / qtySecTokens
                     ;

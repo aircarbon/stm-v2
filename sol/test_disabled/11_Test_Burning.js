@@ -90,7 +90,7 @@ contract("DiamondProxy", accounts => {
         //truffleAssert.prettyPrintEmittedEvents(a0_burnTx1);
         truffleAssert.eventEmitted(a0_burnTx1, 'BurnedPartialSecToken', ev => {
             return ev.stId == stId
-                && ev.tokenTypeId == CONST.tokenType.TOK_T1
+                && ev.tokTypeId == CONST.tokenType.TOK_T1
                 && ev.from == accounts[global.TaddrNdx]
                 && ev.burnedQty == burnTokQty
                 ;
@@ -138,7 +138,7 @@ contract("DiamondProxy", accounts => {
         //truffleAssert.prettyPrintEmittedEvents(a0_burnTx1);
         truffleAssert.eventEmitted(a0_burnTx1, 'BurnedFullSecToken', ev => {
             return ev.stId == stId
-                && ev.tokenTypeId == CONST.tokenType.TOK_T1
+                && ev.tokTypeId == CONST.tokenType.TOK_T1
                 && ev.from == accounts[global.TaddrNdx]
                 && ev.burnedQty == burnTokQty
                 ;
@@ -186,14 +186,14 @@ contract("DiamondProxy", accounts => {
         //truffleAssert.prettyPrintEmittedEvents(a0_burnTx1);
         truffleAssert.eventEmitted(a0_burnTx1, 'BurnedFullSecToken', ev => { 
             return ev.stId == ledgerBefore.tokens[0].stId
-                   && ev.tokenTypeId == CONST.tokenType.TOK_T1
+                   && ev.tokTypeId == CONST.tokenType.TOK_T1
                    && ev.from == accounts[global.TaddrNdx]
                    && ev.burnedQty == CONST.GT_CARBON / 2
                    ;
         });
         truffleAssert.eventEmitted(a0_burnTx1, 'BurnedPartialSecToken', ev => { 
             return ev.stId == ledgerBefore.tokens[1].stId
-                   && ev.tokenTypeId == CONST.tokenType.TOK_T1
+                   && ev.tokTypeId == CONST.tokenType.TOK_T1
                    && ev.from == accounts[global.TaddrNdx]
                    && ev.burnedQty == CONST.GT_CARBON - expectRemainTokQty - CONST.GT_CARBON / 2
                    ;

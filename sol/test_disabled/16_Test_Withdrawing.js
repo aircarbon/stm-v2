@@ -15,7 +15,7 @@ const OwnedFacet = artifacts.require('OwnedFacet');
 
 const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
-const setupHelper = require('../test/testSetupContract.js');
+const setupHelper = require('./testSetupContract.js');
 
 contract("DiamondProxy", accounts => {
     var stm;

@@ -651,6 +651,7 @@ module.exports = {
     ccy_amount_A, ccyTypeId_A, 
     ccy_amount_B, ccyTypeId_B, 
        applyFees,
+    feeOwnerAddr,
     transferType,   
             from,
         ) => {

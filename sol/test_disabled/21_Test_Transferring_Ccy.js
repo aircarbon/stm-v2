@@ -63,7 +63,7 @@ contract("StMaster", accounts => {
 
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, CONST.thousandCcy_cents,       accounts[global.TaddrNdx + 0], 'TEST', );
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, CONST.thousandCcy_cents,       accounts[global.TaddrNdx + 1], 'TEST', );
-        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts, 
+        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
                 ledger_A: accounts[global.TaddrNdx + 0],         ledger_B: accounts[global.TaddrNdx + 1],
                    qty_A: 0,                                  tokTypeId_A: 0,
                    qty_B: 0,                                  tokTypeId_B: 0,
@@ -76,7 +76,7 @@ contract("StMaster", accounts => {
     it(`transferring ccy - should allow one-sided transfer (B -> A) of one currency (ETH) across ledger entries`, async () => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH, CONST.oneEth_wei,              accounts[global.TaddrNdx + 0], 'TEST', );
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH, CONST.oneEth_wei,              accounts[global.TaddrNdx + 1], 'TEST', );
-        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, accounts, 
+        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
                 ledger_A: accounts[global.TaddrNdx + 0],         ledger_B: accounts[global.TaddrNdx + 1],
                    qty_A: 0,                                  tokTypeId_A: 0,
                    qty_B: 0,                                  tokTypeId_B: 0,
@@ -122,7 +122,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 0,                           // ccy_amount_B
                 0,                           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) {
             assert(ex.reason == 'Bad null transfer', `unexpected: ${ex.reason}`);
@@ -142,7 +142,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A
                 -1,                          // ccy_amount_B
                 CONST.ccyType.USD,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad null transfer', `unexpected: ${ex.reason}`);
@@ -162,7 +162,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 -1,                          // ccy_amount_B
                 CONST.ccyType.USD,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad null transfer', `unexpected: ${ex.reason}`);
@@ -182,7 +182,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 0,                           // ccy_amount_B
                 0,                           // ccyTypeId_B
-                false, CONST.transferType.BURN_FEE, 
+                false, CONST.nullAddr, CONST.transferType.BURN_FEE, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Insufficient currency A', `unexpected: ${ex.reason}`);
@@ -202,7 +202,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A
                 CONST.thousandEth_wei,       // ccy_amount_B
                 CONST.ccyType.ETH,           // ccyTypeId_B
-                false, CONST.transferType.OTHER_FEE5, 
+                false, CONST.nullAddr, CONST.transferType.OTHER_FEE5, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Insufficient currency B', `unexpected: ${ex.reason}`);

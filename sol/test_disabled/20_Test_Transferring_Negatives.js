@@ -14,9 +14,9 @@ const StTransferableFacet = artifacts.require('StTransferableFacet');
 const OwnedFacet = artifacts.require('OwnedFacet');
 
 const Big = require('big.js');
-const transferHelper = require('./transferHelper.js');
+const transferHelper = require('../test/transferHelper.js');
 const CONST = require('../const.js');
-const setupHelper = require('./testSetupContract.js');
+const setupHelper = require('../test/testSetupContract.js');
 
 contract("StMaster", accounts => {
     var stm;
@@ -103,8 +103,8 @@ contract("StMaster", accounts => {
 
     it(`transferring - should not allow non-owner to transfer across ledger entries`, async () => {
         try {
-            await transferHelper.transferWrapper(stmStTransferableFacet, accounts, accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1], 0, 0, 0, 0, 0, 0, 0, 0, false, CONST.transferType.UNDEFINED, { from: accounts[10] });
-        } catch (ex) { 
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts, accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1], 0, 0, 0, 0, 0, 0, 0, 0, false, CONST.nullAddr, CONST.transferType.UNDEFINED, { from: accounts[10] });
+        } catch (ex) {
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
             return;
         }
@@ -115,7 +115,7 @@ contract("StMaster", accounts => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, CONST.thousandCcy_cents, accounts[global.TaddrNdx + 0], 'TEST', );
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, CONST.thousandCcy_cents, accounts[global.TaddrNdx + 1], 'TEST', );
         try {
-            await transferHelper.transferWrapper(stmStTransferableFacet, accounts, accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1], 0, 0, 0, 0, 0, 0, 0, 0, false, CONST.transferType.UNDEFINED, { from: accounts[0] });
+            await transferHelper.transferWrapper(stmStTransferableFacet, accounts, accounts[global.TaddrNdx + 0], accounts[global.TaddrNdx + 1], 0, 0, 0, 0, 0, 0, 0, 0, false, CONST.nullAddr, CONST.transferType.UNDEFINED, { from: accounts[0] });
         } catch (ex) {
             assert(ex.reason == 'Bad null transfer', `unexpected: ${ex.reason}`);
             return;
@@ -137,7 +137,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A
                 CONST.thousandCcy_cents,     // ccy_amount_B
                 CONST.ccyType.USD,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad qty_A', `unexpected: ${ex.reason}`);
@@ -160,7 +160,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 0,                           // ccy_amount_B
                 0,                           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad qty_B', `unexpected: ${ex.reason}`);
@@ -184,7 +184,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 0,                           // ccy_amount_B
                 0,                           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transfer types', `unexpected: ${ex.reason}`);
@@ -208,7 +208,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A
                 CONST.thousandCcy_cents,     // ccy_amount_B
                 CONST.ccyType.USD,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transfer types', `unexpected: ${ex.reason}`);
@@ -232,7 +232,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 CONST.thousandCcy_cents,     // ccy_amount_B
                 CONST.ccyType.USD,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transfer types', `unexpected: ${ex.reason}`);
@@ -252,7 +252,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 CONST.oneEth_wei,            // ccy_amount_B
                 CONST.ccyType.ETH,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
@@ -272,7 +272,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 0,                           // ccy_amount_B
                 0,                           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transferType', `unexpected: ${ex.reason}`);
@@ -290,7 +290,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A
                 CONST.oneEth_wei,            // ccy_amount_B
                 CONST.ccyType.ETH,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transferType', `unexpected: ${ex.reason}`);
@@ -307,7 +307,7 @@ contract("StMaster", accounts => {
                 0,                           // qty_B
                 0,                           // tokTypeId_B
                 0, 0, 0, 0, 
-                false, CONST.transferType.UNDEFINED,
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED,
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transferType', `unexpected: ${ex.reason}`);
@@ -324,7 +324,7 @@ contract("StMaster", accounts => {
                 CONST.GT_CARBON,             // qty_B
                 CONST.tokenType.TOK_T2,      // tokTypeId_B
                 0, 0, 0, 0, 
-                false, CONST.transferType.UNDEFINED,
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED,
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad transferType', `unexpected: ${ex.reason}`);
@@ -343,7 +343,7 @@ contract("StMaster", accounts => {
                 0,                           // ccyTypeId_A --> ###
                 CONST.oneEth_wei,            // ccy_amount_B
                 CONST.ccyType.ETH,           // ccyTypeId_B
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad ccyTypeId A', `unexpected: ${ex.reason}`);
@@ -361,7 +361,7 @@ contract("StMaster", accounts => {
                 CONST.ccyType.USD,           // ccyTypeId_A
                 CONST.oneEth_wei,            // ccy_amount_B
                 0,                           // ccyTypeId_B --> ###
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad ccyTypeId B', `unexpected: ${ex.reason}`);
@@ -380,7 +380,7 @@ contract("StMaster", accounts => {
                 CONST.GT_CARBON,             // qty_B
                 CONST.tokenType.TOK_T2,      // tokTypeId_B
                 0, 0, 0, 0,
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad tokTypeId_A', `unexpected: ${ex.reason}`);
@@ -398,7 +398,7 @@ contract("StMaster", accounts => {
                 CONST.GT_CARBON,             // qty_B
                 0,                           // tokTypeId_B --> ###
                 0, 0, 0, 0,
-                false, CONST.transferType.UNDEFINED, 
+                false, CONST.nullAddr, CONST.transferType.UNDEFINED, 
                 { from: accounts[0] });
         } catch (ex) { 
             assert(ex.reason == 'Bad tokTypeId_B', `unexpected: ${ex.reason}`);
