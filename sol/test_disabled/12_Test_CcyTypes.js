@@ -6,11 +6,9 @@ const st = artifacts.require('DiamondProxy');
 const StMasterFacet = artifacts.require('StMasterFacet');
 const StErc20Facet = artifacts.require('StErc20Facet');
 
-const StMintableFacet = artifacts.require('StMintableFacet');
 const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
-const StTransferableFacet = artifacts.require('StTransferableFacet');
 const OwnedFacet = artifacts.require('OwnedFacet');
 
 const truffleAssert = require('truffle-assertions');
