@@ -19,7 +19,7 @@ const transferHelper = require('../test/transferHelper.js');
 const BN = require('bn.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     let stm;
     let stmStMasterFacet;
     let stmStErc20Facet;
