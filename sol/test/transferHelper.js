@@ -445,16 +445,16 @@ module.exports = {
             // originator token fee events
             originatorFeeData.forEach(of => {
                 if (of.fee_tok_A > 0) {
-                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to == of.fee_to && p2.fee_tok_A > 0).length;
-                    const fullCount = tokFullEvents.filter(p => p.from == ledger_A && p.to == of.fee_to && p.transferType == CONST.transferType.ORIG_FEE).length;
-                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_A && p.to == of.fee_to && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to_A == of.fee_to_A && p2.fee_tok_A > 0).length;
+                    const fullCount = tokFullEvents.filter(p => p.from == ledger_A && p.to == of.fee_to_A && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_A && p.to == of.fee_to_A && p.transferType == CONST.transferType.ORIG_FEE).length;
                     assert(fullCount > 0 || partialCount == expectedFeeEventCount,
                            'unexpected originator fee transfer full vs. partial event count after transfer for ledger A');
                 }
                 if (of.fee_tok_B > 0) {
-                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to == of.fee_to && p2.fee_tok_B > 0).length;
-                    const fullCount = tokFullEvents.filter(p => p.from == ledger_B && p.to == of.fee_to && p.transferType == CONST.transferType.ORIG_FEE).length;
-                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_B && p.to == of.fee_to && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to_B == of.fee_to_B && p2.fee_tok_B > 0).length;
+                    const fullCount = tokFullEvents.filter(p => p.from == ledger_B && p.to == of.fee_to_B && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_B && p.to == of.fee_to_B && p.transferType == CONST.transferType.ORIG_FEE).length;
                     // console.log('             ledger_B', ledger_B);
                     // console.log('          orig_fee.to', of.fee_to);
                     // console.log('          fullCount B', fullCount);
