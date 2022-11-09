@@ -2,43 +2,81 @@
 // Author: https://github.com/7-of-9
 
 // Re: StTransferable.sol => TransferLib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+const StMintableFacet = artifacts.require('StMintableFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+
 const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
 const transferHelper = require('../test/transferHelper.js');
 const BN = require('bn.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
-    var stm;
+contract("DiamondProxy", accounts => {
+    let stm;
+    let stmStMasterFacet;
+    let stmStErc20Facet;
+    let stmCcyCollateralizableFacet;
+    let stmStLedgerFacet;
+    let stmStFeesFacet;
+    let stmOwnedFacet;
+    let stmStMintableFacet;
+    let stmStTransferableFacet;
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmOwnedFacet = await OwnedFacet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+        
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;
         
-        await setupHelper.whitelistAndSeal({ stm, accounts });
-        await setupHelper.setDefaults({ stm, accounts });
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 40));
+        await stmStMasterFacet.sealContract();
+        
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts});
     });
 
     beforeEach(async () => {
         global.TaddrNdx += 2;
+        await stmStErc20Facet.setAccountEntityBatch([{id: 1, addr: accounts[global.TaddrNdx + 0]}, {id: 1, addr: accounts[global.TaddrNdx + 1]}]);
         if (CONST.logTestAccountUsage)
-            console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
+            console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${addr} (owner: ${accounts[0]})`);
     });
 
     // CCY -- 3 USD per Million RECEIVED
     it(`fees (ccy per million received) - apply USD ccy fee 3 USD/1m tokens received on trades (0.1KT, 1KT, 1.5KT, 11KT) (global fee on A)`, async () => {
         const A = accounts[global.TaddrNdx + 0]
         const B = accounts[global.TaddrNdx + 1]
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  A, 'TEST');
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     B, CONST.nullFees, 0, [], [], { from: accounts[0] });
+        await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  A, 'TEST');
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     B, CONST.nullFees, 0, [], [], { from: accounts[0] });
 
         // set global fee: ccy 3.00 /per Million qty received
         const ccy_perMillion = 300; // $3
-        const setFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
+        const setFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         // truffleAssert.eventEmitted(setFeeTx, 'SetFeeCcyPerMillion', ev => ev.ccyTypeId == CONST.ccyType.USD && ev.fee_ccy_perMillion == ccy_perMillion && ev.ledgerOwner == CONST.nullAddr);
-        assert((await stm.getFee(CONST.getFeeType.CCY, CONST.ccyType.USD, CONST.nullAddr)).ccy_perMillion == ccy_perMillion, 'unexpected fee per Million received after setting ccy fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.USD, CONST.nullAddr)).ccy_perMillion == ccy_perMillion, 'unexpected fee per Million received after setting ccy fee structure');
 
         const transferAmountsTok = [CONST.KT_CARBON * 0.1, CONST.KT_CARBON * 15, CONST.KT_CARBON * 1, CONST.KT_CARBON * 11];
         for (var i = 0 ; i < transferAmountsTok.length ; i++) {
@@ -48,7 +86,7 @@ contract("StMaster", accounts => {
             const expectedFeeCcy = //Math.floor
                                     (Number(transferAmountTok.toString()) / 1000000) * ccy_perMillion;
             console.log('expectedFeeCcy', expectedFeeCcy);
-            const data = await transferHelper.transferLedger({ stm, accounts,
+            const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
                     ledger_A: A,                                         ledger_B: B,
                        qty_A: 0,                                      tokTypeId_A: 0,
                        qty_B: transferAmountTok,                      tokTypeId_B: CONST.tokenType.TOK_T2,
@@ -67,14 +105,14 @@ contract("StMaster", accounts => {
     it(`fees (ccy per million received) - apply USD ccy fee 3 USD/1m tokens received on trades (0.1KT, 1KT, 1.5KT, 11KT) (global fee on B)`, async () => {
         const A = accounts[global.TaddrNdx + 0]
         const B = accounts[global.TaddrNdx + 1]
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     A, CONST.nullFees, 0, [], [], { from: accounts[0] });
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  B, 'TEST');
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     A, CONST.nullFees, 0, [], [], { from: accounts[0] });
+        await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  B, 'TEST');
 
         // set global fee: ccy 3.00 /per Million qty received
         const ccy_perMillion = 300; // $3
-        const setFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
+        const setFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         // truffleAssert.eventEmitted(setFeeTx, 'SetFeeCcyPerMillion', ev => ev.ccyTypeId == CONST.ccyType.USD && ev.fee_ccy_perMillion == ccy_perMillion && ev.ledgerOwner == CONST.nullAddr);
-        assert((await stm.getFee(CONST.getFeeType.CCY, CONST.ccyType.USD, CONST.nullAddr)).ccy_perMillion == ccy_perMillion, 'unexpected fee per Million received after setting ccy fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.USD, CONST.nullAddr)).ccy_perMillion == ccy_perMillion, 'unexpected fee per Million received after setting ccy fee structure');
 
         const transferAmountsTok = [CONST.KT_CARBON * 0.1, CONST.KT_CARBON * 15, CONST.KT_CARBON * 1, CONST.KT_CARBON * 11];
         for (var i = 0 ; i < transferAmountsTok.length ; i++) {
@@ -84,7 +122,7 @@ contract("StMaster", accounts => {
             const expectedFeeCcy = //Math.floor
                                     (Number(transferAmountTok.toString()) / 1000000) * ccy_perMillion;
             //console.log('expectedFeeCcy', expectedFeeCcy);
-            const data = await transferHelper.transferLedger({ stm, accounts,
+            const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
                     ledger_A: A,                                         ledger_B: B,
                        qty_A: transferAmountTok,                      tokTypeId_A: CONST.tokenType.TOK_T2,
                        qty_B: 0,                                      tokTypeId_B: 0,
@@ -103,15 +141,15 @@ contract("StMaster", accounts => {
     it(`fees (ccy per million received) - apply ledger override USD ccy fee 6 USD/1m tokens received, capped USD 60, on trades (0.1KT, 1KT, 1.5KT, 11KT) (ledger fee on A)`, async () => {
         const A = accounts[global.TaddrNdx + 0]
         const B = accounts[global.TaddrNdx + 1]
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  A, 'TEST');
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     B, CONST.nullFees, 0, [], [], { from: accounts[0] });
+        await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  A, 'TEST');
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     B, CONST.nullFees, 0, [], [], { from: accounts[0] });
 
         // set global fee: ccy 3.00 /per Million qty received
-        const setExchangeFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 300, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
+        const setExchangeFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 300, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
 
         // set ledger override fee: ccy 6.00 /per Million qty received, cap 60.00
         const ccy_perMillion = 600, fee_max = 6000, fee_min = 100; // $6, $60, $1
-        const setLedgerFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, A, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min, fee_max } );
+        const setLedgerFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, A, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min, fee_max } );
 
         const transferAmountsTok = [CONST.KT_CARBON * 0.1, CONST.KT_CARBON * 15, CONST.KT_CARBON * 1, CONST.KT_CARBON * 11];
         for (var i = 0 ; i < transferAmountsTok.length ; i++) {
@@ -121,7 +159,7 @@ contract("StMaster", accounts => {
             const expectedFeeCcy = Math.max(Math.min(//Math.floor
                                                      (Number(transferAmountTok.toString()) / 1000000) * ccy_perMillion, fee_max), fee_min);
             //console.log('expectedFeeCcy', expectedFeeCcy);
-            const data = await transferHelper.transferLedger({ stm, accounts,
+            const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
                     ledger_A: A,                                         ledger_B: B,
                        qty_A: 0,                                      tokTypeId_A: 0,
                        qty_B: transferAmountTok,                      tokTypeId_B: CONST.tokenType.TOK_T2,
@@ -140,15 +178,15 @@ contract("StMaster", accounts => {
     it(`fees (ccy per million received) - apply ledger override USD ccy fee 6 USD/1m tokens received, max USD 60, min USD 1, on trades (0.1KT, 1KT, 1.5KT, 11KT) (ledger fee on B)`, async () => {
         const A = accounts[global.TaddrNdx + 0]
         const B = accounts[global.TaddrNdx + 1]
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     A, CONST.nullFees, 0, [], [], { from: accounts[0] });
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  B, 'TEST');
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.MT_CARBON,  1,     A, CONST.nullFees, 0, [], [], { from: accounts[0] });
+        await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,                      CONST.millionCcy_cents,  B, 'TEST');
 
         // set global fee: ccy 3.00 /per Million qty received
-        const setExchangeFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 300, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
+        const setExchangeFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 300, fee_fixed: 0, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
 
         // set ledger override fee: ccy 6.00 /per Million qty received, cap 60.00, collar 1.00
         const ccy_perMillion = 600, fee_max = 6000, fee_min = 100; // $6, $60, $1
-        const setLedgerFeeTx = await stm.setFee_CcyType(CONST.ccyType.USD, B, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min, fee_max } );
+        const setLedgerFeeTx = await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, B, { ccy_mirrorFee: false, ccy_perMillion, fee_fixed: 0, fee_percBips: 0, fee_min, fee_max } );
 
         const transferAmountsTok = [CONST.KT_CARBON * 0.1, CONST.KT_CARBON * 15, CONST.KT_CARBON * 1, CONST.KT_CARBON * 11];
         for (var i = 0 ; i < transferAmountsTok.length ; i++) {
@@ -158,7 +196,7 @@ contract("StMaster", accounts => {
             const expectedFeeCcy = Math.max(Math.min(//Math.floor
                                                      (Number(transferAmountTok.toString()) / 1000000) * ccy_perMillion, fee_max), fee_min);
             //console.log('expectedFeeCcy', expectedFeeCcy);
-            const data = await transferHelper.transferLedger({ stm, accounts,
+            const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
                     ledger_A: A,                                         ledger_B: B,
                        qty_A: transferAmountTok,                      tokTypeId_A: CONST.tokenType.TOK_T2,
                        qty_B: 0,                                      tokTypeId_B: 0,
