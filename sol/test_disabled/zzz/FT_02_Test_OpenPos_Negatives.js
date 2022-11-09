@@ -14,8 +14,8 @@ const BN = require('bn.js');
 const { DateTime } = require('luxon');
 
 const futuresHelper = require('../test/futuresHelper.js');
-const CONST = require('../const.js');
-const setupHelper = require('../test/testSetupContract.js');
+const CONST = require('../../const.js');
+const setupHelper = require('../../test/testSetupContract.js');
 
 contract("StMaster", accounts => {
     var stm;
