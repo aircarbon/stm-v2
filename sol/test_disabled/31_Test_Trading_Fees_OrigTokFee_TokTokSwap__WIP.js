@@ -2,7 +2,17 @@
 // Author: https://github.com/7-of-9
 
 // Re: StTransferable.sol => TransferLib.sol
-const st = artifacts.require('StMaster');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
+const StMintableFacet = artifacts.require('StMintableFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+
 const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
 const transferHelper = require('../test/transferHelper.js');
@@ -10,23 +20,59 @@ const BN = require('bn.js');
 const Big = require('big.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
-    var stm;
+contract("DiamondProxy", accounts => {
+    let stm;
+    let stmStMasterFacet;
+    let stmStErc20Facet;
+    let stmCcyCollateralizableFacet;
+    let stmStLedgerFacet;
+    let stmStFeesFacet;
+    let stmOwnedFacet;
+    let stmStMintableFacet;
+    let stmStTransferableFacet;
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmOwnedFacet = await OwnedFacet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+        
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
 
         if (!global.TaddrNdx) global.TaddrNdx = 0;
         
-        await setupHelper.whitelistAndSeal({ stm, accounts });
-        await setupHelper.setDefaults({ stm, accounts });
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 40));
+        await stmStMasterFacet.sealContract();
+        
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts});
     });
 
     beforeEach(async () => {
         //global.TaddrNdx += 5; // tests increment this; they use varying #'s of accounts
+        await stmStErc20Facet.setAccountEntityBatch(
+            [
+                {id: 1, addr: accounts[global.TaddrNdx + 1]},
+                {id: 1, addr: accounts[global.TaddrNdx + 2]},
+                {id: 1, addr: accounts[global.TaddrNdx + 3]},
+                {id: 1, addr: accounts[global.TaddrNdx + 4]},
+                {id: 1, addr: accounts[global.TaddrNdx + 5]},
+            ]
+        );
         if (CONST.logTestAccountUsage)
-            console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
+            console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${addr} (owner: ${accounts[0]})`);
     });
 
     // ST ORIGINATOR FEES - MULTIPLE ORIGINATORS
@@ -48,21 +94,21 @@ contract("StMaster", accounts => {
 
         // TEST - set ledger fee structure A
         var ledgerFee_A = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 100, fee_percBips: 10, fee_min: 100, fee_max: 200 };
-        await stm.setFee_TokType(tokType_A, A,              ledgerFee_A);
-        await stm.setFee_TokType(tokType_A, CONST.nullAddr, CONST.nullFees);
+        await stmStFeesFacet.setFee_TokType(1, tokType_A, A,              ledgerFee_A);
+        await stmStFeesFacet.setFee_TokType(1, tokType_A, CONST.nullAddr, CONST.nullFees);
 
         // TEST - set global fee structure B
         var globalFee_B = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 50, fee_percBips: 5, fee_min: 50, fee_max: 100 };
-        await stm.setFee_TokType(tokType_B, CONST.nullAddr, globalFee_B);
-        await stm.setFee_TokType(tokType_B, B,              CONST.nullFees);
+        await stmStFeesFacet.setFee_TokType(1, tokType_B, CONST.nullAddr, globalFee_B);
+        await stmStFeesFacet.setFee_TokType(1, tokType_B, B,              CONST.nullFees);
 
         // TEST - transfer
         qty_A = qty_A.minus(Big(500)); // take off some for fees
         qty_B = qty_B.minus(Big(500));
 
-        for (var i = 0 ; i < M_multi_A.length ; i++) M_multi_A[i].ledgerBefore = await stm.getLedgerEntry(M_multi_A[i].account);
-        for (var i = 0 ; i < M_multi_B.length ; i++) M_multi_B[i].ledgerBefore = await stm.getLedgerEntry(M_multi_B[i].account);
-        const data = await transferHelper.transferLedger({ stm, accounts, 
+        for (var i = 0 ; i < M_multi_A.length ; i++) M_multi_A[i].ledgerBefore = await stmStLedgerFacet.getLedgerEntry(M_multi_A[i].account);
+        for (var i = 0 ; i < M_multi_B.length ; i++) M_multi_B[i].ledgerBefore = await stmStLedgerFacet.getLedgerEntry(M_multi_B[i].account);
+        const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
                 ledger_A: A,                                   ledger_B: B,
                    qty_A: qty_A,                            tokTypeId_A: tokType_A,
                    qty_B: qty_B,                            tokTypeId_B: tokType_B,
@@ -70,8 +116,8 @@ contract("StMaster", accounts => {
             ccy_amount_B: 0,                                ccyTypeId_B: 0,
                applyFees: true,
         });
-        for (var i = 0 ; i < M_multi_A.length ; i++) M_multi_A[i].ledgerAfter = await stm.getLedgerEntry(M_multi_A[i].account);
-        for (var i = 0 ; i < M_multi_B.length ; i++) M_multi_B[i].ledgerAfter = await stm.getLedgerEntry(M_multi_B[i].account);
+        for (var i = 0 ; i < M_multi_A.length ; i++) M_multi_A[i].ledgerAfter = await stmStLedgerFacet.getLedgerEntry(M_multi_A[i].account);
+        for (var i = 0 ; i < M_multi_B.length ; i++) M_multi_B[i].ledgerAfter = await stmStLedgerFacet.getLedgerEntry(M_multi_B[i].account);
         await CONST.logGas(web3, data.transferTx, `Multi Orig Fees`);
         //console.log('feesPreview', data.feesPreview);
 
@@ -90,14 +136,14 @@ contract("StMaster", accounts => {
         // TEST - originators (M[]) have each received their batch fee
         for (var i = 0 ; i < M_multi_A.length ; i++) {
             const M = M_multi_A[i].account;
-            const expectedBatchFee = data.feesPreview.filter(p => p.fee_to == M).map(p => p.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+            const expectedBatchFee = data.feesPreview.filter(p => p.fee_to_A == M).map(p => p.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             const M_balBefore = M_multi_A[i].ledgerBefore.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             const M_balAfter  =  M_multi_A[i].ledgerAfter.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             assert(Big(M_balAfter).eq(Big(M_balBefore).plus(Big(expectedBatchFee))), 'unexpected batch originator token balance after transfer (A)');
         }
         for (var i = 0 ; i < M_multi_B.length ; i++) {
             const M = M_multi_B[i].account;
-            const expectedBatchFee = data.feesPreview.filter(p => p.fee_to == M).map(p => p.fee_tok_B).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+            const expectedBatchFee = data.feesPreview.filter(p => p.fee_to_B == M).map(p => p.fee_tok_B).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             const M_balBefore = M_multi_B[i].ledgerBefore.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             const M_balAfter  =  M_multi_B[i].ledgerAfter.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
             assert(Big(M_balAfter).eq(Big(M_balBefore).plus(Big(expectedBatchFee))), 'unexpected batch originator token balance after transfer (B)');
@@ -140,7 +186,7 @@ contract("StMaster", accounts => {
             for (var j = 0 ; j < batchesPerOriginator ; j++) {
                 const origFee = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: (i+j), fee_percBips: (i+j) * 10, fee_min: (i+j) * 10, fee_max: (i+j) * 100 };
                 const qty = CONST.KT_CARBON * (i + 1 + j + 1);
-                await stm.mintSecTokenBatch(tokenType, qty, 1, M, origFee, 0, [], [], { from: accounts[0] });
+                await stmStMintableFacet.mintSecTokenBatch(tokenType, qty, 1, M, origFee, 0, [], [], { from: accounts[0] });
                 totalTokQty += qty;
             }
         }
@@ -148,13 +194,13 @@ contract("StMaster", accounts => {
         // SETUP - M[] -> A (no originator fees to self)
         for (var i = 0 ; i < M_multi.length ; i++) {
             const M = M_multi[i].account;
-            const le = await stm.getLedgerEntry(M);
+            const le = await stmStLedgerFacet.getLedgerEntry(M);
             const M_qty = le.tokens.filter(p => p.tokTypeId == tokenType).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
 
-            await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH,                   CONST.oneEth_wei,        transferTo, 'TEST');
-            await stm.setFee_TokType(tokenType,                 CONST.nullAddr,          CONST.nullFees); // no exchange fees
-            await stm.setFee_CcyType(CONST.ccyType.ETH,         CONST.nullAddr,          CONST.nullFees);
-            const data_MA = await transferHelper.transferLedger({ stm, accounts, 
+            await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH,                   CONST.oneEth_wei,        transferTo, 'TEST');
+            await stmStFeesFacet.setFee_TokType(1, tokenType,                 CONST.nullAddr,          CONST.nullFees); // no exchange fees
+            await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.ETH,         CONST.nullAddr,          CONST.nullFees);
+            const data_MA = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
                 ledger_A: M,                                   ledger_B: transferTo,
                    qty_A: new BN(M_qty.toString()),         tokTypeId_A: tokenType,
                    qty_B: 0,                                tokTypeId_B: 0,
@@ -164,7 +210,7 @@ contract("StMaster", accounts => {
             });
         }
 
-        const le = await stm.getLedgerEntry(transferTo);
+        const le = await stmStLedgerFacet.getLedgerEntry(transferTo);
         const A_qty = le.tokens.filter(p => p.tokTypeId == tokenType).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(totalTokQty).eq(Big(totalTokQty)), 'test setup failed');
         return { qty: A_qty, M_multi };
