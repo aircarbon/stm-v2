@@ -45,6 +45,7 @@ contract StErc20Facet {
 		ValidationLib.validateOnlyOwner();
 
 		uint256 len = entityIdWithAddr.length;
+		require(len > 0, "setAccountEntityBatch: empty args array passed");
 
 		for (uint256 i = 0; i < len; i++) {
 			ValidationLib.validateEntityExists(entityIdWithAddr[i].id);

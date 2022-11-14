@@ -40,6 +40,7 @@ library Erc20Lib {
 
 	function createEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) internal {
 		uint len = entityIdWithAddr.length;
+		require(len > 0, "createEntityBatch: empty args array passed");
 
 		for(uint i = 0; i < len; i++) {
 			createEntity(entityIdWithAddr[i]);
@@ -52,6 +53,7 @@ library Erc20Lib {
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		require(s.entityExists[entityId], 'updateEntity: entity does not exist');
+		require(s.feeAddrPerEntity[entityId] != transferOrTradeFeesOwner, "updateEntity: trying to update with the same value");
 
 		s.feeAddrPerEntity[entityId] = transferOrTradeFeesOwner;
 		emit EntityUpdated(entityId, transferOrTradeFeesOwner);
@@ -59,6 +61,7 @@ library Erc20Lib {
 
 	function updateEntityBatch(StructLib.IdWithAddress[] calldata entityIdWithAddr) internal {
 		uint len = entityIdWithAddr.length;
+		require(len > 0, "updateEntityBatch: empty args array passed");
 
 		for(uint i = 0; i < len; i++) {
 			updateEntity(entityIdWithAddr[i]);
