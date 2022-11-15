@@ -395,6 +395,10 @@ describe(`Contract Web3 Interface`, async () => {
         for (var whiteNdx = 0; whiteNdx < WHITE_MINTERS.length ; whiteNdx++) {
             const WM = WHITE_MINTERS[whiteNdx];
 
+            if((await CONST.web3_call('getAccountEntity', [WM.addr])).toString() === '0') {
+                await CONST.web3_tx('setAccountEntity', [{id: 4, addr: WM.addr}], OWNER, OWNER_privKey);
+            }
+
             console.group(chalk.inverse(`MINTING FOR ${WM.addr}...`));
             for (var batchNdx = 0; batchNdx < BATCHES_PER_WHITE_MINTER ; batchNdx++) {
                 const batchFees = {
@@ -427,6 +431,9 @@ describe(`Contract Web3 Interface`, async () => {
 
             // fund white buyer (deposit ccy)
             const ccyTypeIdFunded = (whiteNdx % ccyTypes.length) + 1;
+            if((await CONST.web3_call('getAccountEntity', [BUYER.addr])).toString() === '0') {
+                await CONST.web3_tx('setAccountEntity', [{id: 4, addr: BUYER.addr}], OWNER, OWNER_privKey);
+            }
             await CONST.web3_tx('fundOrWithdraw', [ CONST.fundWithdrawType.FUND, ccyTypeIdFunded, 1000000 * (whiteNdx+1), BUYER.addr, 'TEST_DATA' ], OWNER, OWNER_privKey);
 
             // trade with minters
@@ -438,25 +445,26 @@ describe(`Contract Web3 Interface`, async () => {
 
                 const exchangeCcyFee = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: buyNdx * 11, fee_percBips: buyNdx * 6, fee_min: buyNdx * 11, fee_max: buyNdx * 51, };
                 const ledgerCcyFee =   { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: buyNdx * 12, fee_percBips: buyNdx * 7, fee_min: buyNdx * 12, fee_max: buyNdx * 52, };
-                await CONST.web3_tx('setFee_CcyType', [ ccyTypeIdFunded, CONST.nullAddr, exchangeCcyFee ], OWNER, OWNER_privKey);
-                await CONST.web3_tx('setFee_CcyType', [ ccyTypeIdFunded, BUYER.addr,     ledgerCcyFee   ], OWNER, OWNER_privKey);
+                await CONST.web3_tx('setFee_CcyType', [ 4, ccyTypeIdFunded, CONST.nullAddr, exchangeCcyFee ], OWNER, OWNER_privKey);
+                await CONST.web3_tx('setFee_CcyType', [ 4, ccyTypeIdFunded, BUYER.addr,     ledgerCcyFee   ], OWNER, OWNER_privKey);
 
                 const exchangeTokFee = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: buyNdx * 11, fee_percBips: buyNdx * 6, fee_min: buyNdx * 11, fee_max: buyNdx * 51, };
                 const ledgerTokFee =   { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: buyNdx * 12, fee_percBips: buyNdx * 7, fee_min: buyNdx * 12, fee_max: buyNdx * 52, };
-                await CONST.web3_tx('setFee_TokType', [ minterTokTypeId, CONST.nullAddr, exchangeTokFee ], OWNER, OWNER_privKey);
-                await CONST.web3_tx('setFee_TokType', [ minterTokTypeId, SELLER.addr,    ledgerTokFee   ], OWNER, OWNER_privKey);
+                await CONST.web3_tx('setFee_TokType', [ 4, minterTokTypeId, CONST.nullAddr, exchangeTokFee ], OWNER, OWNER_privKey);
+                await CONST.web3_tx('setFee_TokType', [ 4, minterTokTypeId, SELLER.addr,    ledgerTokFee   ], OWNER, OWNER_privKey);
 
                 await CONST.web3_tx('transferOrTrade', [ {
-                    ledger_A: SELLER.addr,                                    ledger_B: BUYER.addr,
-                       qty_A: minterLedger.tokens[0].currentQty.div(2),    tokTypeId_A: minterTokTypeId,
-                       qty_B: 0,                                           tokTypeId_B: 0,
-                ccy_amount_A: 0,                                           ccyTypeId_A: 0,
-                ccy_amount_B: 5000,                                        ccyTypeId_B: ccyTypeIdFunded,
-                   applyFees: true,
-                feeAddrOwner: CONST.nullAddr,
-                   k_stIds_A: [], k_stIds_B: [],
-                transferType: CONST.transferType.ADJUSTMENT,
-            }], OWNER, OWNER_privKey);
+                        ledger_A: SELLER.addr,                                    ledger_B: BUYER.addr,
+                        qty_A: minterLedger.tokens[0].currentQty.div(2),    tokTypeId_A: minterTokTypeId,
+                        qty_B: 0,                                           tokTypeId_B: 0,
+                    ccy_amount_A: 0,                                           ccyTypeId_A: 0,
+                    ccy_amount_B: 5000,                                        ccyTypeId_B: ccyTypeIdFunded,
+                    applyFees: true,
+                    feeAddrOwner_A: CONST.nullAddr,
+                    feeAddrOwner_B: CONST.nullAddr,
+                    k_stIds_A: [], k_stIds_B: [],
+                    transferType: CONST.transferType.UNDEFINED,
+                }], OWNER, OWNER_privKey);
             }
             console.groupEnd();
 
@@ -474,9 +482,10 @@ describe(`Contract Web3 Interface`, async () => {
                 ccy_amount_A: 0,                                  ccyTypeId_A: 0,
                 ccy_amount_B: 0,                                  ccyTypeId_B: 0,
                    applyFees: false,
-                feeAddrOwner: CONST.nullAddr,
+                feeAddrOwner_A: CONST.nullAddr,
+                feeAddrOwner_B: CONST.nullAddr,
                    k_stIds_A: [], k_stIds_B: [],
-                transferType: CONST.transferType.ADJUSTMENT,
+                transferType: CONST.transferType.SETTLE_PAY,
                 }], OWNER, OWNER_privKey);
             }
             console.groupEnd();
@@ -489,7 +498,7 @@ describe(`Contract Web3 Interface`, async () => {
 
             // leave USD fee per million at $3 mirrored
             const gfUsd = { ccy_mirrorFee: true, ccy_perMillion: 300, fee_fixed: 0, fee_percBips: 0, fee_min: 300, fee_max: 0, };
-            await CONST.web3_tx('setFee_CcyType', [ CONST.ccyType.USD, CONST.nullAddr, gfUsd ], OWNER, OWNER_privKey);
+            await CONST.web3_tx('setFee_CcyType', [ 4, CONST.ccyType.USD, CONST.nullAddr, gfUsd ], OWNER, OWNER_privKey);
         }
     });
 });
