@@ -2,8 +2,16 @@
 // Author: https://github.com/7-of-9
 
 // Re: StMaster.sol, StErc20.sol => Erc20Lib.sol, TransferLib.sol, LedgerLib.sol
-const st = artifacts.require('StMaster');
-const truffleAssert = require('truffle-assertions');
+const st = artifacts.require('DiamondProxy');
+const StMasterFacet = artifacts.require('StMasterFacet');
+const StErc20Facet = artifacts.require('StErc20Facet');
+
+const StMintableFacet = artifacts.require('StMintableFacet');
+const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
+const StLedgerFacet = artifacts.require('StLedgerFacet');
+const StFeesFacet = artifacts.require('StFeesFacet');
+const StTransferableFacet = artifacts.require('StTransferableFacet');
+
 const CONST = require('../const.js');
 const transferHelper = require('../test/transferHelper.js');
 const setupHelper = require('../test/testSetupContract.js');
@@ -13,14 +21,31 @@ const setupHelper = require('../test/testSetupContract.js');
 //  (only CONTACT_TYPE=COMMODITY supports this fungibility)
 // 
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
+    let stmStMasterFacet;
+    let stmStErc20Facet;
+    let stmStMintableFacet;
+    let stmCcyCollateralizableFacet;
+    let stmStLedgerFacet;
+    let stmStFeesFacet;
+    let stmStTransferableFacet;
 
     var WHITE, GRAY_1, GRAY_2, NDX_GRAY_1, NDX_GRAY_2;
 
     before(async function () {
         stm = await st.deployed();
-        if (await stm.getContractType() != CONST.contractType.COMMODITY) this.skip();
+        const addr = stm.address;
+
+        stmStMasterFacet = await StMasterFacet.at(addr);
+        stmStErc20Facet = await StErc20Facet.at(addr);
+        stmStMintableFacet = await StMintableFacet.at(addr);
+        stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
+        stmStLedgerFacet = await StLedgerFacet.at(addr);
+        stmStFeesFacet = await StFeesFacet.at(addr);
+        stmStTransferableFacet = await StTransferableFacet.at(addr);
+
+        if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
 
         if (!global.TaddrNdx) global.TaddrNdx = 0;   // whitelist (exchange) test addr; managed by tests
         if (!global.XaddrNdx) global.XaddrNdx = 800; // graylist (erc20) test addr; managed by tests
@@ -33,34 +58,42 @@ contract("StMaster", accounts => {
         NDX_GRAY_2 = global.XaddrNdx + 1;
         GRAY_2 = accounts[NDX_GRAY_2];
         
-        await stm.whitelistMany([WHITE]);
-        await stm.sealContract();
-        await setupHelper.setDefaults({ stm, accounts });
+        await stmStErc20Facet.whitelistMany([WHITE]);
+        await stmStMasterFacet.sealContract();
+        await setupHelper.setDefaults({ 
+            StErc20Facet: stmStErc20Facet, 
+            stmStMaster: stmStMasterFacet, 
+            stmStLedger: stmStLedgerFacet, 
+            stmCcyCollateralizable: stmCcyCollateralizableFacet, 
+            stmFees: stmStFeesFacet,
+            accounts});
+
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: WHITE, });
 
         // mint batches x 3 with originator fees - should be ignored by ERC20
         const testFee = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 1, fee_percBips: 10, fee_min: 0, fee_max: 0 };
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
-        await stm.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1, WHITE, testFee, 0, [], [], { from: accounts[0] });
 
         // set exchange fees - should be ignored by ERC20
-        await stm.setFee_TokType(CONST.tokenType.TOK_T2, CONST.nullAddr, testFee );
-        await stm.setFee_TokType(CONST.tokenType.TOK_T1, CONST.nullAddr, testFee );
+        await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, CONST.nullAddr, testFee );
+        await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, CONST.nullAddr, testFee );
 
         // set ledger feess - should be ignored by ERC20
-        await stm.setFee_TokType(CONST.tokenType.TOK_T2, WHITE,  testFee );
-        await stm.setFee_TokType(CONST.tokenType.TOK_T1, WHITE,  testFee );
+        await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, WHITE,  testFee );
+        await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, WHITE,  testFee );
         
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 1, GRAY_1, 'TEST');
-        await stm.setFee_TokType(CONST.tokenType.TOK_T2, GRAY_1, testFee );
-        await stm.setFee_TokType(CONST.tokenType.TOK_T1, GRAY_1, testFee );
+        // await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 1, GRAY_1, 'TEST');
+        // await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, GRAY_1, testFee );
+        // await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, GRAY_1, testFee );
 
-        await stm.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 1, GRAY_2, 'TEST');
-        await stm.setFee_TokType(CONST.tokenType.TOK_T2, GRAY_2, testFee );
-        await stm.setFee_TokType(CONST.tokenType.TOK_T1, GRAY_2, testFee );
+        // await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 1, GRAY_2, 'TEST');
+        // await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, GRAY_2, testFee );
+        // await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, GRAY_2, testFee );
     });
 
     //
@@ -71,7 +104,7 @@ contract("StMaster", accounts => {
         await white_to_gray_1(); // withdraw
     });
     async function white_to_gray_1() {
-        await transferHelper.transferLedger({ stm, accounts, 
+        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
             ledger_A: WHITE,                               ledger_B: GRAY_1,
                qty_A: CONST.KT_CARBON * 3,              tokTypeId_A: CONST.tokenType.TOK_T2,
                qty_B: 0,                                tokTypeId_B: 0,
@@ -80,7 +113,7 @@ contract("StMaster", accounts => {
            applyFees: false,
         transferType: CONST.transferType.OTHER_FEE2,
         });
-        await transferHelper.transferLedger({ stm, accounts, 
+        await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
             ledger_A: WHITE,                               ledger_B: GRAY_1,
                qty_A: CONST.KT_CARBON * 3,              tokTypeId_A: CONST.tokenType.TOK_T1,
                qty_B: 0,                                tokTypeId_B: 0,
@@ -96,11 +129,11 @@ contract("StMaster", accounts => {
     });
     async function gray_1_to_white() {
         const fundTx = await CONST.web3_sendEthTestAddr(0, GRAY_1, "0.1"); // fund GRAY_1 for erc20 op
-        const erc20Tx = await stm.transfer(WHITE, CONST.KT_CARBON * 6, { from: GRAY_1 } );
+        const erc20Tx = await stmStErc20Facet.transfer(WHITE, CONST.KT_CARBON * 6, { from: GRAY_1 } );
         await CONST.logGas(web3, erc20Tx, '(erc20 => exchange)');
 
-        const GRAY_after = await stm.getLedgerEntry(GRAY_1);
-        const WHITE_after = await stm.getLedgerEntry(WHITE);
+        const GRAY_after = await stmStLedgerFacet.getLedgerEntry(GRAY_1);
+        const WHITE_after = await stmStLedgerFacet.getLedgerEntry(WHITE);
 
         assert(GRAY_after.spot_sumQty == 0, 'unexpected graylist ledger GRAY_1 quantity after');     
         assert(WHITE_after.spot_sumQty == CONST.KT_CARBON * 6, 'unexpected whitelist ledger WHITE quantity after');     
@@ -112,11 +145,11 @@ contract("StMaster", accounts => {
     });
     async function gray_1_to_gray_2() {
         const fundTx = await CONST.web3_sendEthTestAddr(0, GRAY_1, "0.01"); // fund GRAY_1 for erc20 op
-        const erc20Tx = await stm.transfer(GRAY_2, CONST.KT_CARBON * 6, { from: GRAY_1 } );
+        const erc20Tx = await stmStErc20Facet.transfer(GRAY_2, CONST.KT_CARBON * 6, { from: GRAY_1 } );
         await CONST.logGas(web3, erc20Tx, '(erc20 => erc20)');
         
-        const GRAY1_after = await stm.getLedgerEntry(GRAY_1);
-        const GRAY2_after = await stm.getLedgerEntry(GRAY_2);
+        const GRAY1_after = await stmStLedgerFacet.getLedgerEntry(GRAY_1);
+        const GRAY2_after = await stmStLedgerFacet.getLedgerEntry(GRAY_2);
         assert(GRAY1_after.spot_sumQty == 0, 'unexpected graylist ledger GRAY_1 quantity after');     
         assert(GRAY2_after.spot_sumQty == CONST.KT_CARBON * 6, 'unexpected graylist ledger GRAY_2 quantity after');     
     }
