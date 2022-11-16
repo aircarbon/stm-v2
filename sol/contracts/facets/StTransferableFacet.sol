@@ -147,8 +147,12 @@ contract StTransferableFacet {
 		uint custFeeB, 
 		bool applyFees
 	) internal {
-		ValidationLib.validateHasEntity(transferArgs.ledger_A);
-		ValidationLib.validateHasEntity(transferArgs.ledger_B);
+		if(transferArgs.qty_A > 0) {
+			ValidationLib.validateHasEntity(transferArgs.ledger_A);
+		}
+		if(transferArgs.qty_B > 0) {
+			ValidationLib.validateHasEntity(transferArgs.ledger_B);
+		}
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		// abort if sending tokens from a non-whitelist account
