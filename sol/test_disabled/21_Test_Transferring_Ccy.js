@@ -6,7 +6,6 @@ const st = artifacts.require('DiamondProxy');
 const StMasterFacet = artifacts.require('StMasterFacet');
 const StErc20Facet = artifacts.require('StErc20Facet');
 
-const StMintableFacet = artifacts.require('StMintableFacet');
 const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
@@ -15,11 +14,10 @@ const CONST = require('../const.js');
 const transferHelper = require('../test/transferHelper.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
     var stmStErc20Facet;
-    var stmStMintableFacet;
     var stmCcyCollateralizableFacet;
     var stmStLedgerFacet;
     var stmStFeesFacet;
@@ -31,7 +29,6 @@ contract("StMaster", accounts => {
 
         stmStMasterFacet = await StMasterFacet.at(addr);
         stmStErc20Facet = await StErc20Facet.at(addr);
-        stmStMintableFacet = await StMintableFacet.at(addr);
         stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
         stmStLedgerFacet = await StLedgerFacet.at(addr);
         stmStFeesFacet = await StFeesFacet.at(addr);

@@ -17,7 +17,7 @@ const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
     var stmStErc20Facet;
@@ -63,7 +63,6 @@ contract("StMaster", accounts => {
         stmStFeesFacet = await StFeesFacet.at(addr);
         stmStTransferableFacet = await StTransferableFacet.at(addr);
         stmStBurnableFacet = await StBurnableFacet.at(addr);
-        stmStMintableFacet = await StMintableFacet.at(addr);
 
         if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;

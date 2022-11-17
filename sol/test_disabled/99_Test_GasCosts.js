@@ -12,7 +12,6 @@ const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
 const StBurnableFacet = artifacts.require('StBurnableFacet');
-const OwnedFacet = artifacts.require('OwnedFacet');
 
 const truffleAssert = require('truffle-assertions');
 const { DateTime } = require('luxon');
@@ -63,7 +62,6 @@ contract("DiamondProxy", accounts => {
     let stmStFeesFacet;
     let stmStTransferableFacet;
     let stmStBurnableFacet;
-    let stmOwnedFacet;
 
     var usdFT, usdFT_underlyer, usdFT_refCcy; // usd FT
 
@@ -76,7 +74,6 @@ contract("DiamondProxy", accounts => {
         stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
         stmStLedgerFacet = await StLedgerFacet.at(addr);
         stmStFeesFacet = await StFeesFacet.at(addr);
-        stmOwnedFacet = await OwnedFacet.at(addr);
         stmStMintableFacet = await StMintableFacet.at(addr);
         stmStTransferableFacet = await StTransferableFacet.at(addr);
         stmStBurnableFacet = await StBurnableFacet.at(addr);

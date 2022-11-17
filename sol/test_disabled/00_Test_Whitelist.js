@@ -8,7 +8,7 @@ const StErc20Facet = artifacts.require('StErc20Facet');
 
 const CONST = require('../const.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
     var stmStErc20Facet;

@@ -66,7 +66,6 @@ contract("DiamondProxy", accounts => {
 
     it(`token types - should have correct default values`, async () => {
         const types = (await stmStLedgerFacet.getSecTokenTypes()).tokenTypes;
-        console.log({types: types});
         assert(types.length == DEF_SEC_TOKEN_COUNT, 'unexpected default type count');
 
         assert(types[0].name == 'AirCarbon CORSIA Token', `unexpected default type name 1`);

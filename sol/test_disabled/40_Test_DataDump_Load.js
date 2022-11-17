@@ -16,15 +16,9 @@ const DiamondCutFacet = artifacts.require('DiamondCutFacet');
 const DataLoadableFacet = artifacts.require('DataLoadableFacet');
 const StBurnableFacet = artifacts.require('StBurnableFacet');
 
-const truffleAssert = require('truffle-assertions');
 const chalk = require('chalk');
 const _ = require('lodash');
-const { DateTime } = require('luxon');
-
 const CONST = require('../const.js');
-const setupHelper = require('../test/testSetupContract.js');
-
-const {createBackupData} = require('../contract_upgrade/utils.js');
 
 contract("DiamondProxy", accounts => {
     let stm_cur, stm_new;
@@ -38,15 +32,12 @@ contract("DiamondProxy", accounts => {
     let stmStMintableFacet_curr;
     let stmStTransferableFacet_curr;
     let stmStBurnableFacet_curr;
-    let stmDataLoadableFacet_curr;
     
     let stmStMasterFacet_new;
     let stmStErc20Facet_new;
     let stmCcyCollateralizableFacet_new;
     let stmStLedgerFacet_new;
     let stmStFeesFacet_new;
-    let stmOwnedFacet_new;
-    let stmStMintableFacet_new;
     let stmStTransferableFacet_new;
     let stmDataLoadableFacet_new;
 
@@ -63,24 +54,13 @@ contract("DiamondProxy", accounts => {
         stmStMintableFacet_curr = await StMintableFacet.at(addr_curr);
         stmStTransferableFacet_curr = await StTransferableFacet.at(addr_curr);
         stmStBurnableFacet_curr = await StBurnableFacet.at(addr_curr);
-        stmDataLoadableFacet_curr = await DataLoadableFacet.at(addr_curr);
 
         if (await stmStMasterFacet_curr.getContractType() != CONST.contractType.COMMODITY) this.skip();
         
         console.log(`stm_cur: @${addr_curr} ledgerHash=${await CONST.getLedgerHashcode(stmStTransferableFacet_curr)} / ${await stmStMasterFacet_curr.name()} ${await stmStMasterFacet_curr.version()}`);
         
         // deploying new contract
-        const diamondCut = await DiamondCutFacet.deployed();
-        const stMasterFacet_curr = await StMasterFacet.deployed();
-        const stErc20Facet_curr = await StErc20Facet.deployed();
-        const ccyCollateralizableFacet_curr = await CcyCollateralizableFacet.deployed();
-        const stLedgerFacet_curr = await StLedgerFacet.deployed();
-        const stFeesFacet_curr = await StFeesFacet.deployed();
-        const ownedFacet_curr = await OwnedFacet.deployed();
-        const stMintableFacet_curr = await StMintableFacet.deployed();
-        const stTransferableFacet_curr = await StTransferableFacet.deployed();
-
-        stm_new = await st.new(accounts[0], diamondCut.address);
+        stm_new = await st.new(accounts[0], DiamondCutFacet.address);
         const addr_new = stm_new.address;
         const stmDiamondCut = await DiamondCutFacet.at(addr_new);
 
@@ -141,7 +121,7 @@ contract("DiamondProxy", accounts => {
         // cutting All other facets
         const diamondCutParams = [
             {
-                facetAddress: ccyCollateralizableFacet_curr.address,
+                facetAddress: CcyCollateralizableFacet.address,
                 action: CONST.FacetCutAction.Add,
                 functionSelectors: CONST.getContractsSelectors('CcyCollateralizableFacet')
             },
@@ -187,9 +167,6 @@ contract("DiamondProxy", accounts => {
         stmCcyCollateralizableFacet_new = await CcyCollateralizableFacet.at(addr_new);
         stmStLedgerFacet_new = await StLedgerFacet.at(addr_new);
         stmStFeesFacet_new = await StFeesFacet.at(addr_new);
-        stmOwnedFacet_new = await OwnedFacet.at(addr_new);
-        stmStMintableFacet_new = await StMintableFacet.at(addr_new);
-        stmStBurnableFacet_new = await StBurnableFacet.at(addr_new);
         stmStTransferableFacet_new = await StTransferableFacet.at(addr_new);
         stmDataLoadableFacet_new = await DataLoadableFacet.at(addr_new);
 

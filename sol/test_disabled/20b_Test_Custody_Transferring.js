@@ -18,7 +18,7 @@ const transferHelper = require('../test/transferHelper.js');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
-contract("StMaster", accounts => {
+contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
     var stmStErc20Facet;
@@ -41,8 +41,6 @@ contract("StMaster", accounts => {
         stmStFeesFacet = await StFeesFacet.at(addr);
         stmStTransferableFacet = await StTransferableFacet.at(addr);
         stmOwnedFacet = await OwnedFacet.at(addr);
-
-        
 
         if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (await stmOwnedFacet.custodyType() == CONST.custodyType.SELF_CUSTODY) this.skip();

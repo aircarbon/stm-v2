@@ -10,9 +10,9 @@ const abi = acmJson['abi'];
 const EthereumJsTx = require('ethereumjs-tx');
 const BN = require('bn.js');
 
-const transferHelper = require('../test/transferHelper.js');
-const setupHelper = require('../test/testSetupContract.js');
-const CONST = require('../const.js');
+const transferHelper = require('../../test/transferHelper.js');
+const setupHelper = require('../../test/testSetupContract.js');
+const CONST = require('../../const.js');
 
 const readline = require("readline");
 const rl = readline.createInterface({

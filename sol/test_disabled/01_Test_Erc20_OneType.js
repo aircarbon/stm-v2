@@ -11,7 +11,6 @@ const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
-const StBurnableFacet = artifacts.require('StBurnableFacet');
 
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
@@ -37,7 +36,6 @@ contract("DiamondProxy", accounts => {
     let stmStLedgerFacet;
     let stmStFeesFacet;
     let stmStTransferableFacet;
-    let stmStBurnableFacet;
 
     var WHITE, GRAY_1, GRAY_2, NDX_GRAY_1, NDX_GRAY_2;
 
@@ -52,7 +50,6 @@ contract("DiamondProxy", accounts => {
         stmStLedgerFacet = await StLedgerFacet.at(addr);
         stmStFeesFacet = await StFeesFacet.at(addr);
         stmStTransferableFacet = await StTransferableFacet.at(addr);
-        stmStBurnableFacet = await StBurnableFacet.at(addr);
 
         if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
 

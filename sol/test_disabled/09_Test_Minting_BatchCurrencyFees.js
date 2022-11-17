@@ -10,8 +10,6 @@ const StMintableFacet = artifacts.require('StMintableFacet');
 const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
-const StTransferableFacet = artifacts.require('StTransferableFacet');
-const StBurnableFacet = artifacts.require('StBurnableFacet');
 
 const BN = require('bn.js');
 const CONST = require('../const.js');
@@ -25,8 +23,6 @@ contract("DiamondProxy", accounts => {
     var stmCcyCollateralizableFacet;
     var stmStLedgerFacet;
     var stmStFeesFacet;
-    var stmStTransferableFacet;
-    var stmStBurnableFacet;
 
     before(async function () {
         stm = await st.deployed();
@@ -38,9 +34,6 @@ contract("DiamondProxy", accounts => {
         stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
         stmStLedgerFacet = await StLedgerFacet.at(addr);
         stmStFeesFacet = await StFeesFacet.at(addr);
-        stmStTransferableFacet = await StTransferableFacet.at(addr);
-        stmStBurnableFacet = await StBurnableFacet.at(addr);
-        stmStMintableFacet = await StMintableFacet.at(addr);
 
         if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;

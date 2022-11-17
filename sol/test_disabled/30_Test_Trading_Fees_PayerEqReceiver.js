@@ -9,17 +9,14 @@ const StErc20Facet = artifacts.require('StErc20Facet');
 const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StLedgerFacet = artifacts.require('StLedgerFacet');
 const StFeesFacet = artifacts.require('StFeesFacet');
-const OwnedFacet = artifacts.require('OwnedFacet');
 const StMintableFacet = artifacts.require('StMintableFacet');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
 
-const truffleAssert = require('truffle-assertions');
 const CONST = require('../const.js');
 const transferHelper = require('../test/transferHelper.js');
 const BN = require('bn.js');
 const Big = require('big.js');
 const Web3 = require('web3');
-const web3 = new Web3();
 const setupHelper = require('../test/testSetupContract.js');
 
 contract("DiamondProxy", accounts => {
@@ -29,7 +26,6 @@ contract("DiamondProxy", accounts => {
     let stmCcyCollateralizableFacet;
     let stmStLedgerFacet;
     let stmStFeesFacet;
-    let stmOwnedFacet;
     let stmStMintableFacet;
     let stmStTransferableFacet;
 
@@ -42,7 +38,6 @@ contract("DiamondProxy", accounts => {
         stmCcyCollateralizableFacet = await CcyCollateralizableFacet.at(addr);
         stmStLedgerFacet = await StLedgerFacet.at(addr);
         stmStFeesFacet = await StFeesFacet.at(addr);
-        stmOwnedFacet = await OwnedFacet.at(addr);
         stmStMintableFacet = await StMintableFacet.at(addr);
         stmStTransferableFacet = await StTransferableFacet.at(addr);
         
