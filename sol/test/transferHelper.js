@@ -140,8 +140,6 @@ module.exports = {
         for (let i = 0; i < originatorFeeData.length; i++) {
             originatorFeeData[i].ledgerBefore_A = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_A);
             originatorFeeData[i].ledgerBefore_B = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_B);
-            const a = originatorFeeData.map(p => p.fee_tok_A).reduce((a,b) => Number(a) + Number(b), Number(0));
-            const b = originatorFeeData.map(p => p.fee_tok_B).reduce((a,b) => Number(a) + Number(b), Number(0));
         }
 
         // ** TRANSFER **

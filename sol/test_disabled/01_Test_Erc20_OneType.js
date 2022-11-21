@@ -87,7 +87,6 @@ contract("DiamondProxy", accounts => {
         // set ledger fees NATURE - should be ignored by ERC20
         await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, WHITE, testFee );
         
-        // instead of funding, send from whitelisted address
         // await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD, 1, GRAY_1, 'TEST');
         // was used just to prove that there are no fees applied for erc20 operations
         // await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, GRAY_1, testFee );
