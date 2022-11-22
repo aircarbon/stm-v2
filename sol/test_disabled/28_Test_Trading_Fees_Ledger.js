@@ -85,9 +85,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokBps', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_PercBips == feeBps && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_tokenQty_Fixed == feeFix && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokMax', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_Max == feeCap && ev.ledgerOwner == A);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_fixed == feeFix, 'unexpected carbon fixed fee after setting ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_percBips == feeBps, 'unexpected carbon bps fee after setting ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_max == feeCap, 'unexpected carbon max fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_fixed == feeFix, 'unexpected carbon fixed fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_percBips == feeBps, 'unexpected carbon bps fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_max == feeCap, 'unexpected carbon max fee after setting ledger fee structure');
 
         // set different (irrelevant) ledger fee UNFCC for A
         await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, A, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: feeFix+1, fee_percBips: feeBps+1, fee_min: 0, fee_max: feeCap+1 } );
@@ -140,9 +140,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokBps', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_PercBips == feeBps && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_tokenQty_Fixed == feeFix && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokMax', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_Max == feeCap && ev.ledgerOwner == A);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_fixed == feeFix, 'unexpected carbon fixed fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_percBips == feeBps, 'unexpected carbon bps fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, A)).fee_max == feeCap, 'unexpected carbon max fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_fixed == feeFix, 'unexpected carbon fixed fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_percBips == feeBps, 'unexpected carbon bps fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, A)).fee_max == feeCap, 'unexpected carbon max fee after clearing ledger fee structure');
 
         // set different (irrelevant) ledger fee UNFCC for A
         await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, A, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: feeFix+1, fee_percBips: feeBps+1, fee_min: 0, fee_max: feeCap+1 } );
@@ -190,9 +190,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokBps', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_PercBips == feeBps && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_tokenQty_Fixed == feeFix && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(setEeuFeeTx, 'SetFeeTokMin', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_Min == feeMin && ev.ledgerOwner == B);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_fixed == feeFix, 'unexpected carbon fixed fee after setting ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_percBips == feeBps, 'unexpected carbon bps fee after setting ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_min == feeMin, 'unexpected carbon max fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_fixed == feeFix, 'unexpected carbon fixed fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_percBips == feeBps, 'unexpected carbon bps fee after setting ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_min == feeMin, 'unexpected carbon max fee after setting ledger fee structure');
 
         // set different (irrelevant) ledger fee UNFCC for B
         await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, B, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: feeFix+1, fee_percBips: feeBps+1, fee_min: feeMin+1, fee_max: 0 } );
@@ -247,9 +247,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokBps', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_PercBips == feeBps && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_tokenQty_Fixed == feeFix && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(clearEeuFeeTx, 'SetFeeTokMin', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_token_Min == feeMin && ev.ledgerOwner == B);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_fixed == feeFix, 'unexpected carbon fixed fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_percBips == feeBps, 'unexpected carbon bps fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, B)).fee_min == feeMin, 'unexpected carbon max fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_fixed == feeFix, 'unexpected carbon fixed fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_percBips == feeBps, 'unexpected carbon bps fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, CONST.tokenType.TOK_T2, B)).fee_min == feeMin, 'unexpected carbon max fee after clearing ledger fee structure');
 
         // set different (irrelevant) ledger fee UNFCC for B
         await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, B, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: feeFix+1, fee_percBips: feeBps+1, fee_min: feeMin+1, fee_max: 0 } );
@@ -297,9 +297,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyBps', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_PercBips == ethFeeBps && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyFix', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Fixed == ethFeeFix && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyMin', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Min == ethFeeMin && ev.ledgerOwner == A);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_percBips == ethFeeBps, 'unexpected ETH percentage fee after setting ETH fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_fixed == ethFeeFix, 'unexpected ETH fixed fee after setting ETH fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_min == ethFeeMin, 'unexpected ETH min fee after setting ETH fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_percBips == ethFeeBps, 'unexpected ETH percentage fee after setting ETH fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_fixed == ethFeeFix, 'unexpected ETH fixed fee after setting ETH fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_min == ethFeeMin, 'unexpected ETH min fee after setting ETH fee structure');
 
         // set different (irrelevant) ledger fee USD for A
         await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, A, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: ethFeeFix+1, fee_percBips: ethFeeBps+1, fee_min: ethFeeMin+1, fee_max: 0 } );
@@ -352,9 +352,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyBps', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_PercBips == ethFeeBps && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyFix', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Fixed == ethFeeFix && ev.ledgerOwner == A);
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyMin', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Min == ethFeeMin && ev.ledgerOwner == A);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, A)).fee_min == ethFeeMin, 'unexpected ccy min fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, A)).fee_min == ethFeeMin, 'unexpected ccy min fee after clearing ledger fee structure');
 
         // set different (irrelevant) ledger fee USD for A
         await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, A, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: ethFeeFix+1, fee_percBips: ethFeeBps+1, fee_min: ethFeeMin+1, fee_max: 0 } );
@@ -402,9 +402,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyBps', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_PercBips == ethFeeBps && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyFix', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Fixed == ethFeeFix && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(setCcyFeeTx, 'SetFeeCcyMax', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Max == ethFeeMax && ev.ledgerOwner == B);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_max == ethFeeMax, 'unexpected ccy max fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_max == ethFeeMax, 'unexpected ccy max fee after clearing ledger fee structure');
 
         // set different (irrelevant) ledger fee USD for B
         await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, B, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: ethFeeFix+1, fee_percBips: ethFeeBps+1, fee_min: 0, fee_max: 0 } );
@@ -459,9 +459,9 @@ contract("DiamondProxy", accounts => {
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyBps', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_PercBips == ethFeeBps && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyFix', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Fixed == ethFeeFix && ev.ledgerOwner == B);
         truffleAssert.eventEmitted(clearFeeTx, 'SetFeeCcyMax', ev => ev.ccyTypeId == CONST.ccyType.ETH && ev.fee_ccy_Max == ethFeeMax && ev.ledgerOwner == B);
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
-        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, CONST.ccyType.ETH, B)).fee_max == ethFeeMax, 'unexpected ccy max fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_fixed == ethFeeFix, 'unexpected ccy fixed fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_percBips == ethFeeBps, 'unexpected ccy bps fee after clearing ledger fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, CONST.ccyType.ETH, B)).fee_max == ethFeeMax, 'unexpected ccy max fee after clearing ledger fee structure');
 
         // set different (irrelevant) ledger fee USD for B
         await stmStFeesFacet.setFee_CcyType(1, CONST.ccyType.USD, B, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: ethFeeFix+1, fee_percBips: ethFeeBps+1, fee_min: 0, fee_max: 0 } );

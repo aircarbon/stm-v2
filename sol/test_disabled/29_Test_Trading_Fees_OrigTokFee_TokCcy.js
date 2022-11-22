@@ -13,10 +13,10 @@ const StMintableFacet = artifacts.require('StMintableFacet');
 const StTransferableFacet = artifacts.require('StTransferableFacet');
 
 const CONST = require('../const.js');
-const transferHelper = require('../test/transferHelper.js');
+const transferHelper = require('./transferHelper.js');
 const BN = require('bn.js');
 const Big = require('big.js');
-const setupHelper = require('../test/testSetupContract.js');
+const setupHelper = require('./testSetupContract.js');
 
 contract("DiamondProxy", accounts => {
     let stm;

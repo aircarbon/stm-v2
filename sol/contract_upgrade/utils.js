@@ -528,6 +528,7 @@ async function createBackupData(contracts, contractAddress, contractType) {
   ] = contracts;
 
   const owners = await newContract_OwnedFacet.getOwners();
+  const deploymentOwner = await newContract_OwnedFacet.deploymentOwner();
   const unit = await newContract_StMasterFacet.unit();
   const symbol = await newContract_StErc20Facet.symbol();
   const decimals = await newContract_StErc20Facet.decimals();
@@ -741,6 +742,7 @@ async function createBackupData(contracts, contractAddress, contractType) {
       symbol,
       unit,
       decimals,
+      deploymentOwner
     },
     data: {
       entitiesWithFeeOwners: entitiesWithFeeOwners,

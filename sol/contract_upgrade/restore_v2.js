@@ -101,7 +101,8 @@ module.exports = async (callback) => {
   } else if (!entitiesOnChain.includes(DEFAULT_ENTITY_ID)) {
     // NOTE: if no entities, then it will create a new entity with an id "1" and assign all the accounts to it.
     // Entity fee owner can be updated later.
-    await newContract_StErc20Facet.createEntity({id: DEFAULT_ENTITY_ID, addr: CONST.nullAddr});
+    if(data.info.deploymentOwner === null || data.info.deploymentOwner === undefined) throw new Error('data.info.deploymentOwner is not found in the backup data!');
+    await newContract_StErc20Facet.createEntity({id: DEFAULT_ENTITY_ID, addr: data.info.deploymentOwner});
   }
   // add ccy data to new contract
   const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();

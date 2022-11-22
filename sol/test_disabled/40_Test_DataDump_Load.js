@@ -199,7 +199,7 @@ contract("DiamondProxy", accounts => {
         console.log(`Whitelist: ${whitelist.join(', ')}`);
         curHash = await checkHashUpdate(curHash);
         stmStMasterFacet_curr.sealContract();
-        await stmStErc20Facet_curr.createEntity({id: 1, addr: CONST.nullAddr});
+        await stmStErc20Facet_curr.createEntity({id: 1, addr: CONST.testAddr99});
 
         // ccy types
         await stmCcyCollateralizableFacet_curr.addCcyType('TEST_CCY_TYPE', 'TEST_UNIT', 42);
@@ -490,7 +490,7 @@ contract("DiamondProxy", accounts => {
         //_.forEach(loadWL, async (p) => await stm_new.whitelist(p));
         await stmStErc20Facet_new.whitelistMany(loadWL);
         await stmStErc20Facet_new.whitelistMany([accounts[0]]);
-        await stmStErc20Facet_new.createEntity({id: 1, addr: CONST.nullAddr});
+        await stmStErc20Facet_new.createEntity({id: 1, addr: CONST.testAddr99});
 
         // set whitelist index
         //stm_new.setWhitelistNextNdx(await stm_cur.getWhitelistNextNdx());
@@ -530,10 +530,10 @@ contract("DiamondProxy", accounts => {
             await stmDataLoadableFacet_new.createLedgerEntry(curEntryOwner, curEntry.ccys, curEntry.spot_sumQtyMinted, curEntry.spot_sumQtyBurned, 1);
 
             // set ledger ccy fees
-            for (p of curCcys.ccyTypes) await stmStFeesFacet_new.setFee_CcyType(1, p.id, curEntryOwner, (await stmStFeesFacet_curr.getFee(CONST.getFeeType.CCY, 1, p.id, curEntryOwner)));
+            for (p of curCcys.ccyTypes) await stmStFeesFacet_new.setFee_CcyType(1, p.id, curEntryOwner, (await stmStFeesFacet_curr.getFee(CONST.getFeeType.CCY, 0, p.id, curEntryOwner)));
 
             // set ledger spot token fees
-            for (p of curToks.tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT)) await stmStFeesFacet_new.setFee_TokType(1, p.id, curEntryOwner, (await stmStFeesFacet_curr.getFee(CONST.getFeeType.TOK, 1, p.id, curEntryOwner)));
+            for (p of curToks.tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT)) await stmStFeesFacet_new.setFee_TokType(1, p.id, curEntryOwner, (await stmStFeesFacet_curr.getFee(CONST.getFeeType.TOK, 0, p.id, curEntryOwner)));
 
             // set ledger futures overrides (init-margin & fee-per-contract)
             // for (p of curToks.tokenTypes.filter(p => p.settlementType == CONST.settlementType.FUTURE))
