@@ -23,7 +23,7 @@ module.exports = {
         } = a;
 
         // create an entity
-        await StErc20Facet.createEntity({id: 1, addr: CONST.nullAddr});
+        await StErc20Facet.createEntity({id: 1, addr: CONST.testAddr99});
 
         // setup default currencies and spot token types
         if (await stmStMaster.getContractType() == CONST.contractType.COMMODITY) {

@@ -28,6 +28,7 @@ library Erc20Lib {
 		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
 
 		require(entityId > 0, 'createEntity: invalid entity id');
+		require(transferOrTradeFeesOwner != address(0), 'createEntity: invalid fee owner address');
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		require(!s.entityExists[entityId], 'createEntity: entity already exists');
 
@@ -52,6 +53,7 @@ library Erc20Lib {
 		address transferOrTradeFeesOwner = entityIdWithAddr.addr;
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		require(transferOrTradeFeesOwner != address(0), 'updateEntity: invalid fee owner address');
 		require(s.entityExists[entityId], 'updateEntity: entity does not exist');
 		require(s.feeAddrPerEntity[entityId] != transferOrTradeFeesOwner, "updateEntity: trying to update with the same value");
 

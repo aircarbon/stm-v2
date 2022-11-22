@@ -69,11 +69,11 @@ contract("DiamondProxy", accounts => {
 
         // set fee structure NATURE: 2 TONS carbon fixed
         const carbonTokQtyFixedFee = 2;
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == 0, 'unexpected NATURE fixed TONS fee before setting NATURE fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == 0, 'unexpected NATURE fixed TONS fee before setting NATURE fee structure');
         const setFeeTx = await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: carbonTokQtyFixedFee, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         truffleAssert.eventEmitted(setFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T2 && ev.fee_tokenQty_Fixed == carbonTokQtyFixedFee && ev.ledgerOwner == CONST.nullAddr);
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == carbonTokQtyFixedFee, 'unexpected NATURE fixed TONS fee after setting NATURE fee structure');
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, CONST.tokenType.TOK_T1, CONST.nullAddr)).fee_fixed == 0, 'unexpected CORSIA fixed TONS fee after setting NATURE fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == carbonTokQtyFixedFee, 'unexpected NATURE fixed TONS fee after setting NATURE fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T1, CONST.nullAddr)).fee_fixed == 0, 'unexpected CORSIA fixed TONS fee after setting NATURE fee structure');
 
         // transfer, with fee structure applied
         const carbonTokQtyTransferAmount = 750;
@@ -108,8 +108,8 @@ contract("DiamondProxy", accounts => {
         const setUnfccFeeTx = await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T1, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: unfccFixedFee, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         const setVcsFeeTx = await stmStFeesFacet.setFee_TokType(1, CONST.tokenType.TOK_T2, CONST.nullAddr,   { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0,             fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         truffleAssert.eventEmitted(setUnfccFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == CONST.tokenType.TOK_T1 && ev.fee_tokenQty_Fixed == unfccFixedFee && ev.ledgerOwner == CONST.nullAddr);
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, CONST.tokenType.TOK_T1, CONST.nullAddr)).fee_fixed == unfccFixedFee, 'unexpected CORSIA fixed TONS fee after setting CORSIA fee structure');
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == 0, 'unexpected NATURE fixed TONS fee after setting CORSIA fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T1, CONST.nullAddr)).fee_fixed == unfccFixedFee, 'unexpected CORSIA fixed TONS fee after setting CORSIA fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, CONST.tokenType.TOK_T2, CONST.nullAddr)).fee_fixed == 0, 'unexpected NATURE fixed TONS fee after setting CORSIA fee structure');
 
         // transfer, with fee structure applied
         const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
@@ -146,7 +146,7 @@ contract("DiamondProxy", accounts => {
         const newSecTokenTypeFixedFee = 1500;
         const setFeeTx = await stmStFeesFacet.setFee_TokType(1, newSectokTypeId, CONST.nullAddr, { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: newSecTokenTypeFixedFee, fee_percBips: 0, fee_min: 0, fee_max: 0 } );
         truffleAssert.eventEmitted(setFeeTx, 'SetFeeTokFix', ev => ev.tokTypeId == newSectokTypeId && ev.fee_tokenQty_Fixed == newSecTokenTypeFixedFee && ev.ledgerOwner == CONST.nullAddr);
-        assert((await stmStFeesFacet.getFee(1, CONST.getFeeType.TOK, newSectokTypeId, CONST.nullAddr)).fee_fixed == newSecTokenTypeFixedFee, 'unexpected new ST type fixed TONS fee after setting fee structure');
+        assert((await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, newSectokTypeId, CONST.nullAddr)).fee_fixed == newSecTokenTypeFixedFee, 'unexpected new ST type fixed TONS fee after setting fee structure');
 
         // transfer, with fee structure applied
         const data = await transferHelper.transferLedger({ stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts, 
@@ -445,4 +445,8 @@ contract("DiamondProxy", accounts => {
         }
         assert.fail('expected contract exception');
     })
+
+    it(`fees - should fail to get fees when both entity id and user address are provided`, async () => {
+        await CONST.expectRevertFromCall(stmStFeesFacet.getFee, [CONST.getFeeType.CCY, 1, CONST.ccyType.USD, CONST.testAddr1], 'getFee: either entity id or owner address should be passed');
+    });
 });

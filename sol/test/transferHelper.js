@@ -61,7 +61,7 @@ module.exports = {
         var fee_ccy_A = 0;
         if (ccy_amount_A > 0 && applyFees && ledger_A != feeOwnerAddr) { // fees not applied by contract if fee-sender == fee-receiver
             const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_A, CONST.nullAddr);
-            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_A, ledger_A);
+            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_A, ledger_A);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips); 
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -79,7 +79,7 @@ module.exports = {
         var fee_ccy_B = 0;
         if (ccy_amount_B > 0 && applyFees && ledger_B != feeOwnerAddr) { // fees not applied by contract if fee-sender == fee-receiver
             const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_B, CONST.nullAddr);
-            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_B, ledger_B);
+            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_B, ledger_B);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips);
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -494,7 +494,7 @@ module.exports = {
         // validate originator token fees are moved
         originatorFeeData.forEach(p => {
           const allOriginatorFeesPaidToLedger_A = Big(originatorFeeData.filter(p2 => p2.fee_to == p.fee_to_A).map(p2 => p2.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0)));
-          const allOriginatorFeesPaidToLedger_B = Big(originatorFeeData.filter(p2 => p2.fee_to == p.fee_to_B).map(p2 => p2.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0)));
+          const allOriginatorFeesPaidToLedger_B = Big(originatorFeeData.filter(p2 => p2.fee_to == p.fee_to_B).map(p2 => p2.fee_tok_B).reduce((a,b) => Big(a).plus(Big(b)), Big(0)));
 
         //   console.log(`   p.ledgerBefore.spot_sumQty ${p.fee_to}`, p.ledgerBefore.spot_sumQty.toString());
         //   console.log(`    p.ledgerAfter.spot_sumQty ${p.fee_to}`, p.ledgerAfter.spot_sumQty.toString());
@@ -726,8 +726,9 @@ async function transferWrapped({
             ccy_amount_A: ccy_amount_A.toString(), ccyTypeId_A, 
             ccy_amount_B: ccy_amount_B.toString(), ccyTypeId_B, 
                applyFees,
-            feeAddrOwner_A: feeOwnerAddr,
-            feeAddrOwner_B: feeOwnerAddr,
+            // feeAddrOwner_A and feeAddrOwner_B are dummy fields, they are overriden in the contract anyway
+            feeAddrOwner_A: CONST.nullAddr,
+            feeAddrOwner_B: CONST.nullAddr,
                k_stIds_A: k_stIds_A || [],
                k_stIds_B: k_stIds_B || [],
             transferType: transferType || CONST.transferType.UNDEFINED, // TODO: add new variable from the transferArgs here

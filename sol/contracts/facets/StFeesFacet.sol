@@ -21,8 +21,9 @@ contract StFeesFacet {
 		uint256 typeId,
 		address ledgerOwner
 	) external view returns (StructLib.SetFeeArgs memory fee) {
-		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		require(!(entityId > 0 && ledgerOwner != address(0)), "getFee: either entity id or owner address should be passed");
 
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
 		StructLib.FeeStruct storage fs;
 
 		if(ledgerOwner == address(0x0)) {

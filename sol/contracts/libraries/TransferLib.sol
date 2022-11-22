@@ -461,6 +461,8 @@ library TransferLib {
 
 			if(a.applyFees) {
 				if (exFees.fee_ccy_A > 0) {
+					// If the custom fee is applied and a user (who makes only a token transfer) 
+					// should pay a fee, he will pay it in the receiving currency
 					uint ccyTypeId = customFee.applyCustomFee && a.ccyTypeId_A == 0 ? a.ccyTypeId_B : a.ccyTypeId_A;
 					// exchange fee transfer from A
 					StructLib.transferCcy(
@@ -476,6 +478,8 @@ library TransferLib {
 				}
 	
 				if (exFees.fee_ccy_B > 0) {
+					// If the custom fee is applied and a user (who makes only a token transfer) 
+					// should pay a fee, he will pay it in the receiving currency
 					uint ccyTypeId = customFee.applyCustomFee && a.ccyTypeId_B == 0 ? a.ccyTypeId_A : a.ccyTypeId_B;
 					// exchange fee transfer from B
 					StructLib.transferCcy(

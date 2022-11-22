@@ -46,11 +46,8 @@ contract("DiamondProxy", accounts => {
         assert(event.feeOwner == CONST.testAddr2, 'Unexpected fee owner address');
     });
 
-    it(`should be able to create entity with zero fee owner address`, async () => {
-        const tx = await stm.createEntity({id: CONST.testId5, addr: CONST.nullAddr});
-        const event = CONST.getEvent(tx, 'EntityCreated');
-        assert(event.entityId.toNumber() == CONST.testId5, 'Unexpected entity id');
-        assert(event.feeOwner == CONST.nullAddr, 'Unexpected fee owner address');
+    it(`should fail to create entity with zero fee owner address`, async () => {
+        await CONST.expectRevert(stm.createEntity, [{id: CONST.testId5, addr: CONST.nullAddr}], 'createEntity: invalid fee owner address');
     });
 
     it(`should fail to create entity with a zero entity id`, async () => {
@@ -66,7 +63,6 @@ contract("DiamondProxy", accounts => {
     });
 
     // createEntityBatch()
-    // TODO: change later in the smart contract
     it(`Transaction should fail with an empty array`, async () => {
         await CONST.expectRevert(stm.createEntityBatch, [[]], 'createEntityBatch: empty args array passed');
     });
@@ -99,15 +95,12 @@ contract("DiamondProxy", accounts => {
         assert(events[1].feeOwner == CONST.testAddr7, 'Unexpected fee owner address');
     });
 
-    it(`should be able to create entity batch with zero address fee owner`, async () => {
-        const tx = await stm.createEntityBatch([{id: CONST.testId8, addr: CONST.testAddr8}, {id: CONST.testId9, addr: CONST.nullAddr}]);
-        const events = CONST.getEvents(tx, 'EntityCreated');
-
-        assert(events.length == 2, 'Unexpected number of events');
-        assert(events[0].entityId.toNumber() == CONST.testId8, 'Unexpected entity id');
-        assert(events[0].feeOwner == CONST.testAddr8, 'Unexpected fee owner address');
-        assert(events[1].entityId.toNumber() == CONST.testId9, 'Unexpected entity id');
-        assert(events[1].feeOwner == CONST.nullAddr, 'Unexpected fee owner address');
+    it(`should fail to create entity batch with zero address fee owner`, async () => {
+        await CONST.expectRevert(
+            stm.createEntityBatch, 
+            [
+                [{id: CONST.testId8, addr: CONST.testAddr8}, {id: CONST.testId9, addr: CONST.nullAddr}],
+            ], 'createEntity: invalid fee owner address');
     });
 
     it(`should be able to create entity batch with already used fee owner address`, async () => {
@@ -152,11 +145,8 @@ contract("DiamondProxy", accounts => {
         assert(event.feeOwner == CONST.testAddr3, 'Unexpected fee owner address');
     });
 
-    it(`should be able to update entity with zero address fee owner address`, async () => {
-        const tx = await stm.updateEntity({id: CONST.testId1, addr: CONST.nullAddr});
-        const event = CONST.getEvent(tx, 'EntityUpdated');
-        assert(event.entityId.toNumber() == CONST.testId1, 'Unexpected entity id');
-        assert(event.feeOwner == CONST.nullAddr, 'Unexpected fee owner address');
+    it(`should fail to update entity with zero address fee owner address`, async () => {
+        await CONST.expectRevert(stm.updateEntity, [{id: CONST.testId1, addr: CONST.nullAddr}], 'updateEntity: invalid fee owner address');
     });
 
     // updateEntityBatch()
@@ -203,15 +193,8 @@ contract("DiamondProxy", accounts => {
         await CONST.expectRevert(stm.updateEntityBatch, [[{id: CONST.testId1, addr: CONST.testAddr5}, {id: CONST.testId2, addr: CONST.testAddr6}]], 'updateEntity: trying to update with the same value');
     });
 
-    it(`should be able to update entity batch with a zero fee owner address`, async () => {
-        const tx = await stm.updateEntityBatch([{id: CONST.testId1, addr: CONST.testAddr7}, {id: CONST.testId2, addr: CONST.nullAddr}]);
-        const events = CONST.getEvents(tx, 'EntityUpdated');
-
-        assert(events.length == 2, 'Unexpected number of EntityUpdated events');
-        assert(events[0].entityId.toNumber() == CONST.testId1, 'Unexpected entity id');
-        assert(events[0].feeOwner == CONST.testAddr7, 'Unexpected fee owner address');
-        assert(events[1].entityId.toNumber() == CONST.testId2, 'Unexpected entity id');
-        assert(events[1].feeOwner == CONST.nullAddr, 'Unexpected fee owner address');
+    it(`should fail to update entity batch with a zero fee owner address`, async () => {
+        await CONST.expectRevert(stm.updateEntityBatch, [[{id: CONST.testId1, addr: CONST.testAddr7}, {id: CONST.testId2, addr: CONST.nullAddr}]], 'updateEntity: invalid fee owner address');
     });
 
     // entityExists()
@@ -233,13 +216,10 @@ contract("DiamondProxy", accounts => {
         assert(allEntities[0] == '1', 'Unexpected entity id of existing entities');
         assert(allEntities[1] == '2', 'Unexpected entity id of existing entities');
         assert(allEntities[2] == '3', 'Unexpected entity id of existing entities');
-        assert(allEntities[3] == '5', 'Unexpected entity id of existing entities');
-        assert(allEntities[4] == '6', 'Unexpected entity id of existing entities');
-        assert(allEntities[5] == '7', 'Unexpected entity id of existing entities');
-        assert(allEntities[6] == '8', 'Unexpected entity id of existing entities');
-        assert(allEntities[7] == '9', 'Unexpected entity id of existing entities');
-        assert(allEntities[8] == '10', 'Unexpected entity id of existing entities');
-        assert(allEntities[9] == '11', 'Unexpected entity id of existing entities');
+        assert(allEntities[3] == '6', 'Unexpected entity id of existing entities');
+        assert(allEntities[4] == '7', 'Unexpected entity id of existing entities');
+        assert(allEntities[5] == '10', 'Unexpected entity id of existing entities');
+        assert(allEntities[6] == '11', 'Unexpected entity id of existing entities');
     });
 
     it(`list of entities should be updated after new entity is created`, async () => {
@@ -248,14 +228,11 @@ contract("DiamondProxy", accounts => {
         assert(allEntities[0] == '1', 'Unexpected entity id of existing entities');
         assert(allEntities[1] == '2', 'Unexpected entity id of existing entities');
         assert(allEntities[2] == '3', 'Unexpected entity id of existing entities');
-        assert(allEntities[3] == '5', 'Unexpected entity id of existing entities');
-        assert(allEntities[4] == '6', 'Unexpected entity id of existing entities');
-        assert(allEntities[5] == '7', 'Unexpected entity id of existing entities');
-        assert(allEntities[6] == '8', 'Unexpected entity id of existing entities');
-        assert(allEntities[7] == '9', 'Unexpected entity id of existing entities');
-        assert(allEntities[8] == '10', 'Unexpected entity id of existing entities');
-        assert(allEntities[9] == '11', 'Unexpected entity id of existing entities');
-        assert(allEntities[10] == '666', 'Unexpected entity id of existing entities');
+        assert(allEntities[3] == '6', 'Unexpected entity id of existing entities');
+        assert(allEntities[4] == '7', 'Unexpected entity id of existing entities');
+        assert(allEntities[5] == '10', 'Unexpected entity id of existing entities');
+        assert(allEntities[6] == '11', 'Unexpected entity id of existing entities');
+        assert(allEntities[7] == '666', 'Unexpected entity id of existing entities');
     });
 
     // getEntityFeeOwner()
@@ -268,11 +245,7 @@ contract("DiamondProxy", accounts => {
     });
 
     it(`should successfully get entity fee owner`, async () => {
-        assert((await stm.getEntityFeeOwner(CONST.testId1)) == CONST.testAddr7, 'unexpected fee owner address');
-    });
-
-    it(`should successfully get entity fee owner with zero address`, async () => {
-        assert((await stm.getEntityFeeOwner(CONST.testId2)) == CONST.nullAddr, 'unexpected fee owner address');
+        assert((await stm.getEntityFeeOwner(CONST.testId1)) == CONST.testAddr5, 'unexpected fee owner address');
     });
 
     // getAllEntitiesWithFeeOwners()
@@ -285,27 +258,21 @@ contract("DiamondProxy", accounts => {
         });
 
         assert(allEntitiesWithFeeOwners[0].id == '1', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[0].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[0].addr == CONST.testAddr5, 'Unexpected address id of existing entities');
         assert(allEntitiesWithFeeOwners[1].id == '2', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[1].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[1].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
         assert(allEntitiesWithFeeOwners[2].id == '3', 'Unexpected entity id of existing entities');
         assert(allEntitiesWithFeeOwners[2].addr == CONST.testAddr2, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[3].id == '5', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[3].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[4].id == '6', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[4].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[5].id == '7', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[5].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[6].id == '8', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[6].addr == CONST.testAddr8, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[7].id == '9', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[7].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[8].id == '10', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[8].addr == CONST.testAddr10, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[9].id == '11', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[9].addr == CONST.testAddr1, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[10].id == '666', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[10].addr == CONST.testAddr2, 'Unexpected address of existing entities');
+        assert(allEntitiesWithFeeOwners[3].id == '6', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[3].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[4].id == '7', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[4].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[5].id == '10', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[5].addr == CONST.testAddr10, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[6].id == '11', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[6].addr == CONST.testAddr1, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[7].id == '666', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[7].addr == CONST.testAddr2, 'Unexpected address of existing entities');
     });
 
     it(`should update all entities with fee owners after another entity is created`, async () => {
@@ -319,29 +286,23 @@ contract("DiamondProxy", accounts => {
         });
 
         assert(allEntitiesWithFeeOwners[0].id == '1', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[0].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[0].addr == CONST.testAddr5, 'Unexpected address id of existing entities');
         assert(allEntitiesWithFeeOwners[1].id == '2', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[1].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[1].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
         assert(allEntitiesWithFeeOwners[2].id == '3', 'Unexpected entity id of existing entities');
         assert(allEntitiesWithFeeOwners[2].addr == CONST.testAddr2, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[3].id == '5', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[3].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[4].id == '6', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[4].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[5].id == '7', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[5].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[6].id == '8', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[6].addr == CONST.testAddr8, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[7].id == '9', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[7].addr == CONST.nullAddr, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[8].id == '10', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[8].addr == CONST.testAddr10, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[9].id == '11', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[9].addr == CONST.testAddr1, 'Unexpected address id of existing entities');
-        assert(allEntitiesWithFeeOwners[10].id == '666', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[10].addr == CONST.testAddr2, 'Unexpected address of existing entities');
-        assert(allEntitiesWithFeeOwners[11].id == '777', 'Unexpected entity id of existing entities');
-        assert(allEntitiesWithFeeOwners[11].addr == CONST.testAddr3, 'Unexpected address of existing entities');
+        assert(allEntitiesWithFeeOwners[3].id == '6', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[3].addr == CONST.testAddr6, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[4].id == '7', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[4].addr == CONST.testAddr7, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[5].id == '10', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[5].addr == CONST.testAddr10, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[6].id == '11', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[6].addr == CONST.testAddr1, 'Unexpected address id of existing entities');
+        assert(allEntitiesWithFeeOwners[7].id == '666', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[7].addr == CONST.testAddr2, 'Unexpected address of existing entities');
+        assert(allEntitiesWithFeeOwners[8].id == '777', 'Unexpected entity id of existing entities');
+        assert(allEntitiesWithFeeOwners[8].addr == CONST.testAddr3, 'Unexpected address of existing entities');
     });
 
     let whitelisted;
@@ -371,7 +332,7 @@ contract("DiamondProxy", accounts => {
         await CONST.expectRevert(stm.setAccountEntity, [{id: CONST.testId1, addr: CONST.testAddr10}], 'setAccountEntity: address is not white listed');
     });
 
-    it(`should successfully entity for an account`, async () => {
+    it(`should successfully set entity for an account`, async () => {
         const tx = await stm.setAccountEntity({id: CONST.testId1, addr: whitelisted[0]});
         const event = CONST.getEvent(tx, 'EntityAssignedForAccount');
         assert(event.entityId.toNumber() == CONST.testId1, 'Unexpected entity id');
