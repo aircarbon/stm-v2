@@ -12,7 +12,8 @@ const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
 contract("DiamondProxy", accounts => {
-    var stm;
+    let stm;
+    let stmStLedger;
 
     before(async function () {
         const contract = await st.deployed();
@@ -20,11 +21,11 @@ contract("DiamondProxy", accounts => {
         const addr = contract.address;
         stm = await StErc20Facet.at(addr);
         const stmStMaster = await StMasterFacet.at(addr);
-        const stmStLedger = await StLedgerFacet.at(addr);
+        stmStLedger = await StLedgerFacet.at(addr);
         const stmCcyCollateralizable = await CcyCollateralizableFacet.at(addr);
         const stmFees = await StFeesFacet.at(addr);
 
-        await stm.whitelistMany([CONST.testAddr1, CONST.testAddr2, CONST.testAddr3, CONST.testAddr4]);
+        await stm.whitelistMany([CONST.testAddr1, CONST.testAddr2, CONST.testAddr3, CONST.testAddr4, CONST.testAddr5, CONST.testAddr6, CONST.testAddr7]);
         if (await stmStMaster.getContractType() != CONST.contractType.COMMODITY) this.skip();
         await stmStMaster.sealContract();
         await setupHelper.setDefaults({ StErc20Facet: stm, stmStMaster, stmStLedger, stmCcyCollateralizable, stmFees, accounts });
@@ -391,6 +392,78 @@ contract("DiamondProxy", accounts => {
 
     it(`should fail to set account entity batch for an address for the second time`, async () => {
         await CONST.expectRevert(stm.setAccountEntityBatch, [[{id: CONST.testId1, addr: whitelisted[3]}, {id: CONST.testId3, addr: whitelisted[2]}]], 'setAccountEntity: address is already assigned to an entity');
+    });
+
+    // getEntityAddresses()
+    it(`should be able to get the list of all addresses for entity 1 and 2`, async () => {
+        let entityAddresses = await stmStLedger.getEntityAddresses(1);
+        assert(entityAddresses[0] == CONST.testAddr1, 'Unexpected address from entity 1');
+        assert(entityAddresses[1] == CONST.testAddr2, 'Unexpected address from entity 1');
+
+        entityAddresses = await stmStLedger.getEntityAddresses(2);
+        assert(entityAddresses[0] == CONST.testAddr3, 'Unexpected address from entity 2');
+    });
+
+    it(`should be able to get the list of all addresses after adding new address`, async () => {
+        await stm.setAccountEntity({id: CONST.testId1, addr: whitelisted[4]});
+
+        let entityAddresses = await stmStLedger.getEntityAddresses(1);
+        assert(entityAddresses[0] == CONST.testAddr1, 'Unexpected address from entity 1');
+        assert(entityAddresses[1] == CONST.testAddr2, 'Unexpected address from entity 1');
+        assert(entityAddresses[2] == whitelisted[4], 'Unexpected address from entity 1');
+    });
+
+    it(`should fail to get entity addresses from zero entity id`, async () => {
+        await CONST.expectRevertFromCall(stmStLedger.getEntityAddresses, [0], 'Entity does not exist');
+    });
+
+    it(`should fail to get entity addresses from non-existing entity`, async () => {
+        await CONST.expectRevertFromCall(stmStLedger.getEntityAddresses, [999], 'Entity does not exist');
+    });
+
+    // getAccountEntity()
+    it(`should be able to get account entity for assigned addresses`, async () => {
+        assert((await stmStLedger.getAccountEntity(CONST.testAddr1)).toNumber() === CONST.testId1, 'Unexpected entity id');
+        assert((await stmStLedger.getAccountEntity(CONST.testAddr2)).toNumber() === CONST.testId1, 'Unexpected entity id');
+        assert((await stmStLedger.getAccountEntity(whitelisted[2])).toNumber() === CONST.testId2, 'Unexpected entity id');
+    });
+
+    it(`should be able to get account entity for non-whitelisted address`, async () => {
+        const entityId = (await stmStLedger.getAccountEntity(CONST.testAddr10)).toNumber();
+        assert(entityId === 0, 'Unexpected entity id');
+    });
+
+    it(`should be able to get account entity for an address with no entity assigned`, async () => {
+        const entityId = (await stmStLedger.getAccountEntity(CONST.testAddr7)).toNumber();
+        assert(entityId === 0, 'Unexpected entity id');
+    });
+
+    it(`should fail to get account entity for zero address`, async () => {
+        await CONST.expectRevertFromCall(stmStLedger.getAccountEntity, [CONST.nullAddr], 'getEntity: invalid address');
+    });
+
+    // getAccountEntityBatch()
+    it(`should be able to get account entity batch for assigned addresses`, async () => {
+        const results = (await stmStLedger.getAccountEntityBatch([CONST.testAddr1, CONST.testAddr2, whitelisted[2]])).map(u => u.toNumber());
+        assert(results[0] === CONST.testId1, 'Unexpected entity id');
+        assert(results[1] === CONST.testId1, 'Unexpected entity id');
+        assert(results[2] === CONST.testId2, 'Unexpected entity id');
+    });
+
+    it(`should be able to get account entity for non-whitelisted address`, async () => {
+        const results = (await stmStLedger.getAccountEntityBatch([CONST.testAddr10, CONST.testAddr2])).map(u => u.toNumber());
+        assert(results[0] === 0, 'Unexpected entity id');
+        assert(results[1] === CONST.testId1, 'Unexpected entity id');
+    });
+
+    it(`should be able to get account entity for an address with no entity assigned`, async () => {
+        const results = (await stmStLedger.getAccountEntityBatch([CONST.testAddr7, CONST.testAddr2])).map(u => u.toNumber());
+        assert(results[0] === 0, 'Unexpected entity id');
+        assert(results[1] === CONST.testId1, 'Unexpected entity id');
+    });
+
+    it(`should fail to get account entity for zero address`, async () => {
+        await CONST.expectRevertFromCall(stmStLedger.getAccountEntityBatch, [[CONST.nullAddr, CONST.testAddr2]], 'getEntity: invalid address');
     });
 
 });
