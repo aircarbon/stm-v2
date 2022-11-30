@@ -39,7 +39,7 @@ module.exports = {
             // creating entity
             const LOCAL_ENTITY_ID = 4;
             if(!await CONST.web3_call('entityExists', [LOCAL_ENTITY_ID], nameOverride)) {
-                await CONST.web3_tx('createEntity', [ {id: LOCAL_ENTITY_ID, addr: CONST.nullAddr} ], O.addr, O.privKey, nameOverride);
+                await CONST.web3_tx('createEntity', [ {id: LOCAL_ENTITY_ID, addr: CONST.testAddr99} ], O.addr, O.privKey, nameOverride);
             }
 
             const usdFee = (await CONST.web3_call('getFee', [CONST.getFeeType.CCY, LOCAL_ENTITY_ID, CONST.ccyType.USD, CONST.nullAddr], nameOverride, undefined/*addrOverride*/, O.addr));

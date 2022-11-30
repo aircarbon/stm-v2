@@ -121,8 +121,8 @@ contract("DiamondProxy", accounts => {
         //console.log('qty_B', qty_B.toString());
 
         // TEST - contract owner has received exchange fees
-        const owner_balBefore = data.owner_before.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.owner_after.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         //console.log('owner_balBefore', owner_balBefore.toString());
         //console.log('owner_balAfter', owner_balAfter.toString());
         //console.log('data.exchangeFee_tok_A', data.exchangeFee_tok_A.toString());

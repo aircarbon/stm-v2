@@ -25,11 +25,25 @@ module.exports = {
         // ledger entries before
         var ledgerA_before, ledgerA_after;
         var ledgerB_before, ledgerB_after;
-        var owner_before, owner_after;
-        const feeOwnerAddr = await stmStErc20Facet.getEntityFeeOwner(1);
+        var feeOwnerLedgerForA_before, feeOwnerLedgerForB_before, feeOwnerLedgerForA_after, feeOwnerLedgerForB_after;
+        const whitelisted = await stmStErc20Facet.getWhitelist();
+
+        const ledgerA_Whitelisted = whitelisted.includes(ledger_A);
+        const ledgerB_Whitelisted = whitelisted.includes(ledger_B);
+
+        // const feeOwnerAddr = await stmStErc20Facet.getEntityFeeOwner(1);
+        const entityIdOfLedgerA = ledgerA_Whitelisted ? (await stmStLedgerFacet.getAccountEntity(ledger_A)).toNumber() : -1;
+        const entityIdOfLedgerB = ledgerB_Whitelisted ? (await stmStLedgerFacet.getAccountEntity(ledger_B)).toNumber() : -1;
+        const feeOwnerAddr_A = ledgerA_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerA) : undefined;
+        const feeOwnerAddr_B = ledgerB_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerB) : undefined;
+
+        const sameFeeOwner = feeOwnerAddr_A === feeOwnerAddr_B;
+
         ledgerA_before = await stmStLedgerFacet.getLedgerEntry(ledger_A);
         ledgerB_before = await stmStLedgerFacet.getLedgerEntry(ledger_B);
-        owner_before = await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr);
+
+        feeOwnerLedgerForA_before = ledgerA_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_A) : undefined;
+        feeOwnerLedgerForB_before = ledgerB_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_B) : undefined;
         
         // global totals: transferred before
         //var totalTokQty_tfd_before, totalTokQty_tfd_after;
@@ -59,7 +73,7 @@ module.exports = {
         
         // expected currency fees paid by A and B - (ledger fees >0 overrides global fees)
         var fee_ccy_A = 0;
-        if (ccy_amount_A > 0 && applyFees && ledger_A != feeOwnerAddr) { // fees not applied by contract if fee-sender == fee-receiver
+        if (ccy_amount_A > 0 && applyFees && ledger_A != feeOwnerAddr_A) { // fees not applied by contract if fee-sender == fee-receiver
             const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_A, CONST.nullAddr);
             const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_A, ledger_A);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
@@ -77,7 +91,7 @@ module.exports = {
         }
 
         var fee_ccy_B = 0;
-        if (ccy_amount_B > 0 && applyFees && ledger_B != feeOwnerAddr) { // fees not applied by contract if fee-sender == fee-receiver
+        if (ccy_amount_B > 0 && applyFees && ledger_B != feeOwnerAddr_B) { // fees not applied by contract if fee-sender == fee-receiver
             const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_B, CONST.nullAddr);
             const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_B, ledger_B);
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
@@ -102,8 +116,8 @@ module.exports = {
             ccy_amount_A: ccy_amount_A.toString(),    ccyTypeId_A, 
             ccy_amount_B: ccy_amount_B.toString(),    ccyTypeId_B, 
                applyFees,
-               feeAddrOwner_A: feeOwnerAddr,
-               feeAddrOwner_B: feeOwnerAddr,
+               feeAddrOwner_A: ledgerA_Whitelisted ? feeOwnerAddr_A : CONST.nullAddr,
+               feeAddrOwner_B: ledgerB_Whitelisted ? feeOwnerAddr_B : CONST.nullAddr,
                k_stIds_A: k_stIds_A || [],
                k_stIds_B: k_stIds_B || [],
             transferType: transferType || CONST.transferType.UNDEFINED,
@@ -150,7 +164,6 @@ module.exports = {
                 ccy_amount_A, ccyTypeId_A, 
                 ccy_amount_B, ccyTypeId_B, 
                    applyFees,
-                   feeOwnerAddr,
                    k_stIds_A: k_stIds_A || [],
                    k_stIds_B: k_stIds_B || [],
                 transferType: transferType || CONST.transferType.UNDEFINED,
@@ -173,7 +186,8 @@ module.exports = {
         // ledger entries after
         ledgerA_after = await stmStLedgerFacet.getLedgerEntry(ledger_A);
         ledgerB_after = await stmStLedgerFacet.getLedgerEntry(ledger_B);
-        owner_after = await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr);
+        feeOwnerLedgerForA_after = ledgerA_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_A) : undefined;
+        feeOwnerLedgerForB_after = ledgerB_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_B) : undefined;
 
         for (let i = 0; i < originatorFeeData.length; i++) {
             originatorFeeData[i].ledgerAfter_A = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_A);
@@ -313,8 +327,8 @@ module.exports = {
                 (ccy_amount_A > 0 && ev.from == ledger_A && ev.to == ledger_B && ev.ccyTypeId == ccyTypeId_A && ev.amount.eq(new BN(ccy_amount_A)))
              || (ccy_amount_B > 0 && ev.from == ledger_B && ev.to == ledger_A && ev.ccyTypeId == ccyTypeId_B && ev.amount.eq(new BN(ccy_amount_B)))
                 // exchange fee transfer events
-             || (ccy_amount_A > 0 && ev.from == ledger_A && ev.to == feeOwnerAddr && ev.ccyTypeId == ccyTypeId_A)
-             || (ccy_amount_B > 0 && ev.from == ledger_B && ev.to == feeOwnerAddr && ev.ccyTypeId == ccyTypeId_B)
+             || (ccy_amount_A > 0 && ev.from == ledger_A && ev.to == feeOwnerAddr_A && ev.ccyTypeId == ccyTypeId_A)
+             || (ccy_amount_B > 0 && ev.from == ledger_B && ev.to == feeOwnerAddr_B && ev.ccyTypeId == ccyTypeId_B)
                 );
             });
         }
@@ -412,7 +426,7 @@ module.exports = {
         const tokPartialEvents = [];
         // default exchange fee acc
         // if transfer is to/from system account, no fees should be paid
-        const contractOwnerIsTransfering = ledger_A == feeOwnerAddr || ledger_B == feeOwnerAddr;
+        const contractOwnerIsTransfering = ledger_A == feeOwnerAddr_A || ledger_B == feeOwnerAddr_B;
         if (qty_A > 0 || qty_B > 0) {
             //truffleAssert.prettyPrintEmittedEvents(transferTx);
             
@@ -481,11 +495,13 @@ module.exports = {
             // don't double count sender/receiver and master contract owner, if the contract owner is on one side of the transfer
             assert(Number(ledgerA_before.spot_sumQty) + 
                    Number(ledgerB_before.spot_sumQty) + 
-                   (contractOwnerIsTransfering ? 0 : Number(owner_before.spot_sumQty)) // exchange fee receiver before
+                   (contractOwnerIsTransfering ? 0 : (feeOwnerLedgerForA_before ? Number(feeOwnerLedgerForA_before.spot_sumQty) : 0)) + // exchange fee receiver for A before
+                   (contractOwnerIsTransfering || sameFeeOwner ? 0 : (feeOwnerLedgerForB_before ? Number(feeOwnerLedgerForB_before.spot_sumQty) : 0)) // exchange fee receiver for B before
                    ==
                    Number(ledgerA_after.spot_sumQty)  + 
                    Number(ledgerB_after.spot_sumQty)  + 
-                   (contractOwnerIsTransfering ? 0 : Number(owner_after.spot_sumQty)) + // exchange fee receiver after
+                   (contractOwnerIsTransfering ? 0 : (feeOwnerLedgerForA_after ? Number(feeOwnerLedgerForA_after.spot_sumQty) : 0)) + // exchange fee receiver for A after
+                   (contractOwnerIsTransfering || sameFeeOwner ? 0 : (feeOwnerLedgerForB_after ? Number(feeOwnerLedgerForB_after.spot_sumQty) : 0)) + // exchange fee receiver for B after
                    (contractOwnerIsTransfering ? 0 : originatorFeeData.map(p => p.fee_tok_A).reduce((a,b) => Number(a) + Number(b), Number(0))) + // originator fees paid by A
                    (contractOwnerIsTransfering ? 0 : originatorFeeData.map(p => p.fee_tok_B).reduce((a,b) => Number(a) + Number(b), Number(0)))   // originator fees paid by B
                    , 'unexpected total quantity sum across ledger before vs. after');
@@ -525,7 +541,7 @@ module.exports = {
         min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min); //ledgerFee_Min.gt(0) ? ledgerFee_Min : globalFee_Min;
         max = lf.fee_max > 0 ? Big(lf.fee_max) : Big(gf.fee_max); //ledgerFee_Max.gt(0) ? ledgerFee_Max : globalFee_Max;
         var ex_tokFee_A = 0;
-        if (ledger_A != feeOwnerAddr && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
+        if (ledger_A != feeOwnerAddr_A && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
             ex_tokFee_A = Math.floor(Number(fix) + Number((qty_A / 10000) * Number(bps)));
             if (Big(ex_tokFee_A).gt(max) && max.gt(0)) ex_tokFee_A = max.toFixed();
             if (Big(ex_tokFee_A).lt(min) && min.gt(0)) ex_tokFee_A = min.toFixed();
@@ -548,7 +564,7 @@ module.exports = {
         min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min); //ledgerFee_Min.gt(0) ? ledgerFee_Min : globalFee_Min;
         max = lf.fee_max > 0 ? Big(lf.fee_max) : Big(gf.fee_max); //ledgerFee_Max.gt(0) ? ledgerFee_Max : globalFee_Max;
         var ex_tokFee_B = 0;
-        if (ledger_B != feeOwnerAddr && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
+        if (ledger_B != feeOwnerAddr_B && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
             ex_tokFee_B = Math.floor(Number(fix) + Number((qty_B / 10000) * Number(bps))); 
             if (Big(ex_tokFee_B).gt(max) && max.gt(0)) ex_tokFee_B = max.toFixed();
             if (Big(ex_tokFee_B).lt(min) && min.gt(0)) ex_tokFee_B = min.toFixed();                     
@@ -618,8 +634,25 @@ module.exports = {
         // console.log('owner_before.spot_sumQty', owner_before.spot_sumQty);
         // console.log('       totalqty_AllSecSecTokenTypes_fees', totalqty_AllSecSecTokenTypes_fees);
         if (!contractOwnerIsTransfering) {
-            assert(new BN(owner_after.spot_sumQty).sub(new BN(owner_before.spot_sumQty))
-                    .eq(totalqty_AllSecSecTokenTypes_fees), 'unexpected contract owner (exchange fee receiver) token quantity after transfer');
+            // assert(new BN(owner_after.spot_sumQty).sub(new BN(owner_before.spot_sumQty))
+            //         .eq(totalqty_AllSecSecTokenTypes_fees), 'unexpected contract owner (exchange fee receiver) token quantity after transfer');
+
+            if(ledgerA_Whitelisted !== ledgerB_Whitelisted) {
+                if(ledgerA_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForA_after.spot_sumQty).sub(new BN(feeOwnerLedgerForA_before.spot_sumQty))
+                        .eq(new BN(ex_tokFee_A)), 'unexpected contract owner (exchange fee receiver A) token quantity after transfer');
+                }
+    
+                if(ledgerB_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForB_after.spot_sumQty).sub(new BN(feeOwnerLedgerForB_before.spot_sumQty))
+                        .eq(new BN(ex_tokFee_B)), 'unexpected contract owner (exchange fee receiver B) token quantity after transfer');
+                }
+            } else {
+                if(ledgerA_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForA_after.spot_sumQty).sub(new BN(feeOwnerLedgerForA_before.spot_sumQty))
+                        .eq((new BN(ex_tokFee_A)).add(new BN(ex_tokFee_B))), 'unexpected contract owner (exchange fee receiver A (same as B)) token quantity after transfer');
+                }
+            }
         }
 
         // validate token global totals
@@ -633,7 +666,8 @@ module.exports = {
             tokFullEvents,              tokPartialEvents,
             ledgerA_before,             ledgerA_after,  
             ledgerB_before,             ledgerB_after,
-            owner_before, owner_after,
+            feeOwnerLedgerForA_before, feeOwnerLedgerForB_before, 
+            feeOwnerLedgerForA_after, feeOwnerLedgerForB_after,
             originatorFees_tok_A,       originatorFees_tok_B,
             exchangeFee_tok_A,          exchangeFee_tok_B,
             exchangeFee_ccy_A,          exchangeFee_ccy_B,
@@ -660,7 +694,6 @@ module.exports = {
     ccy_amount_A, ccyTypeId_A, 
     ccy_amount_B, ccyTypeId_B, 
        applyFees,
-    feeOwnerAddr,
     transferType,
     }, from);
     },
@@ -702,7 +735,6 @@ async function transferWrapped({
     ccy_amount_A, ccyTypeId_A,
     ccy_amount_B, ccyTypeId_B,
     applyFees,
-    feeOwnerAddr,
     k_stIds_A,
     k_stIds_B,
     transferType,

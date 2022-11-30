@@ -139,13 +139,13 @@ contract("DiamondProxy", accounts => {
         const M_ledgerAfter = await stmStLedgerFacet.getLedgerEntry(M);
 
         // TEST - contract owner has received exchange fees (tokens + currency)
-        const owner_balVcsBefore = data.owner_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balVcsAfter  =  data.owner_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balVcsBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balVcsAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(data.exchangeFee_tok_A).eq(Big(ledgerFeeTok.fee_fixed)), 'unexpected contract owner token balance after transfer (1)');
         assert(Big(owner_balVcsAfter).eq(Big(owner_balVcsBefore).plus(Big(data.exchangeFee_tok_A))), 'unexpected contract owner token balance after transfer (2)');
         
-        const owner_balEthBefore = data.owner_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH)[0].balance;
-        const owner_balEthAfter  =  data.owner_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH)[0].balance;
+        const owner_balEthBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH)[0].balance;
+        const owner_balEthAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH)[0].balance;
         assert(Big(owner_balEthAfter).eq(Big(owner_balEthBefore).plus(Big(data.exchangeFee_ccy_B))), 'unexpected contract owner currency balance after transfer');
 
         // TEST - originator (M) has received batch fee
@@ -218,12 +218,12 @@ contract("DiamondProxy", accounts => {
         const M_ledgerAfter = await stmStLedgerFacet.getLedgerEntry(M);
 
         // TEST - contract owner has received expected token exchange fees
-        const owner_balBefore = data.owner_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.owner_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(owner_balAfter).eq(Big(owner_balBefore).plus(Big(data.exchangeFee_tok_B))), 'unexpected fee receiver token balance after transfer');
         
-        const owner_balCcyBefore = data.owner_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.USD)[0].balance;
-        const owner_balCcyAfter  =  data.owner_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.USD)[0].balance;
+        const owner_balCcyBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.USD)[0].balance;
+        const owner_balCcyAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.USD)[0].balance;
         assert(Big(owner_balCcyAfter).eq(Big(ledgerFeeCcy.fee_fixed)), 'unexpected contract owner currency balance after transfer (1)');
         assert(Big(owner_balCcyAfter).eq(Big(owner_balCcyBefore).plus(Big(data.exchangeFee_ccy_A))), 'unexpected contract owner currency balance after transfer (2)');
 
@@ -320,8 +320,8 @@ contract("DiamondProxy", accounts => {
         //console.log('feesPreview', data.feesPreview);
 
         // TEST - contract owner has received exchange fee
-        const owner_balBefore = data.owner_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.owner_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(owner_balAfter).eq(Big(owner_balBefore).plus(Big(data.exchangeFee_tok_A))), 'unexpected contract owner token balance after transfer');
         
         // TEST - originators (M[]) have each received their batch fee
@@ -425,8 +425,8 @@ contract("DiamondProxy", accounts => {
         //console.log('feesPreview', data.feesPreview);
 
         // TEST - contract owner has received exchange fee
-        const owner_balBefore = data.owner_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.owner_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T1).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(owner_balAfter).eq(Big(owner_balBefore).plus(Big(data.exchangeFee_tok_B))), 'unexpected contract owner token balance after transfer');
         
         // TEST - originators (M[]) have each received their batch fee
