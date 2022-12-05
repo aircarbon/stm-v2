@@ -32,8 +32,10 @@ module.exports = {
         const ledgerB_Whitelisted = whitelisted.includes(ledger_B);
 
         // const feeOwnerAddr = await stmStErc20Facet.getEntityFeeOwner(1);
-        const entityIdOfLedgerA = ledgerA_Whitelisted ? (await stmStLedgerFacet.getAccountEntity(ledger_A)).toNumber() : -1;
-        const entityIdOfLedgerB = ledgerB_Whitelisted ? (await stmStLedgerFacet.getAccountEntity(ledger_B)).toNumber() : -1;
+        const ledger_A_entityId = (await stmStLedgerFacet.getAccountEntity(ledger_A)).toNumber();
+        const ledger_B_entityId = (await stmStLedgerFacet.getAccountEntity(ledger_B)).toNumber();
+        const entityIdOfLedgerA = ledgerA_Whitelisted ? ledger_A_entityId : -1;
+        const entityIdOfLedgerB = ledgerB_Whitelisted ? ledger_B_entityId : -1;
         const feeOwnerAddr_A = ledgerA_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerA) : undefined;
         const feeOwnerAddr_B = ledgerB_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerB) : undefined;
 
@@ -74,8 +76,8 @@ module.exports = {
         // expected currency fees paid by A and B - (ledger fees >0 overrides global fees)
         var fee_ccy_A = 0;
         if (ccy_amount_A > 0 && applyFees && ledger_A != feeOwnerAddr_A) { // fees not applied by contract if fee-sender == fee-receiver
-            const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_A, CONST.nullAddr);
-            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_A, ledger_A);
+            const gf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ledger_A_entityId, ccyTypeId_A, CONST.nullAddr) : CONST.nullFees;
+            const lf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_A, ledger_A) : CONST.nullFees;
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips); 
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -92,8 +94,8 @@ module.exports = {
 
         var fee_ccy_B = 0;
         if (ccy_amount_B > 0 && applyFees && ledger_B != feeOwnerAddr_B) { // fees not applied by contract if fee-sender == fee-receiver
-            const gf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 1, ccyTypeId_B, CONST.nullAddr);
-            const lf = await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_B, ledger_B);
+            const gf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.CCY, ledger_B_entityId, ccyTypeId_B, CONST.nullAddr) : CONST.nullFees;
+            const lf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.CCY, 0, ccyTypeId_B, ledger_B) : CONST.nullFees;
             const fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed);
             const bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips);
             const min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min);
@@ -526,8 +528,8 @@ module.exports = {
 
         // calculate expected exchange token fees separately from fee preview
         var gf, lf, fix, bps, min, max;
-        gf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, tokTypeId_A, CONST.nullAddr);
-        lf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_A, ledger_A);
+        gf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, entityIdOfLedgerA, tokTypeId_A, CONST.nullAddr) : CONST.nullFees;
+        lf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_A, ledger_A) : CONST.nullFees;
         // globalFee_Fix = Big(await stm.globalFee_tokType_Fix(tokTypeId_A));
         // ledgerFee_Fix = Big(await stm.ledgerFee_tokType_Fix(tokTypeId_A, ledger_A));
         // globalFee_Bps = Big(await stm.globalFee_tokType_Bps(tokTypeId_A));
@@ -549,8 +551,8 @@ module.exports = {
         //console.log('ex_eeuFee_A', ex_eeuFee_A); 
         assert(exchangeFee_tok_A.eq(Big(ex_tokFee_A)), 'unexpected fee preview exchange token fee (A)');
 
-        gf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 1, tokTypeId_B, CONST.nullAddr);
-        lf = await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_B, ledger_B);
+        gf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, entityIdOfLedgerB, tokTypeId_B, CONST.nullAddr) : CONST.nullFees;
+        lf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_B, ledger_B) : CONST.nullFees;
         // globalFee_Fix = Big(await stm.globalFee_tokType_Fix(tokTypeId_B));
         // ledgerFee_Fix = Big(await stm.ledgerFee_tokType_Fix(tokTypeId_B, ledger_B));
         // globalFee_Bps = Big(await stm.globalFee_tokType_Bps(tokTypeId_B));
@@ -637,7 +639,7 @@ module.exports = {
             // assert(new BN(owner_after.spot_sumQty).sub(new BN(owner_before.spot_sumQty))
             //         .eq(totalqty_AllSecSecTokenTypes_fees), 'unexpected contract owner (exchange fee receiver) token quantity after transfer');
 
-            if(ledgerA_Whitelisted !== ledgerB_Whitelisted) {
+            if(feeOwnerAddr_A !== feeOwnerAddr_B) {
                 if(ledgerA_Whitelisted) {
                     assert(new BN(feeOwnerLedgerForA_after.spot_sumQty).sub(new BN(feeOwnerLedgerForA_before.spot_sumQty))
                         .eq(new BN(ex_tokFee_A)), 'unexpected contract owner (exchange fee receiver A) token quantity after transfer');
