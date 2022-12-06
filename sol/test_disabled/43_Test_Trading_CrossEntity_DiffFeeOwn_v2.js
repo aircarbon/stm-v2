@@ -67,7 +67,7 @@ contract("DiamondProxy", accounts => {
     });
 
     // ST FEES
-    it(`fees (fixed) - apply NATURE token fee on a trade (fee on A)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply NATURE token fee on a trade (fee on A)`, async () => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH,        CONST.oneEth_wei,        accounts[global.TaddrNdx + 1],   'TEST', );
 
@@ -102,7 +102,7 @@ contract("DiamondProxy", accounts => {
         assert(ledgerA_VcsTokQtyAfter == Number(ledgerA_VcsTokQtyBefore) - Number(carbonTokQtyFixedFee) - Number(carbonTokQtyTransferAmount), 'unexpected ledger A (fee payer) NATURE ST quantity after transfer');
     });
 
-    it(`fees (fixed) - apply CORSIA token fee on a trade (fee on B)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply CORSIA token fee on a trade (fee on B)`, async () => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH,     CONST.oneEth_wei,        accounts[global.TaddrNdx + 0], 'TEST', );
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
 
@@ -143,7 +143,7 @@ contract("DiamondProxy", accounts => {
         assert(contractOwnerVcsTokQtyAfter == Number(contractOwnerVcsTokQtyBefore), 'unexpected contract owner (fee receiver B) NATURE ST quantity after transfer');
     });
 
-    it(`fees (fixed) - apply large (>1 batch ST size) token fee on a trade on a newly added ST type`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply large (>1 batch ST size) token fee on a trade on a newly added ST type`, async () => {
         await stmStLedgerFacet.addSecTokenType('TEST_EEU_TYPE', CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
         const types = (await stmStLedgerFacet.getSecTokenTypes()).tokenTypes;
         const newSectokTypeId = types.filter(p => p.name == 'TEST_EEU_TYPE')[0].id;
@@ -179,7 +179,7 @@ contract("DiamondProxy", accounts => {
     });
 
     // CCY FEES
-    it(`fees (fixed) - apply ETH ccy fee on a max. trade (fee on A)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply ETH ccy fee on a max. trade (fee on A)`, async () => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.ETH,      CONST.oneEth_wei,              accounts[global.TaddrNdx + 0], 'TEST');
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,  CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
 
@@ -210,7 +210,7 @@ contract("DiamondProxy", accounts => {
         assert(owner_balAfter == Number(owner_balBefore), 'unexpected contract owner (fee receiver B) ETH balance after transfer');
     });
 
-    it(`fees (fixed) - apply USD ccy fee on a max. trade (fee on B)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply USD ccy fee on a max. trade (fee on B)`, async () => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 0], CONST.nullFees, 0, [], [], { from: accounts[0] });
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,        CONST.millionCcy_cents,  accounts[global.TaddrNdx + 1], 'TEST', );
 
@@ -240,7 +240,7 @@ contract("DiamondProxy", accounts => {
         assert(owner_balAfter == Number(owner_balBefore) + Number(usdFeeFixed_cents), 'unexpected contract owner (fee receiver B) USD balance after transfer');
     });
 
-    it(`fees (fixed) - apply ccy fee on a max. trade on a newly added ccy`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply ccy fee on a max. trade on a newly added ccy`, async () => {
         await stmCcyCollateralizableFacet.addCcyType('TEST_CCY_TYPE', 'TEST_UNIT', 2);
         const types = (await stmCcyCollateralizableFacet.getCcyTypes()).ccyTypes;
         const newCcyTypeId = types.filter(p => p.name == 'TEST_CCY_TYPE')[0].id;
@@ -274,7 +274,7 @@ contract("DiamondProxy", accounts => {
     });
 
     // ST + CCY FEES
-    it(`fees (fixed) - apply ETH ccy & NATURE ST fee on a max. trade (fees on both sides)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply ETH ccy & NATURE ST fee on a max. trade (fees on both sides)`, async () => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND,  CONST.ccyType.ETH,       CONST.oneEth_wei,              accounts[global.TaddrNdx + 0], 'TEST', );
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2,    CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
 
@@ -316,7 +316,7 @@ contract("DiamondProxy", accounts => {
         assert(contractOwnerVcsTokQtyAfter == Number(contractOwnerVcsTokQtyBefore) + Number(vcsTokQtyFeeFixed), 'unexpected contract owner (fee receiver B) NATURE ST quantity after transfer');
     });
 
-    it(`fees (fixed) - apply USD ccy & CORSIA ST fee on a max. trade (fees on both sides)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply USD ccy & CORSIA ST fee on a max. trade (fees on both sides)`, async () => {
         await stmCcyCollateralizableFacet.fundOrWithdraw(CONST.fundWithdrawType.FUND, CONST.ccyType.USD,     CONST.millionCcy_cents,        accounts[global.TaddrNdx + 0], 'TEST', );
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.KT_CARBON, 1,      accounts[global.TaddrNdx + 1], CONST.nullFees, 0, [], [], { from: accounts[0] });
 
@@ -358,7 +358,7 @@ contract("DiamondProxy", accounts => {
         assert(contractOwnerVcsTokQtyAfter == Number(contractOwnerVcsTokQtyBefore) + Number(corsiaTokQtyFeeFixed), 'unexpected contract owner (fee receiver B) CORSIA ST quantity after transfer');
     });
 
-    it(`fees (fixed) - apply newly added ccy & newly added ST type fee on a max. trade (fees on both sides)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fixed) - apply newly added ccy & newly added ST type fee on a max. trade (fees on both sides)`, async () => {
         await stmCcyCollateralizableFacet.addCcyType('TEST_CCY_TYPE_2', 'TEST_UNIT', 2);
         const ccyTypes = (await stmCcyCollateralizableFacet.getCcyTypes()).ccyTypes;
         const newCcyTypeId = ccyTypes.filter(p => p.name == 'TEST_CCY_TYPE_2')[0].id;
