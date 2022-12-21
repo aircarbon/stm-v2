@@ -56,7 +56,7 @@ contract("DiamondProxy", accounts => {
             stmFees: stmStFeesFacet,
             accounts});
 
-        await stmStErc20Facet.createEntity({id: CONST.testId2, addr: accounts[0]});
+        await stmStErc20Facet.createEntity({id: CONST.testId2, addr: CONST.testAddr10});
         await stmStErc20Facet.updateEntity({id: 1, addr: accounts[0]});
 
         await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[0]});
@@ -72,7 +72,7 @@ contract("DiamondProxy", accounts => {
 
     // STs: NO FEES IF FEE RECEIVER = FEE SENDER (contract owner or batch originator)
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - global/ledger/originator token fees should not be applied when fee sender is fee receiver (fee on A, contract owner & batch originator)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - global/ledger/originator token fees should not be applied when fee sender is fee receiver (fee on A, contract owner & batch originator)`, async () => {
         const A = accounts[0]; // sender is contract owner, exchange fee receiver, and batch originator fee receiver
         const B = accounts[global.TaddrNdx + 1];
         const allFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 0 };
@@ -103,10 +103,14 @@ contract("DiamondProxy", accounts => {
         });
 
         // contract owner (A) has paid no fees
-        // feeOwnerLedgerForA = feeOwnerLedgerForB
-        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountTokQty)).plus(Big(expectedFeeTokQty))), 'unexpected fee receiver token balance after transfer');
+        // feeOwnerLedgerForA != feeOwnerLedgerForB
+        let owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        let owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountTokQty)).plus(Big(expectedFeeTokQty))), 'unexpected fee receiver A token balance after transfer');
+
+        owner_balBefore = data.feeOwnerLedgerForB_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        owner_balAfter  =  data.feeOwnerLedgerForB_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore)), 'unexpected fee receiver B token balance after transfer');
         
         // receiver (B) has received expected quantity
         const receiver_balBefore = data.ledgerB_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
@@ -114,7 +118,7 @@ contract("DiamondProxy", accounts => {
         assert(Big(receiver_balAfter).eq(Big(receiver_balBefore).plus(Big(transferAmountTokQty))), 'unexpected receiver carbon after transfer');
     });
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - global/ledger/originator token fees should not be applied when fee sender is fee receiver (fee on B, contract owner & batch originator)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - global/ledger/originator token fees should not be applied when fee sender is fee receiver (fee on B, contract owner & batch originator)`, async () => {
         const A = accounts[global.TaddrNdx + 1];
         const B = accounts[0]; // sender is contract owner, exchange fee receiver, and batch originator fee receiver
         const allFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 0 };
@@ -143,10 +147,14 @@ contract("DiamondProxy", accounts => {
         });
 
         // contract owner (B) has paid no fees
-        // feeOwnerLedgerForA = feeOwnerLedgerForB
-        const owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountTokQty)).plus(Big(expectedFeeTokQty))), 'unexpected fee receiver token balance after transfer');
+        // feeOwnerLedgerForA != feeOwnerLedgerForB
+        let owner_balBefore = data.feeOwnerLedgerForB_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        let owner_balAfter  =  data.feeOwnerLedgerForB_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountTokQty)).plus(Big(expectedFeeTokQty))), 'unexpected fee receiver A token balance after transfer');
+
+        owner_balBefore = data.feeOwnerLedgerForA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        owner_balAfter  =  data.feeOwnerLedgerForA_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore)), 'unexpected fee receiver B token balance after transfer');
         
         // receiver (A) has received expected quantity
         const receiver_balBefore = data.ledgerA_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
@@ -154,7 +162,7 @@ contract("DiamondProxy", accounts => {
         assert(Big(receiver_balAfter).eq(Big(receiver_balBefore).plus(Big(transferAmountTokQty))), 'unexpected receiver carbon after transfer');
     });
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - originator token fee should not be applied (global should be) when fee sender is fee receiver (fee on A, batch originator)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - originator token fee should not be applied (global should be) when fee sender is fee receiver (fee on A, batch originator)`, async () => {
         const A = accounts[global.TaddrNdx + 0]; // sender is batch originator 
         const B = accounts[global.TaddrNdx + 1];
         const origFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 2 };
@@ -199,7 +207,7 @@ contract("DiamondProxy", accounts => {
         assert(Big(receiver_balAfter).eq(Big(receiver_balBefore).plus(Big(transferAmountTokQty))), 'unexpected receiver token balance after transfer');
     });
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - originator token fee should not be applied (ledger should be) when fee sender is fee receiver (fee on B, batch originator)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - originator token fee should not be applied (ledger should be) when fee sender is fee receiver (fee on B, batch originator)`, async () => {
         const A = accounts[global.TaddrNdx + 0]; 
         const B = accounts[global.TaddrNdx + 1]; // sender is batch originator 
         const origFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 2 };
@@ -234,7 +242,6 @@ contract("DiamondProxy", accounts => {
         });
 
         // token sender (B) has has not paid originator fees to self, and has only paid exchange fee
-        // feeOwnerLedgerForA = feeOwnerLedgerForB
         const sender_balBefore = data.ledgerB_before.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         const sender_balAfter  =  data.ledgerB_after.tokens.filter(p => p.tokTypeId == CONST.tokenType.TOK_T2).map(p => p.currentQty).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
         assert(Big(sender_balAfter).eq(Big(sender_balBefore).minus(Big(transferAmountTokQty)).minus(Big(expectedFeeTokQty))), 'unexpected token fee payer balance after transfer');
@@ -247,7 +254,7 @@ contract("DiamondProxy", accounts => {
 
     // CCY FEES: NO FEES IF FEE RECEIVER = FEE SENDER (only ever the case for contract owner)
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - global/ledger currency fee should not be applied when fee sender is fee receiver (fee on A, contract owner)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - global/ledger currency fee should not be applied when fee sender is fee receiver (fee on A, contract owner)`, async () => {
         const A = accounts[0]; // sender is contract owner, exchange fee receiver
         const B = accounts[global.TaddrNdx + 1];
         const allFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 0 };
@@ -276,10 +283,14 @@ contract("DiamondProxy", accounts => {
         });
 
         // contract owner has paid no fees
-        // feeOwnerLedgerForA = feeOwnerLedgerForB
-        const owner_balBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountEth)).plus(Big(expectedFeeEth))), 'unexpected fee receiver currency balance after transfer');
+        // feeOwnerLedgerForA != feeOwnerLedgerForB
+        let owner_balBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        let owner_balAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountEth)).plus(Big(expectedFeeEth))), 'unexpected fee receiver A currency balance after transfer');
+
+        owner_balBefore = data.feeOwnerLedgerForB_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        owner_balAfter  =  data.feeOwnerLedgerForB_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore)), 'unexpected fee receiver B currency balance after transfer');
         
         // receiver has received expected quantity
         const receiver_balBefore = data.ledgerB_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
@@ -287,7 +298,7 @@ contract("DiamondProxy", accounts => {
         assert(Big(receiver_balAfter).eq(Big(receiver_balBefore).plus(Big(transferAmountEth))), 'unexpected receiver currency after transfer');
     });
 
-    it(`cross-entity transfer (same fee owner) - fees (fee payer=receiver) - global/ledger currency fee should not be applied when fee sender is fee receiver (fee on B, contract owner)`, async () => {
+    it(`cross-entity transfer (different fee owners) - fees (fee payer=receiver) - global/ledger currency fee should not be applied when fee sender is fee receiver (fee on B, contract owner)`, async () => {
         const A = accounts[global.TaddrNdx + 1];
         const B = accounts[0]; // sender is contract owner (exchange fee receiver)
         const allFees = { ccy_mirrorFee: false, ccy_perMillion: 0, fee_fixed: 0, fee_percBips: 100, fee_min: 0, fee_max: 0 };
@@ -316,10 +327,14 @@ contract("DiamondProxy", accounts => {
         });
 
         // contract owner has paid no fees
-        // feeOwnerLedgerForA = feeOwnerLedgerForB
-        const owner_balBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        const owner_balAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
-        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountEth)).plus(Big(expectedFeeEth))), 'unexpected fee receiver currency balance after transfer');
+        // feeOwnerLedgerForA != feeOwnerLedgerForB
+        let owner_balBefore = data.feeOwnerLedgerForA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        let owner_balAfter  =  data.feeOwnerLedgerForA_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore)), 'unexpected fee receiver A currency balance after transfer');
+
+        owner_balBefore = data.feeOwnerLedgerForB_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        owner_balAfter  =  data.feeOwnerLedgerForB_after.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        assert(Big(owner_balAfter).eq(Big(owner_balBefore).minus(Big(transferAmountEth)).plus(Big(expectedFeeEth))), 'unexpected fee receiver B currency balance after transfer');
         
         // receiver has received expected quantity
         const receiver_balBefore = data.ledgerA_before.ccys.filter(p => p.ccyTypeId == CONST.ccyType.ETH).map(p => p.balance).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
