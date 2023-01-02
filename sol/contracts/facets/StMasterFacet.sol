@@ -114,16 +114,18 @@ contract StMasterFacet {
 		bool customFee
 	);
 
-	event RetokenizedToken(
+	event RetokenizationBurningToken(
 		address indexed owner,
-		uint indexed oldTokenTypeId,
-		uint indexed newTokenTypeId,
-		uint oldBatchId,
-		uint newBatchId,
-		uint oldStId,
-		uint newStId,
-		uint oldQty,
-		uint newQty
+		uint indexed tokenTypeId,
+		uint burnQty,
+		uint[] k_stIds
+	);
+
+	event RetokenizationMintingToken(
+		address indexed owner,
+		uint indexed tokenTypeId,
+		uint indexed batchId,
+		uint qty
 	);
 
 	// StructLib events

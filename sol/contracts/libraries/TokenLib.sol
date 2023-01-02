@@ -99,6 +99,20 @@ library TokenLib {
 	event SetBatchOriginatorFee_Token(uint256 indexed batchId, StructLib.SetFeeArgs originatorFee);
 	event SetBatchOriginatorFee_Currency(uint256 indexed batchId, uint16 origCcyFee_percBips_ExFee);
 
+	event RetokenizationBurningToken(
+		address indexed owner,
+		uint indexed tokenTypeId,
+		uint burnQty,
+		uint[] k_stIds
+	);
+
+	event RetokenizationMintingToken(
+		address indexed owner,
+		uint indexed tokenTypeId,
+		uint indexed batchId,
+		uint qty
+	);
+
 	//event dbg1(uint256 id, uint256 typeId);
 	//event dbg2(uint256 postIdShifted);
 
@@ -612,41 +626,29 @@ library TokenLib {
 		}
 	}
 
-	// note: for now we assume that only one stId will be passed
 	function retokenizeSecToken(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		MintSecTokenBatchArgs memory a,
-		StructLib.IdAndQuantity[] memory idWithQty
+		StructLib.RetokenizationBurningParam[] memory retokenizationBurningParam
 	) public {
-		// check if the owner has enough of the tokens
-		address batchOwner = a.batchOwner;
-		uint len = idWithQty.length;
-		require(len == 1, "retokenizeSecToken: retokenization only with one st id is allowed at the moment");
-		
-		for(uint i = 0; i < len; i++) {
-			uint[] memory tokenTypeStIds = ld._ledger[batchOwner].tokenType_stIds[idWithQty[i].tokenTypeId];
-			uint currStId = idWithQty[i].stId;
-			uint currQty = idWithQty[i].qty;
-
-			require(_arrayIncludes(tokenTypeStIds, currStId), "retokenizeSecToken: account does not own some of the tokens");
-			require(currQty <= MAX_INT, "retokenizeSecToken: type overflow");
-			require(uint(int(ld._sts[currStId].currentQty)) >= currQty, "retokenizeSecToken: not sufficient tokens");
-		}
+		uint len = retokenizationBurningParam.length;
 
 		// burn tokens (suppress events)
 		for(uint i = 0; i < len; i++) {
-			uint[] memory k_stIds = new uint[](1);
-			k_stIds[0] = idWithQty[i].stId;
+			address owner = retokenizationBurningParam[i].batchOwner;
+			uint tokenTypeId = retokenizationBurningParam[i].tokenTypeId;
+			uint qty = retokenizationBurningParam[i].qty;
+			require(qty <= MAX_INT, "retokenizeSecToken: type overflow");
 
 			burnTokens(
 				ld,
 				std,
 				BurnTokenArgs({
-					ledgerOwner: batchOwner,
-					tokTypeId: idWithQty[i].tokenTypeId,
-					burnQty: int(idWithQty[i].qty),
-					k_stIds: k_stIds
+					ledgerOwner: owner,
+					tokTypeId: tokenTypeId,
+					burnQty: int(qty),
+					k_stIds: retokenizationBurningParam[i].k_stIds
 				}),
 				StructLib.CustomCcyFee({
 					ccyTypeId: 0,
@@ -655,36 +657,21 @@ library TokenLib {
 				}),
 				true
 			);
+
+			// emit event
+			emit RetokenizationBurningToken(owner, tokenTypeId, qty, retokenizationBurningParam[i].k_stIds);
 		}
 
 		// mint tokens (suppress events)
-		require(a.mintSecTokenCount == 1, "retokenizeSecToken: expected mintSecTokenCount to be 1");
 		mintSecTokenBatch(ld, std, a, false, 0, 0, true);
 
 		// emit event
-		uint oldStId = idWithQty[0].stId;
-		emit RetokenizedToken(
-			batchOwner, // owner
-			idWithQty[0].tokenTypeId, // oldTokenTypeId
-			a.tokTypeId, // newTokenTypeId
-			ld._sts[oldStId].batchId, // oldBatchId
-			ld._batches_currentMax_id, // newBatchId
-			oldStId, // oldStId
-			ld._tokens_currentMax_id, // newStId
-			idWithQty[0].qty, // oldQty
-			a.mintQty // newQty
+		emit RetokenizationMintingToken(
+			a.batchOwner,
+			a.tokTypeId,
+			ld._batches_currentMax_id,
+			a.mintQty
 		);
-	}
-
-	function _arrayIncludes(uint[] memory arr, uint value) internal pure returns(bool result) {
-		result = false;
-		uint len = arr.length;
-
-		for (uint i = 0; i < len; i++) {
-			if(arr[i] == value) {
-				return true;
-			}
-		}
 	}
 
 	// POST-MINTING: add KVP metadata

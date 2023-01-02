@@ -219,6 +219,7 @@ library StructLib {
 		address feeAddrOwner_A; // exchange fees: receive address from entity of ledger_A
 		address feeAddrOwner_B; // exchange fees: receive address from entity of ledger_B
 		TransferType transferType; // reason/type code: applies only to one-sided transfers (not two-sided trades, which are coded automatically)
+		// bytes reverseTxHash; // hash of the reversed transaction
 	}
 
 	struct CustomFee {
@@ -399,9 +400,10 @@ library StructLib {
 		//uint256 _nextWhitelistNdx;
 	}
 
-	struct IdAndQuantity {
+	struct RetokenizationBurningParam {
+		address batchOwner;
 		uint tokenTypeId;
-		uint stId;
+		uint[] k_stIds;
 		uint qty;
 	}
 

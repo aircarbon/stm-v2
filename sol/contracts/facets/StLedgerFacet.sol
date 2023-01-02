@@ -18,7 +18,7 @@ contract StLedgerFacet {
 		uint16 origCcyFee_percBips_ExFee,
 		string[] memory metaKeys,
 		string[] memory metaValues,
-		StructLib.IdAndQuantity[] memory idWithQty
+		StructLib.RetokenizationBurningParam[] memory retokenizationBurningParam
 	) external {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
@@ -36,7 +36,7 @@ contract StLedgerFacet {
 		});
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		TokenLib.retokenizeSecToken(s.ld, s.std, args, idWithQty);
+		TokenLib.retokenizeSecToken(s.ld, s.std, args, retokenizationBurningParam);
 	}
 
 	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) external {
