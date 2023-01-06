@@ -15,7 +15,7 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 library TokenLib {
 	using strings for *;
 
-	uint256 constant MAX_INT = 2**256 - 1;
+	uint256 constant MAX_INT = 2**255 - 1;
 
 	struct MintSecTokenBatchArgs {
 		uint256 tokTypeId;

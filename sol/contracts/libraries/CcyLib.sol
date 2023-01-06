@@ -6,7 +6,7 @@ import { StructLib } from "../libraries/StructLib.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 
 library CcyLib {
-	uint256 constant MAX_INT = 2**256 - 1;
+	uint256 constant MAX_INT = 2**255 - 1;
 
 	event AddedCcyType(uint256 id, string name, string unit);
 	event CcyFundedLedger(uint256 ccyTypeId, address indexed to, int256 amount, string desc, bool customFee);
