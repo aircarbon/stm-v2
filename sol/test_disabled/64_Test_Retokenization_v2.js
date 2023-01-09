@@ -46,7 +46,7 @@ contract("DiamondProxy", accounts => {
         if (await stmStMasterFacet.getContractType() != CONST.contractType.COMMODITY) this.skip();
         if (!global.TaddrNdx) global.TaddrNdx = 0;
 
-        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 50));
+        await stmStErc20Facet.whitelistMany(accounts.slice(global.TaddrNdx, global.TaddrNdx + 100));
         await stmStMasterFacet.sealContract();
         
         await setupHelper.setDefaults({ 
@@ -58,13 +58,12 @@ contract("DiamondProxy", accounts => {
             accounts });
 
         await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[49]});
+        await stmStErc20Facet.createEntity({id: 2, addr: CONST.testAddr99});
     });
 
     beforeEach(async () => {
         global.TaddrNdx++;
-        if(global.TaddrNdx !== 49) {
-            await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx + 0]});
-        }
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx + 0]});
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
@@ -87,6 +86,362 @@ contract("DiamondProxy", accounts => {
             tokTypeId: CONST.tokenType.TOK_T1,
             mintQty: CONST.GT_CARBON * 2,
             batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for same user`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuBefore.currentQty) - burnTokQty1 - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty1 + burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for diff users`, async () => {
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[51]});
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[51], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore1 = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId1 = ledgerBefore1.tokens[0].stId;
+        const eeuBefore1 = await stmStLedgerFacet.getSecToken(stId1);
+        const batch0_before1 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore1.batchId);
+        assert(Number(batch0_before1.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const ledgerBefore2 = await stmStLedgerFacet.getLedgerEntry(accounts[51]);
+        const stId2 = ledgerBefore2.tokens[0].stId;
+        const eeuBefore2 = await stmStLedgerFacet.getSecToken(stId2);
+        const batch0_before2 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore2.batchId);
+        assert(Number(batch0_before2.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[51],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter1 = await stmStLedgerFacet.getSecToken(stId1);
+        assert(Number(eeuAfter1.currentQty) == Number(eeuBefore1.currentQty) - burnTokQty1, 'unexpected remaining TONS in ST after burn');
+
+        const eeuAfter2 = await stmStLedgerFacet.getSecToken(stId2);
+        assert(Number(eeuAfter2.currentQty) == Number(eeuBefore2.currentQty) - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter1 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter1.batchId);
+        assert(batchAfter1.burnedQty == burnTokQty1, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchAfter2 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter2.batchId);
+        assert(batchAfter2.burnedQty == burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for diff users, different entities`, async () => {
+        await stmStErc20Facet.setAccountEntity({id: 2, addr: accounts[54]});
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[54], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore1 = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId1 = ledgerBefore1.tokens[0].stId;
+        const eeuBefore1 = await stmStLedgerFacet.getSecToken(stId1);
+        const batch0_before1 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore1.batchId);
+        assert(Number(batch0_before1.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const ledgerBefore2 = await stmStLedgerFacet.getLedgerEntry(accounts[54]);
+        const stId2 = ledgerBefore2.tokens[0].stId;
+        const eeuBefore2 = await stmStLedgerFacet.getSecToken(stId2);
+        const batch0_before2 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore2.batchId);
+        assert(Number(batch0_before2.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[54],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter1 = await stmStLedgerFacet.getSecToken(stId1);
+        assert(Number(eeuAfter1.currentQty) == Number(eeuBefore1.currentQty) - burnTokQty1, 'unexpected remaining TONS in ST after burn');
+
+        const eeuAfter2 = await stmStLedgerFacet.getSecToken(stId2);
+        assert(Number(eeuAfter2.currentQty) == Number(eeuBefore2.currentQty) - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter1 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter1.batchId);
+        assert(batchAfter1.burnedQty == burnTokQty1, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchAfter2 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter2.batchId);
+        assert(batchAfter2.burnedQty == burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for same user, different tokens`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId1 = ledgerBefore.tokens[0].stId;
+        const eeuBefore1 = await stmStLedgerFacet.getSecToken(stId1);
+        const batch0_before1 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore1.batchId);
+        assert(Number(batch0_before1.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const stId2 = ledgerBefore.tokens[1].stId;
+        const eeuBefore2 = await stmStLedgerFacet.getSecToken(stId2);
+        const batch0_before2 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore2.batchId);
+        assert(Number(batch0_before2.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T2, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter1 = await stmStLedgerFacet.getSecToken(stId1);
+        assert(Number(eeuAfter1.currentQty) == Number(eeuBefore1.currentQty) - burnTokQty1, 'unexpected remaining TONS in ST after burn');
+
+        const eeuAfter2 = await stmStLedgerFacet.getSecToken(stId2);
+        assert(Number(eeuAfter2.currentQty) == Number(eeuBefore2.currentQty) - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter1 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter1.batchId);
+        assert(batchAfter1.burnedQty == burnTokQty1, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchAfter2 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter2.batchId);
+        assert(batchAfter2.burnedQty == burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for diff users, different tokens`, async () => {
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[52]});
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, accounts[52], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore1 = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId1 = ledgerBefore1.tokens[0].stId;
+        const eeuBefore1 = await stmStLedgerFacet.getSecToken(stId1);
+        const batch0_before1 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore1.batchId);
+        assert(Number(batch0_before1.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const ledgerBefore2 = await stmStLedgerFacet.getLedgerEntry(accounts[52]);
+        const stId2 = ledgerBefore2.tokens[0].stId;
+        const eeuBefore2 = await stmStLedgerFacet.getSecToken(stId2);
+        const batch0_before2 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore2.batchId);
+        assert(Number(batch0_before2.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[52],
+                    tokenTypeId: CONST.tokenType.TOK_T2, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter1 = await stmStLedgerFacet.getSecToken(stId1);
+        assert(Number(eeuAfter1.currentQty) == Number(eeuBefore1.currentQty) - burnTokQty1, 'unexpected remaining TONS in ST after burn');
+
+        const eeuAfter2 = await stmStLedgerFacet.getSecToken(stId2);
+        assert(Number(eeuAfter2.currentQty) == Number(eeuBefore2.currentQty) - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter1 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter1.batchId);
+        assert(batchAfter1.burnedQty == burnTokQty1, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchAfter2 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter2.batchId);
+        assert(batchAfter2.burnedQty == burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to burn a part of vST - twice, for diff users, different tokens, different entities`, async () => {
+        await stmStErc20Facet.setAccountEntity({id: 2, addr: accounts[55]});
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, accounts[55], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore1 = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId1 = ledgerBefore1.tokens[0].stId;
+        const eeuBefore1 = await stmStLedgerFacet.getSecToken(stId1);
+        const batch0_before1 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore1.batchId);
+        assert(Number(batch0_before1.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const ledgerBefore2 = await stmStLedgerFacet.getLedgerEntry(accounts[55]);
+        const stId2 = ledgerBefore2.tokens[0].stId;
+        const eeuBefore2 = await stmStLedgerFacet.getSecToken(stId2);
+        const batch0_before2 = await stmStLedgerFacet.getSecTokenBatch(eeuBefore2.batchId);
+        assert(Number(batch0_before2.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty1 = CONST.GT_CARBON / 2;
+        const burnTokQty2 = CONST.GT_CARBON / 5;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty1
+                },
+                {
+                    batchOwner: accounts[55],
+                    tokenTypeId: CONST.tokenType.TOK_T2, 
+                    k_stIds: [], 
+                    qty: burnTokQty2
+                },
+            ]
+        });
+        
+        // check ST
+        const eeuAfter1 = await stmStLedgerFacet.getSecToken(stId1);
+        assert(Number(eeuAfter1.currentQty) == Number(eeuBefore1.currentQty) - burnTokQty1, 'unexpected remaining TONS in ST after burn');
+
+        const eeuAfter2 = await stmStLedgerFacet.getSecToken(stId2);
+        assert(Number(eeuAfter2.currentQty) == Number(eeuBefore2.currentQty) - burnTokQty2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter1 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter1.batchId);
+        assert(batchAfter1.burnedQty == burnTokQty1, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchAfter2 = await stmStLedgerFacet.getSecTokenBatch(eeuAfter2.batchId);
+        assert(batchAfter2.burnedQty == burnTokQty2, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow owner to retokenize for users from different entities`, async () => {
+        await stmStErc20Facet.setAccountEntity({id: 2, addr: accounts[53]});
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[53],
             retokenizationBurningParam: [
                 {
                     batchOwner: accounts[global.TaddrNdx],
