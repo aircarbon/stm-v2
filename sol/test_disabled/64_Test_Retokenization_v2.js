@@ -392,6 +392,98 @@ contract("DiamondProxy", accounts => {
         assert.fail('expected contract exception');
     });
 
+    it(`retokenization - burning by id - should allow full burning of specific STs by IDs`, async () => {
+        const A = accounts[global.TaddrNdx];
+
+        // mint STs for A
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+
+        const le_before = await stmStLedgerFacet.getLedgerEntry(A);
+
+        // define tokens to burn
+        const burnType = CONST.tokenType.TOK_T1;
+        const burnSts = le_before.tokens.filter(p => p.tokTypeId == burnType && p.stId % 2 == 1);
+        assert(burnSts.length > 0, 'bad test data');
+        const burnStIds = burnSts.map(p => p.stId);
+        const burnQty = burnSts.map(p => p.currentQty).reduce((a,b) => a.add(new BN(b)), new BN(0));
+                        
+        // burn baby
+        // await stmStBurnableFacet.burnTokens(accounts[global.TaddrNdx], burnType, burnQty.toString(), burnStIds);
+
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 5,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: burnType, 
+                    k_stIds: burnStIds, 
+                    qty: burnQty.toString()
+                }
+            ]
+        });
+
+        // check batches
+        for (var st of burnSts) {
+            const batch = await stmStLedgerFacet.getSecTokenBatch(st.batchId);
+            assert(batch.burnedQty == CONST.GT_CARBON, `unexpected batch (stid=${st.stId}) after burn`);
+        }
+    });
+
+    it(`retokenize - burning by id - should allow partial burning of a single specific ST by ID`, async () => {
+        const A = accounts[global.TaddrNdx];
+
+        // mint STs for A
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], );
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T3, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], ); 
+
+        const le_before = await stmStLedgerFacet.getLedgerEntry(A);
+
+        // define tokens to burn
+        const burnType = CONST.tokenType.TOK_T3;
+        const burnSts = le_before.tokens.filter(p => p.tokTypeId == burnType);
+        assert(burnSts.length > 0, 'bad test data');
+        //const burnType = CONST.tokenType.TOK_T3;
+        //const burnSts = le_before.tokens.filter(p => p.tokTypeId == burnType);
+
+        const burnStIds = burnSts.map(p => p.stId);
+        const burnQty = burnSts.map(p => p.currentQty).reduce((a,b) => a.add(new BN(b)), new BN(0)).div(new BN(2));
+
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T2,
+            mintQty: CONST.GT_CARBON * 7,
+            batchOwner: accounts[49],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: burnType, 
+                    k_stIds: burnStIds, 
+                    qty: burnQty.toString()
+                }
+            ]
+        });
+
+        // check batches
+        for (var st of burnSts) {
+            const batch = await stmStLedgerFacet.getSecTokenBatch(st.batchId);
+            assert(batch.burnedQty == burnQty.toString(), `unexpected batch (stid=${st.stId}) after burn`);
+        }
+    });
+
     const validateRetokanizationOutcome = async({tokTypeId, mintQty, mintSecTokenCount = 1, batchOwner, originatorFee = CONST.nullFees, origCcyFee_percBips_ExFee = 0, metaKeys = [], metaValues = [], retokenizationBurningParam = []}) => {
         // fetching data before the retokenization
         const allStTokensBefore = await getAllTokens();
@@ -419,7 +511,7 @@ contract("DiamondProxy", accounts => {
                 burnedQtyPerToken[currTokenId] += currQty;
             }
 
-            totalBurnedQty += currQty;
+            totalBurnedQty += Number(currQty);
         }
 
         if(ledgersBefore[batchOwner] === undefined) {
@@ -450,7 +542,6 @@ contract("DiamondProxy", accounts => {
                 ev => {
                     if(ev.owner == retokenizationBurningParam[i].batchOwner && ev.tokenTypeId == retokenizationBurningParam[i].tokenTypeId && ev.burnQty == retokenizationBurningParam[i].qty) {
                         for(let j = 0; j < retokenizationBurningParam[i].k_stIds.length; j++) {
-                            console.log('ev.k_stIds[j]', j, ev.k_stIds[j]);
                             if(ev.k_stIds[j] != retokenizationBurningParam[i].k_stIds[j]) {
                                 return false;
                             }
