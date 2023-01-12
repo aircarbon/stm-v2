@@ -1281,6 +1281,232 @@ contract("DiamondProxy", accounts => {
         assert.fail('expected contract exception');
     });
 
+    // Batch fee related tests
+    it(`retokenize - minting originator ccy fee - should allow minting with a batch originator currency fee on a batch`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            origCcyFee_percBips_ExFee: 100,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchId = await stmStLedgerFacet.getSecTokenBatch_MaxId.call();
+        const batch = await stmStLedgerFacet.getSecTokenBatch(batchId);
+        assert(batch.originator == accounts[49], 'unexpected originator on minted batch');
+        assert(batch.origCcyFee_percBips_ExFee == 100, 'unexpected originator currency on minted batch');
+    });
+
+    it(`retokenize - minting originator ccy fee - should allow decreasing of batch currency fee on a batch`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T2,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            origCcyFee_percBips_ExFee: 100,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchId = await stmStLedgerFacet.getSecTokenBatch_MaxId.call();
+        await stmStMintableFacet.setOriginatorFeeCurrencyBatch(batchId, 50, { from: accounts[0] });
+    });
+
+    it(`retokenize - minting originator ccy fee - should not allow increasing of batch currency fee after minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T2,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            origCcyFee_percBips_ExFee: 100,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchId = await stmStLedgerFacet.getSecTokenBatch_MaxId.call();
+        try { await stmStMintableFacet.setOriginatorFeeCurrencyBatch(batchId, 101, { from: accounts[0] }); assert.fail('expected contract exception'); }
+        catch (ex) { assert(ex.reason == 'Bad fee args', `unexpected: ${ex.reason}`); }
+    });
+
+    it(`retokenize - minting originator ccy fee - should not allow non-owner to edit batch currency fee after minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T2,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            origCcyFee_percBips_ExFee: 100,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+
+        const batchId = await stmStLedgerFacet.getSecTokenBatch_MaxId.call();
+        try {
+            await stmStMintableFacet.setOriginatorFeeCurrencyBatch(batchId, 101, { from: accounts[10] })
+        } catch (ex) { assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`); return; }
+        assert.fail('expected contract exception');
+    });
+
+    it(`retokenize - minting originator ccy fee - should not allow minting batch currency fee basis points > 10000`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        // retokenizing
+        try {
+            await validateRetokanizationOutcome({
+                tokTypeId: CONST.tokenType.TOK_T2,
+                mintQty: CONST.GT_CARBON * 2,
+                batchOwner: accounts[49],
+                origCcyFee_percBips_ExFee: 10001,
+                retokenizationBurningParam: [
+                    {
+                        batchOwner: accounts[global.TaddrNdx],
+                        tokenTypeId: CONST.tokenType.TOK_T1, 
+                        k_stIds: [], 
+                        qty: CONST.GT_CARBON / 2
+                    }
+                ]
+            });
+        } catch (ex) { assert(ex.reason == 'Bad fee args', `unexpected: ${ex.reason}`); return; }
+        assert.fail('expected contract exception');     
+    });
+
+    it(`retokenize - minting originator ccy fee - should not allow setting of batch currency fee basis points > 10000`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T2,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            origCcyFee_percBips_ExFee: 100,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        const batchId = await stmStLedgerFacet.getSecTokenBatch_MaxId.call();
+        try {
+            await stmStMintableFacet.setOriginatorFeeCurrencyBatch(batchId, 10001, { from: accounts[0] });
+        } catch (ex) { assert(ex.reason == 'Bad fee args', `unexpected: ${ex.reason}`); return; }
+        assert.fail('expected contract exception');   
+    });
+
     const validateRetokanizationOutcome = async({tokTypeId, mintQty, mintSecTokenCount = 1, batchOwner, originatorFee = CONST.nullFees, origCcyFee_percBips_ExFee = 0, metaKeys = [], metaValues = [], retokenizationBurningParam = []}) => {
         // fetching data before the retokenization
         const allStTokensBefore = await getAllTokens();
