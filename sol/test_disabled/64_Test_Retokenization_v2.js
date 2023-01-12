@@ -19,6 +19,23 @@ const BN = require('bn.js');
 const CONST = require('../const.js');
 const setupHelper = require('../test/testSetupContract.js');
 
+const corsia_ExampleKvps = [
+    // e.g. UN_CER = old unfccc
+    { k: 'REGISTRY_TYPE',         v: 'UN_CER' },
+    { k: 'PROJECT_ID',            v: '0008' }, // int
+    { k: 'URL_PROJECT',           v: 'https://cdm.unfccc.int/Projects/DB/DNV-CUK1095236970.6/view' }, // url
+    { k: 'URL_ISSUANCE',          v: 'https://cdm.unfccc.int/Projects/DB/DNV-CUK1095236970.6/CP/S7AT4T5YDHX1RNDGO6ZOZO6SDNY485/iProcess/RWTUV1346049921.05/view' }, // url
+    { k: 'ISSUANCE_SERIAL_RANGE', v: 'BR-5-85316059-1-1-0-8 - BR-5-85448545-1-1-0-8' }, // freetext
+];
+
+const nature_ExampleKvps = [
+    { k: 'REGISTRY_TYPE',         v: '***' },
+    { k: 'PROJECT_ID',            v: '...' },
+    { k: 'URL_PROJECT',           v: '...' },
+    { k: 'URL_ISSUANCE',          v: '...' },
+    { k: 'ISSUANCE_SERIAL_RANGE', v: '...' }
+];
+
 contract("DiamondProxy", accounts => {
     var stm;
     var stmStMasterFacet;
@@ -63,7 +80,7 @@ contract("DiamondProxy", accounts => {
 
     beforeEach(async () => {
         global.TaddrNdx++;
-        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx + 0]});
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[global.TaddrNdx]});
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
@@ -603,8 +620,8 @@ contract("DiamondProxy", accounts => {
 
     it(`retokenize - should not allow burning for non-existent ledger owner`, async () => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
-        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[30]});
-        const a9_le = await stmStLedgerFacet.getLedgerEntry(accounts[30]);
+        await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[60]});
+        const a9_le = await stmStLedgerFacet.getLedgerEntry(accounts[60]);
         assert(a9_le.exists == false, 'expected non-existent ledger entry');
         try {
             await validateRetokanizationOutcome({
@@ -613,7 +630,7 @@ contract("DiamondProxy", accounts => {
                 batchOwner: accounts[49],
                 retokenizationBurningParam: [
                     {
-                        batchOwner: accounts[30],
+                        batchOwner: accounts[60],
                         tokenTypeId: CONST.tokenType.TOK_T1, 
                         k_stIds: [], 
                         qty: CONST.GT_CARBON
@@ -839,6 +856,431 @@ contract("DiamondProxy", accounts => {
         }
     });
 
+    // Metadata related tests
+    it(`retokenize - should allow metadata single KVP minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: ['testKey_A'],
+            metaValues: ['testValue_A'],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow metadata 10 KVP minting, small strings`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        const metaKeys = [];
+        const metaValues = [];
+        for (var i = 0 ; i < 10 ; i++) {
+            metaKeys.push(`${i}`);
+            metaValues.push(`${i}`);
+        }
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys,
+            metaValues,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow metadata 10 KVP minting, large strings`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        const metaKeys = [];
+        const metaValues = [];
+        for (var i = 0 ; i < 10 ; i++) {
+            metaKeys.push(`testKey_LargeProjectKeytring000000000000000000_${i}`);
+            metaValues.push(`testKey_LargerProjectValueString0000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111_${i}`);
+        }
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys,
+            metaValues,
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow multiple metadata KVP minting, with null value`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: ['testKey_A', 'testKey_B'],
+            metaValues: ['', 'b'],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow multiple metadata KVP minting, with null key`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: ['', 'testKey_B'],
+            metaValues: ['a', 'b'],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow multiple metadata KVP minting, with mismatched key/value lengths (implied null values)`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: ['', 'testKey_B'],
+            metaValues: ['a', 'b'],
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow metadata KVP minting for example NATURE VCUs`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: nature_ExampleKvps.map(p => p.k),
+            metaValues: nature_ExampleKvps.map(p => p.v),
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - should allow metadata KVP minting for example CORSIA CERs`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        const burnTokQty = CONST.GT_CARBON / 2;
+
+        // retokenizing
+        await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: nature_ExampleKvps.map(p => p.k),
+            metaValues: nature_ExampleKvps.map(p => p.v),
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: burnTokQty
+                }
+            ]
+        });
+        
+        // check ST
+        const eeuAfter = await stmStLedgerFacet.getSecToken(stId);
+        assert(Number(eeuAfter.currentQty) == Number(eeuAfter.mintedQty) / 2, 'unexpected remaining TONS in ST after burn');
+
+        // check batch 
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(eeuAfter.batchId);
+        assert(batchAfter.burnedQty == burnTokQty, 'unexpected batch burned TONS value on batch after burn');
+    });
+
+    it(`retokenize - post-minting metadata - should allow adding of a new KVP after minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        // retokenizing
+        const batchId = await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: corsia_ExampleKvps.map(p => p.k),
+            metaValues: corsia_ExampleKvps.map(p => p.v),
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: CONST.GT_CARBON / 2
+                }
+            ]
+        });
+
+        const batchBefore = await stmStLedgerFacet.getSecTokenBatch(batchId);
+
+        const testKey = 'TEST_NEW_KEY', testValue = 'TEST_NEW_VALUE';
+        const addKvpTx = await stmStMintableFacet.addMetaSecTokenBatch(batchId, testKey, testValue);
+        truffleAssert.eventEmitted(addKvpTx, 'AddedBatchMetadata', ev => ev.batchId == batchId && ev.key == testKey && ev.value == testValue);
+        const batchAfter = await stmStLedgerFacet.getSecTokenBatch(batchId);
+
+        //console.log('batchBefore', batchBefore);
+        //console.log('batchAfter', batchAfter);
+        assert(batchAfter.metaKeys.length == batchBefore.metaKeys.length + 1, 'unexpected meta keys length after adding batch metadata');
+        assert(batchAfter.metaValues.length == batchBefore.metaValues.length + 1, 'unexpected meta values length after adding batch metadata');
+        assert(batchAfter.metaKeys.includes(testKey), 'missing meta key after adding batch metadata');
+        assert(batchAfter.metaValues.includes(testValue), 'missing meta key after adding batch metadata');
+    });
+
+    it(`retokenize - post-minting metadata - should not allow non-owner to add a new KVP after minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        // retokenizing
+        const batchId = await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: corsia_ExampleKvps.map(p => p.k),
+            metaValues: corsia_ExampleKvps.map(p => p.v),
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: CONST.GT_CARBON / 2
+                }
+            ]
+        });
+        
+        try {
+            await stmStMintableFacet.addMetaSecTokenBatch(batchId, 'testKey', 'TEST_NEW_VALUE', {from: accounts[10] });
+        } catch (ex) { 
+            assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
+            return;
+        }
+        assert.fail('expected contract exception');
+    });
+
+    it(`retokenize - post-minting metadata - should not allow adding of a existing KVP after minting`, async () => {
+        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, accounts[global.TaddrNdx], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        
+        const ledgerBefore = await stmStLedgerFacet.getLedgerEntry(accounts[global.TaddrNdx]);
+        const stId = ledgerBefore.tokens[0].stId;
+        const eeuBefore = await stmStLedgerFacet.getSecToken(stId);
+        const batch0_before = await stmStLedgerFacet.getSecTokenBatch(eeuBefore.batchId);
+        assert(Number(batch0_before.burnedQty) == 0, 'unexpected burn TONS value on batch before burn');
+
+        // retokenizing
+        const batchId = await validateRetokanizationOutcome({
+            tokTypeId: CONST.tokenType.TOK_T1,
+            mintQty: CONST.GT_CARBON * 2,
+            batchOwner: accounts[49],
+            metaKeys: corsia_ExampleKvps.map(p => p.k),
+            metaValues: corsia_ExampleKvps.map(p => p.v),
+            retokenizationBurningParam: [
+                {
+                    batchOwner: accounts[global.TaddrNdx],
+                    tokenTypeId: CONST.tokenType.TOK_T1, 
+                    k_stIds: [], 
+                    qty: CONST.GT_CARBON / 2
+                }
+            ]
+        });
+        
+        await stmStLedgerFacet.getSecTokenBatch(batchId);
+
+        const testKey = corsia_ExampleKvps[0].k, testValue = corsia_ExampleKvps[0].v;
+        try {
+            await stmStMintableFacet.addMetaSecTokenBatch(batchId, testKey, testValue);
+        } catch (ex) {
+            assert(ex.reason == 'Duplicate key', `unexpected: ${ex.reason}`);
+            return;
+        }
+        assert.fail('expected contract exception');
+    });
+
     const validateRetokanizationOutcome = async({tokTypeId, mintQty, mintSecTokenCount = 1, batchOwner, originatorFee = CONST.nullFees, origCcyFee_percBips_ExFee = 0, metaKeys = [], metaValues = [], retokenizationBurningParam = []}) => {
         // fetching data before the retokenization
         const allStTokensBefore = await getAllTokens();
@@ -956,6 +1398,23 @@ contract("DiamondProxy", accounts => {
                 assert(Number(totalMintQtyAfter) == Number(totalMintQtyBefore) + mintQty, 'unexpected remaining minted TONS in ST after burn for minted tokenId');
             }
         }
+
+        // check minted tokens details
+        const batchId = (await stmStLedgerFacet.getSecTokenBatch_MaxId.call()).toNumber();
+        const batch = await stmStLedgerFacet.getSecTokenBatch(batchId);
+        
+        const batchKeys = batch.metaKeys;
+        const batchValues = batch.metaValues;
+
+        assert(batchKeys.length == metaKeys.length, 'batch/supplied meta keys length mismatch');
+        assert(batchValues.length == metaValues.length, 'batch/supplied meta values length mismatch');
+        for (var i=0 ; i < batchKeys.length ; i++) {
+            assert(batchKeys[i] == metaKeys[i], `batch/supplied meta key mismatch at position ${i}`);
+        }
+        for (var i=0 ; i < batchValues.length ; i++) {
+            assert(batchValues[i] == metaValues[i], `batch/supplied meta value mismatch at position ${i}`);
+        }
+        return batchId;
     }
 
     const getAllTokens = async() => {
