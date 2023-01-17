@@ -76,7 +76,6 @@ library StructLib {
 		OtherFee23, // AC: TBD
 		OtherFee24, // AC: TBD
 		OtherFee25, // AC: TBD
-		OtherFee25, // AC: TBD
 		OtherFee26 // AC: TBD
 	}
 
