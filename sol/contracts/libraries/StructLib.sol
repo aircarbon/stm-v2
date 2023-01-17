@@ -54,7 +54,30 @@ library StructLib {
 		// CFT: token issuance/subscription
 		Subscription,
 		// AC: BLOCK_TRADE
-		BlockTrade
+		BlockTrade,
+
+		OtherFee6, // AC: TBD
+		OtherFee7, // AC: TBD
+		OtherFee8, // AC: TBD
+		OtherFee9, // AC: TBD
+		OtherFee10, // AC: TBD
+		OtherFee11, // AC: TBD
+		OtherFee12, // AC: TBD
+		OtherFee13, // AC: TBD
+		OtherFee14, // AC: TBD
+		OtherFee15, // AC: TBD
+		OtherFee16, // AC: TBD
+		OtherFee17, // AC: TBD
+		OtherFee18, // AC: TBD
+		OtherFee19, // AC: TBD
+		OtherFee20, // AC: TBD
+		OtherFee21, // AC: TBD
+		OtherFee22, // AC: TBD
+		OtherFee23, // AC: TBD
+		OtherFee24, // AC: TBD
+		OtherFee25, // AC: TBD
+		OtherFee25, // AC: TBD
+		OtherFee26 // AC: TBD
 	}
 
 	enum CashflowType {
@@ -401,7 +424,7 @@ library StructLib {
 	}
 
 	struct RetokenizationBurningParam {
-		address batchOwner;
+		address batchOwner; // TODO: repace with ledger owner
 		uint tokenTypeId;
 		uint[] k_stIds;
 		uint qty;
