@@ -20,7 +20,7 @@ const StTransferableFacet = artifacts.require('StTransferableFacet');
 
 const series = require('async/series');
 
-const { getLedgerHashOffChain, createBackupData, createBatches } = require('./utils');
+const { getLedgerHashOffChain, createBackupData, createBatches, retry } = require('./utils');
 const CONST = require('../const');
 const { helpers } = require('../../orm/build');
 
@@ -197,6 +197,18 @@ module.exports = async (callback) => {
     await series(batchesPromises);
     await sleep(1000);
 
+    // get entities by 
+    const entitiesByAccount = {};
+    const accountsWithEntities = {};
+    for(let i = 0; i < data.accountEntities?.length || 0; i++) {
+      const acc = data.whitelistAddresses[i];
+      const entId = data.accountEntities[i];
+      entitiesByAccount[acc] = entId;
+      if(entId != 0) {
+        accountsWithEntities[acc] = true;
+      }
+    }    
+
     // get ledgers
     const ledgerOwners = await newContract_StLedgerFacet.getLedgerOwners();
     const ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry(owner))))
@@ -217,22 +229,24 @@ module.exports = async (callback) => {
     const whitelistedAddresses = await newContract_StErc20Facet.getWhitelist();
   
   // load ledgers data to new contract
+  const ledgerOwnersMap = {};
   let filteredLedgersWithOwners = [];
 
   for(let i = 0; i < data.ledgerOwners.length; i++) {
-    if(!ledgerOwners.includes(data.ledgerOwners[i])) {
+    const currLedgerOwner = data.ledgerOwners[i];
+    ledgerOwnersMap[currLedgerOwner] = true;
+    if(!ledgerOwners.includes(currLedgerOwner)) {
       // if there are no acocunt entities, then we assign 1 by default
-      const entityId = data.accountEntities?.[i] || DEFAULT_ENTITY_ID;
-      const ledgerOwner = data.ledgerOwners[i];
+      const entityId = entitiesByAccount[currLedgerOwner] || DEFAULT_ENTITY_ID;
 
-      if(!whitelistedAddresses.includes(ledgerOwner)) {
-          console.log(`ERROR! The ledger owner is not whitelisted: ${ledgerOwner}`);
+      if(!whitelistedAddresses.includes(currLedgerOwner)) {
+          console.log(`ERROR! The ledger owner is not whitelisted: ${currLedgerOwner}`);
           process.exit();
       }
 
       filteredLedgersWithOwners.push({
         ledger: data.ledgers[i],
-        owner: ledgerOwner,
+        owner: currLedgerOwner,
         // TODO: cannot set entities because some of the addresses are not whitelisted (ledger entry owner)
         // This should not be a problem on production data, but needs to be tested
         entityId: entityId == 0 ? DEFAULT_ENTITY_ID : entityId
@@ -263,6 +277,44 @@ module.exports = async (callback) => {
   );
 
   await series(ledgersPromises);
+  await sleep(1000);
+
+  // checking which of the addresses already have entity id assigned
+  const wlAddressesBatches = createBatches(data.whitelistAddresses, 20);
+  const entitiesOfWlAddressesFuncs = [];
+  for (let i = 0; i < wlAddressesBatches.length; i++) {
+    entitiesOfWlAddressesFuncs.push(newContract_StLedgerFacet.getAccountEntityBatch.bind(this, wlAddressesBatches[i]));
+  }
+  
+  let currAccountEntities = await retry(entitiesOfWlAddressesFuncs, 2000);
+  currAccountEntities = currAccountEntities.flat();
+
+  const currAccEntMap = {};
+  for(let i = 0; i < currAccountEntities.length; i++) {
+    currAccEntMap[data.whitelistAddresses[i]] = currAccountEntities[i];
+  }
+  
+  // adding entity ids to those accounts, that have entity id but does not have a ledger
+  const accsToBeAssignedEntities = [];
+  for(let acc of Object.keys(accountsWithEntities)){
+    if(!ledgerOwnersMap[acc] && currAccEntMap[acc] == 0) {
+      accsToBeAssignedEntities.push({addr: acc, id: entitiesByAccount[acc]});
+    }
+  }
+
+  let accountsWithEntIds = createBatches(accsToBeAssignedEntities, 50);
+
+  const accEntPromises = accountsWithEntIds.map((accEntBatch, index) => 
+    function createAccEntBatchFuncs(cb) {
+      console.log(`Assigning entities for the remaining accounts ${index + 1}/${accountsWithEntIds.length}`);
+
+      newContract_StErc20Facet.setAccountEntityBatch(accEntBatch)
+        .then((result) => cb(null, result))
+        .catch((error) => cb(error));
+    },
+  );
+
+  await series(accEntPromises);
   await sleep(1000);
   
   // adding sec tokens
@@ -628,7 +680,7 @@ module.exports = async (callback) => {
 
   // write backup to json file
   const newBackupFile = path.join(dataDir, `${newContractAddress}.json`);
-  console.log(`Writing backup to ${backupFile}`);
+  console.log(`Writing backup to ${newBackupFile}`);
   fs.writeFileSync(newBackupFile, JSON.stringify({ ledgerHash, ...backupData }, null, 2));
 
   if (ledgerHash !== previousHash) {

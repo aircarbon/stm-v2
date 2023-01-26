@@ -835,3 +835,4 @@ exports.getLedgerHashOffChain = getLedgerHashOffChain;
 exports.createBackupData = createBackupData;
 exports.createBatches = createBatches;
 exports.createBackupDataFromOldContract = createBackupDataFromOldContract;
+exports.retry = retry;
