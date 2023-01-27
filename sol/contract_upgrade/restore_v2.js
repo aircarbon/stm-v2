@@ -242,7 +242,7 @@ module.exports = async (callback) => {
       // if there are no acocunt entities, then we assign 1 by default
       const entityId = entitiesByAccount[currLedgerOwner] || DEFAULT_ENTITY_ID;
 
-      if(!whitelistedAddresses.includes(currLedgerOwner)) {
+      if(!whitelistedAddresses.includes(currLedgerOwner) && currLedgerOwner != CONST.nullAddr) {
           console.log(`ERROR! The ledger owner is not whitelisted: ${currLedgerOwner}`);
           process.exit();
       }
