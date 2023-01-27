@@ -79,6 +79,7 @@ module.exports = async function (deployer) {
 
     // AC
     case 'DEV':
+    case 'DEV_80001_AC':
       console.log(`Deploying (AWS DEV / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEMO':
