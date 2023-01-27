@@ -90,6 +90,9 @@ module.exports = async (callback) => {
   const entitiesToAdd = [];
   data.entitiesWithFeeOwners?.forEach((entWithFeeOwn) => {
     if(!entitiesOnChain.includes(Number(entWithFeeOwn.id))) {
+      if(entWithFeeOwn.addr == CONST.nullAddr) {
+        entWithFeeOwn.addr = data.whitelistAddresses[0];
+      }
       entitiesToAdd.push(entWithFeeOwn);
     }
   });
