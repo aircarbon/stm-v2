@@ -620,8 +620,9 @@ async function createBackupData(contracts, contractAddress, contractType) {
         // workaround for a system account (null address)
         if(currLedgerOwner == CONST.nullAddr) {
           ccyFeeFuncs.push(async () => {return CONST.nullFees});  
+        } else {
+          ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 0, currencyTypes[index].id, currLedgerOwner));
         }
-        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 0, currencyTypes[index].id, currLedgerOwner));
       }
 
       const tokenFeeFuncs = [];
@@ -629,8 +630,9 @@ async function createBackupData(contracts, contractAddress, contractType) {
         // workaround for a system account (null address)
         if(currLedgerOwner == CONST.nullAddr) {
           ccyFeeFuncs.push(async () => {return CONST.nullFees});  
+        } else {
+          tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 0, tokenTypes[index].id, currLedgerOwner));
         }
-        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 0, tokenTypes[index].id, currLedgerOwner));
       }
 
       const ccyFeeFundBatches = createBatches(ccyFeeFuncs, 50);
