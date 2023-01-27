@@ -613,15 +613,24 @@ async function createBackupData(contracts, contractAddress, contractType) {
 
     let results = [];
     for(let i = 0; i < ledgerOwners.length; i++) {
-      console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${ledgerOwners[i]}`);
+      const currLedgerOwner = ledgerOwners[i];
+      console.log(`#${i + 1}/${ledgerOwners.length} - getLedgerOwnersFees for ${currLedgerOwner}`);
       const ccyFeeFuncs = [];
       for (let index = 0; index < currencyTypes.length; index++) {
-        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 0, currencyTypes[index].id, ledgerOwners[i]));
+        // workaround for a system account (null address)
+        if(currLedgerOwner == CONST.nullAddr) {
+          ccyFeeFuncs.push(async () => {return CONST.nullFees});  
+        }
+        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, 0, currencyTypes[index].id, currLedgerOwner));
       }
 
       const tokenFeeFuncs = [];
       for (let index = 0; index < tokenTypes.length; index++) {
-        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 0, tokenTypes[index].id, ledgerOwners[i]));
+        // workaround for a system account (null address)
+        if(currLedgerOwner == CONST.nullAddr) {
+          ccyFeeFuncs.push(async () => {return CONST.nullFees});  
+        }
+        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, 0, tokenTypes[index].id, currLedgerOwner));
       }
 
       const ccyFeeFundBatches = createBatches(ccyFeeFuncs, 50);
