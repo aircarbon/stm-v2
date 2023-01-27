@@ -90,9 +90,6 @@ module.exports = async (callback) => {
   const entitiesToAdd = [];
   data.entitiesWithFeeOwners?.forEach((entWithFeeOwn) => {
     if(!entitiesOnChain.includes(Number(entWithFeeOwn.id))) {
-      if(entWithFeeOwn.addr == CONST.nullAddr) {
-        entWithFeeOwn.addr = data.whitelistAddresses[0];
-      }
       entitiesToAdd.push(entWithFeeOwn);
     }
   });
@@ -241,10 +238,6 @@ module.exports = async (callback) => {
     if(!ledgerOwners.includes(currLedgerOwner)) {
       // if there are no acocunt entities, then we assign 1 by default
       const entityId = entitiesByAccount[currLedgerOwner] || DEFAULT_ENTITY_ID;
-
-      if(currLedgerOwner == CONST.nullAddr) {
-        continue;
-      }
 
       if(!whitelistedAddresses.includes(currLedgerOwner)) {
           console.log(`ERROR! The ledger owner is not whitelisted: ${currLedgerOwner}`);
