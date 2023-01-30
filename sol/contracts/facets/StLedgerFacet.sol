@@ -9,7 +9,7 @@ import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StLedgerFacet {
 
-	function retokenizeSecToken(
+	function retokenizeSecTokenDet(
 		uint256 tokTypeId,
 		uint256 mintQty,
 		int64 mintSecTokenCount,
@@ -36,7 +36,7 @@ contract StLedgerFacet {
 		});
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		TokenLib.retokenizeSecToken(s.ld, s.std, args, retokenizationBurningParam);
+		TokenLib.retokenizeSecTokenDet(s.ld, s.std, args, retokenizationBurningParam);
 	}
 
 	function addSecTokenTypeBatch(StructLib.AddSecTokenTypeBatchArgs[] calldata params) external {

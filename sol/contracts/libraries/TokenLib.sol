@@ -626,7 +626,7 @@ library TokenLib {
 		}
 	}
 
-	function retokenizeSecToken(
+	function retokenizeSecTokenDet(
 		StructLib.LedgerStruct storage ld,
 		StructLib.StTypesStruct storage std,
 		MintSecTokenBatchArgs memory a,
@@ -639,7 +639,7 @@ library TokenLib {
 			address owner = retokenizationBurningParam[i].batchOwner;
 			uint tokenTypeId = retokenizationBurningParam[i].tokenTypeId;
 			uint qty = retokenizationBurningParam[i].qty;
-			require(qty <= MAX_INT, "retokenizeSecToken: type overflow");
+			require(qty <= MAX_INT, "retokenizeSecTokenDet: type overflow");
 
 			burnTokens(
 				ld,

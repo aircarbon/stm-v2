@@ -771,7 +771,7 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
         try {
             await stmOwnedFacet.setReadOnly(true, { from: accounts[0] });
-            await stmStLedgerFacet.retokenizeSecToken(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], [{batchOwner: B, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[0], });
+            await stmStLedgerFacet.retokenizeSecTokenDet(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], [{batchOwner: B, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[0], });
         } catch (ex) { 
             assert(ex.reason == 'Read-only', `unexpected: ${ex.reason}`);
             await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
@@ -787,7 +787,7 @@ contract("DiamondProxy", accounts => {
         
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
         try {
-            await stmStLedgerFacet.retokenizeSecToken(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], [{batchOwner: B, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[10], });
+            await stmStLedgerFacet.retokenizeSecTokenDet(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], [{batchOwner: B, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[10], });
         } catch (ex) { 
             assert(ex.reason == 'Restricted', `unexpected: ${ex.reason}`);
             return;
@@ -801,7 +801,7 @@ contract("DiamondProxy", accounts => {
         
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
         try {
-            await stmStLedgerFacet.retokenizeSecToken(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, M, CONST.nullFees, 0, [], [], [{batchOwner: A, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[0], });
+            await stmStLedgerFacet.retokenizeSecTokenDet(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, M, CONST.nullFees, 0, [], [], [{batchOwner: A, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: CONST.GT_CARBON}], { from: accounts[0], });
         } catch (ex) { 
             assert(ex.reason == 'The address is not assigned to any entity', `unexpected: ${ex.reason}`);
             return;
@@ -816,9 +816,9 @@ contract("DiamondProxy", accounts => {
         await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
         try {
             const aboveIntLimit = ((new BN('2')).pow(new BN('255'))).toString();
-            await stmStLedgerFacet.retokenizeSecToken(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, B, CONST.nullFees, 0, [], [], [{batchOwner: A, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: aboveIntLimit}], { from: accounts[0], });
+            await stmStLedgerFacet.retokenizeSecTokenDet(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, B, CONST.nullFees, 0, [], [], [{batchOwner: A, tokenTypeId: CONST.tokenType.TOK_T1, k_stIds: [], qty: aboveIntLimit}], { from: accounts[0], });
         } catch (ex) { 
-            assert(ex.reason == 'retokenizeSecToken: type overflow', `unexpected: ${ex.reason}`);
+            assert(ex.reason == 'retokenizeSecTokenDet: type overflow', `unexpected: ${ex.reason}`);
             return;
         }
         assert.fail('expected contract exception');
@@ -2257,7 +2257,7 @@ contract("DiamondProxy", accounts => {
         const mintedTokQtyBefore = await stmStMintableFacet.getSecToken_totalMintedQty.call();
         
         // retokenization
-        const tx = await stmStLedgerFacet.retokenizeSecToken(tokTypeId, mintQty, mintSecTokenCount, batchOwner, originatorFee, origCcyFee_percBips_ExFee, metaKeys, metaValues, retokenizationBurningParam);
+        const tx = await stmStLedgerFacet.retokenizeSecTokenDet(tokTypeId, mintQty, mintSecTokenCount, batchOwner, originatorFee, origCcyFee_percBips_ExFee, metaKeys, metaValues, retokenizationBurningParam);
 
         // validate that burn and mint events were not emmited
         truffleAssert.eventNotEmitted(tx, 'BurnedPartialSecToken');
