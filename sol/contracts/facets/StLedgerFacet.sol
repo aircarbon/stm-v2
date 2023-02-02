@@ -8,6 +8,21 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StLedgerFacet {
+		
+	function retokenizeSecToken(
+		TokenLib.MintSecTokenBatchArgs memory a, 
+		address[] calldata ledgers, 
+		uint tokenTypeIdFrom, 
+		uint mult, // multiplier
+		uint multDiv // multiplication divider (example: mult = 8, multDiv = 10, result -> 80%)
+	) external {
+		ValidationLib.validateOnlyOwner();
+		ValidationLib.validateOnlyWhenReadWrite();
+		ValidationLib.validateHasEntity(a.batchOwner);
+		
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+		TokenLib.retokenizeSecToken(s, a, ledgers, tokenTypeIdFrom, mult, multDiv);
+	}
 
 	function retokenizeSecTokenDet(
 		uint256 tokTypeId,

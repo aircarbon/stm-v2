@@ -11,6 +11,9 @@ import { StLedgerFacet } from "../facets/StLedgerFacet.sol";
 import { StBurnableFacet } from "../facets/StBurnableFacet.sol";
 import { StMintableFacet } from "../facets/StMintableFacet.sol";
 import { LibMainStorage } from "../libraries/LibMainStorage.sol";
+import { LedgerLib } from "../libraries/LedgerLib.sol";
+import { ValidationLib } from "../libraries/ValidationLib.sol";
+import { TransferLib } from "../libraries/TransferLib.sol";
 
 library TokenLib {
 	using strings for *;
@@ -624,6 +627,127 @@ library TokenLib {
 				}
 			}
 		}
+	}
+
+	function retokenizeSecToken(
+		LibMainStorage.MainStorage storage s,
+		MintSecTokenBatchArgs memory a,
+		address[] calldata ledgers, 
+		uint tokenTypeIdFrom,
+		uint mult, 
+		uint multDiv
+	) public {
+		require(tokenTypeIdFrom != 0, "retokenizeSecToken: invalid token type id");
+		require(mult != 0 && multDiv != 0, "retokenizeSecToken: multiplication coefficients");
+		require(a.mintQty == 0, "retokenizeSecToken: mint qty should be 0"); // because it will be reassigned in the code
+		uint len = ledgers.length;
+		require(len > 0, "retokenizeSecToken: empty ledger array");
+
+		uint[] memory oldQtys = new uint[](len); 
+		uint totalQty = 0;
+
+		for(uint  i = 0; i < len; i++) {
+			address currLedger = ledgers[i];
+			ValidationLib.validateHasEntity(currLedger);
+
+			// counting number of tokens for an account
+			StructLib.LedgerSecTokenReturn[] memory tokens = LedgerLib.getLedgerEntry(s.ld, s.std, s.ctd, currLedger).tokens;
+			uint len2 = tokens.length;
+			uint currQty = 0;
+
+			for(uint j = 0; j < len2; j++) {
+				if(tokens[j].tokTypeId == tokenTypeIdFrom) {
+					currQty += uint(int(tokens[j].currentQty));
+				}
+			}
+
+			currQty = (currQty * mult) / multDiv;
+
+			// burn
+			if(currQty > 0) {
+				oldQtys[i] = currQty;
+				totalQty += currQty;
+
+				burnTokens(
+					s.ld,
+					s.std,
+					BurnTokenArgs({
+						ledgerOwner: currLedger,
+						tokTypeId: tokenTypeIdFrom,
+						burnQty: int(currQty),
+						k_stIds: new uint[](0)
+					}),
+					StructLib.CustomCcyFee({
+						ccyTypeId: 0,
+						fee: 0,
+						applyCustomFee: false
+					}),
+					true
+				);
+
+				emit RetokenizationBurningToken(currLedger, tokenTypeIdFrom, currQty, new uint[](0));
+			}
+			
+		}
+
+		// proceeding with retokenizaiton if the current batch of accounts does not have any target tokens
+		if(totalQty > 0) {
+			// minting tokens
+			a.mintQty = totalQty;
+			mintSecTokenBatch(s.ld, s.std, a, false, 0, 0, true);
+
+			address batchOwner = a.batchOwner;
+			uint newTokenTypeId = a.tokTypeId;
+
+			emit RetokenizationMintingToken(
+				batchOwner,
+				newTokenTypeId,
+				s.ld._batches_currentMax_id,
+				totalQty
+			);
+			
+			// redistributing tokens (transfering to every user the respective token amount)
+			for(uint  i = 0; i < len; i++) {
+				_redistribution(s, batchOwner, ledgers[i], newTokenTypeId, oldQtys[i]);
+			}
+		}
+	}
+
+	function _redistribution(
+		LibMainStorage.MainStorage storage s, 
+		address batchOwner, 
+		address currLedger, 
+		uint newTokenTypeId, 
+		uint curQty
+	) internal {
+		StructLib.TransferArgs memory transferArgs = StructLib.TransferArgs({
+			ledger_A: batchOwner,
+			ledger_B: currLedger,
+			qty_A: curQty,
+			k_stIds_A: new uint[](0),
+			tokTypeId_A: newTokenTypeId,
+			qty_B: 0,
+			k_stIds_B: new uint[](0),
+			tokTypeId_B: 0,
+			ccy_amount_A: 0,
+			ccyTypeId_A: 0,
+			ccy_amount_B: 0,
+			ccyTypeId_B: 0,
+			applyFees: false,
+			feeAddrOwner_A: address(0),
+			feeAddrOwner_B: address(0),
+			transferType: StructLib.TransferType.Undefined //TODO ???
+		});
+
+		TransferLib.transferOrTrade(
+			s.ld, 
+			s.std, 
+			s.ctd, 
+			s.entityGlobalFees, 
+			s.entitiesPerAddress, 
+			transferArgs, 
+			StructLib.CustomFee(0, 0, false)
+		);
 	}
 
 	function retokenizeSecTokenDet(

@@ -118,6 +118,7 @@ module.exports = {
             deployer.link(ValidationLib, StLedgerFacet);
             deployer.link(ValidationLib, StMintableFacet);
             deployer.link(ValidationLib, StTransferableFacet);
+            deployer.link(ValidationLib, TokenLib);
 
             // deploying ValidationLib
             await deployImpl(CcyLib, 'CcyLib');
@@ -129,12 +130,13 @@ module.exports = {
             deployer.link(LedgerLib, StLedgerFacet);
             deployer.link(LedgerLib, StMintableFacet);
             deployer.link(LedgerLib, StTransferableFacet);
+            deployer.link(LedgerLib, TokenLib);
 
             // deploying LedgerLib
             await deployImpl(LoadLib, 'LoadLib');
             deployer.link(LoadLib, DataLoadableFacet);
 
-            // deploying LedgerLib
+            // deploying SpotFeeLib
             await deployImpl(SpotFeeLib, 'SpotFeeLib');
             deployer.link(SpotFeeLib, StFeesFacet);
             deployer.link(SpotFeeLib, StMintableFacet);
@@ -145,6 +147,7 @@ module.exports = {
             deployer.link(TransferLib, StErc20Facet);
             deployer.link(TransferLib, StTransferableFacet);
             deployer.link(TransferLib, Erc20Lib);
+            deployer.link(TransferLib, TokenLib);
 
             // deploying TransferLibView
             await deployImpl(TransferLibView, 'TransferLibView');
