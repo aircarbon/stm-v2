@@ -71,7 +71,7 @@ const contractProps = {
     COMMODITY: {
         contractVer: contractVer,
         contractDecimals: 0,
-        contractName: `AirCarbon`,
+        contractName: `ACX`,
         contractUnit: "KG", //"Ton(s)",
         contractSymbol: "ACC",
         cashflowArgs: nullCashflowArgs,
