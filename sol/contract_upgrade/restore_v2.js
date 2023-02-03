@@ -470,7 +470,7 @@ module.exports = async (callback) => {
     let allCcyTypesWithFees = data.ccyFees.map((ccyFee, index) => {
       const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[index % entityIds.length];
       return {
-        ccyType: data.ccyTypes[Math.floor(index / entityIds.length)],
+        ccyType: data.ccyTypes[Math.floor(index / (entityIds.length || 1))],
         fee: ccyFee,
         entityId
       }
