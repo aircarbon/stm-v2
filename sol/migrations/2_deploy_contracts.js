@@ -110,7 +110,7 @@ module.exports = async function (deployer) {
     case 'PROD_56':
       console.log(`Deploying (AWS PROD / BSC 56 MAINNET) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
-    case 'PROD_137_AC':
+    case 'PROD_137_ACX':
       console.log(`Deploying (AWS PROD / Matic Mainnet) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
 
