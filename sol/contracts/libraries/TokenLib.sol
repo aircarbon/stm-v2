@@ -637,6 +637,7 @@ library TokenLib {
 		uint mult, 
 		uint multDiv
 	) public {
+		revert(); // function disaled until full testing is finished
 		require(tokenTypeIdFrom != 0, "retokenizeSecToken: invalid token type id");
 		require(mult != 0 && multDiv != 0, "retokenizeSecToken: multiplication coefficients");
 		require(a.mintQty == 0, "retokenizeSecToken: mint qty should be 0"); // because it will be reassigned in the code
@@ -646,48 +647,14 @@ library TokenLib {
 		uint[] memory oldQtys = new uint[](len); 
 		uint totalQty = 0;
 
+		// counting and burning tokens
 		for(uint  i = 0; i < len; i++) {
-			address currLedger = ledgers[i];
-			ValidationLib.validateHasEntity(currLedger);
+			uint currQty = _calcAndBurnTok(s, tokenTypeIdFrom, ledgers[i], mult, multDiv);
 
-			// counting number of tokens for an account
-			StructLib.LedgerSecTokenReturn[] memory tokens = LedgerLib.getLedgerEntry(s.ld, s.std, s.ctd, currLedger).tokens;
-			uint len2 = tokens.length;
-			uint currQty = 0;
-
-			for(uint j = 0; j < len2; j++) {
-				if(tokens[j].tokTypeId == tokenTypeIdFrom) {
-					currQty += uint(int(tokens[j].currentQty));
-				}
-			}
-
-			currQty = (currQty * mult) / multDiv;
-
-			// burn
 			if(currQty > 0) {
 				oldQtys[i] = currQty;
 				totalQty += currQty;
-
-				burnTokens(
-					s.ld,
-					s.std,
-					BurnTokenArgs({
-						ledgerOwner: currLedger,
-						tokTypeId: tokenTypeIdFrom,
-						burnQty: int(currQty),
-						k_stIds: new uint[](0)
-					}),
-					StructLib.CustomCcyFee({
-						ccyTypeId: 0,
-						fee: 0,
-						applyCustomFee: false
-					}),
-					true
-				);
-
-				emit RetokenizationBurningToken(currLedger, tokenTypeIdFrom, currQty, new uint[](0));
 			}
-			
 		}
 
 		// proceeding with retokenizaiton if the current batch of accounts does not have any target tokens
@@ -710,6 +677,51 @@ library TokenLib {
 			for(uint  i = 0; i < len; i++) {
 				_redistribution(s, batchOwner, ledgers[i], newTokenTypeId, oldQtys[i]);
 			}
+		}
+	}
+
+	function _calcAndBurnTok(
+		LibMainStorage.MainStorage storage s, 
+		uint tokenTypeIdFrom, 
+		address currLedger, 
+		uint mult, 
+		uint multDiv
+	) internal returns(uint currQty) {
+		ValidationLib.validateHasEntity(currLedger);
+
+		// counting number of tokens for an account
+		StructLib.LedgerSecTokenReturn[] memory tokens = LedgerLib.getLedgerEntry(s.ld, s.std, s.ctd, currLedger).tokens;
+		uint len = tokens.length;
+		currQty = 0;
+
+		for(uint i = 0; i < len; i++) {
+			if(tokens[i].tokTypeId == tokenTypeIdFrom) {
+				currQty += uint(int(tokens[i].currentQty));
+			}
+		}
+
+		currQty = (currQty * mult) / multDiv;
+
+		// burn
+		if(currQty > 0) {
+			burnTokens(
+				s.ld,
+				s.std,
+				BurnTokenArgs({
+					ledgerOwner: currLedger,
+					tokTypeId: tokenTypeIdFrom,
+					burnQty: int(currQty),
+					k_stIds: new uint[](0)
+				}),
+				StructLib.CustomCcyFee({
+					ccyTypeId: 0,
+					fee: 0,
+					applyCustomFee: false
+				}),
+				true
+			);
+
+			emit RetokenizationBurningToken(currLedger, tokenTypeIdFrom, currQty, new uint[](0));
 		}
 	}
 

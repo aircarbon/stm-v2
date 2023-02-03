@@ -16,6 +16,7 @@ contract StLedgerFacet {
 		uint mult, // multiplier
 		uint multDiv // multiplication divider (example: mult = 8, multDiv = 10, result -> 80%)
 	) external {
+		revert(); // function disaled until full testing is finished
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(a.batchOwner);
