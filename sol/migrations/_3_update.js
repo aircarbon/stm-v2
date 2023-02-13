@@ -128,6 +128,7 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, CcyCollateralizableFacet);
     deployer.link(ValidationLib_c, StMintableFacet);
     deployer.link(ValidationLib_c, StBurnableFacet);
+    deployer.link(ValidationLib_c, TokenLib);
 
     // deploying new CcyCollateralizableFacet
     const CcyCollateralizableFacet_c  = await deployOrGetDeployed(deployer, deployments.CcyCollateralizableFacet_addr, CcyCollateralizableFacet);
@@ -139,6 +140,7 @@ module.exports = async function (deployer) {
     deployer.link(TransferLib_c, Erc20Lib);
     deployer.link(TransferLib_c, StErc20Facet);
     deployer.link(TransferLib_c, StTransferableFacet);
+    deployer.link(TransferLib_c, TransferLib);
 
     // deploygin new TransferLibView
     const TransferLibView_c = await deployOrGetDeployed(deployer, deployments.TransferLibView_addr, TransferLibView);
@@ -174,6 +176,7 @@ module.exports = async function (deployer) {
     deployer.link(LedgerLib_c, StLedgerFacet);
     deployer.link(LedgerLib_c, StTransferableFacet);
     deployer.link(LedgerLib_c, StMintableFacet);
+    deployer.link(LedgerLib_c, TokenLib);
 
     // deploying new StErc20Facets
     const StErc20Facet_c = await deployOrGetDeployed(deployer, deployments.StErc20Facet_addr, StErc20Facet);

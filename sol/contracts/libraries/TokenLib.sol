@@ -637,12 +637,19 @@ library TokenLib {
 		uint mult, 
 		uint multDiv
 	) public {
-		revert(); // function disaled until full testing is finished
 		require(tokenTypeIdFrom != 0, "retokenizeSecToken: invalid token type id");
 		require(mult != 0 && multDiv != 0, "retokenizeSecToken: multiplication coefficients");
 		require(a.mintQty == 0, "retokenizeSecToken: mint qty should be 0"); // because it will be reassigned in the code
 		uint len = ledgers.length;
 		require(len > 0, "retokenizeSecToken: empty ledger array");
+
+		// validate that array does not have repeating addresses
+		for(uint i = 0; i < len; i++) {
+			address currLedger = ledgers[i];
+			for(uint j = i + 1; j < len; j++) {
+				require(currLedger != ledgers[j], "retokenizeSecToken: ledgers array has duplicates");
+			}
+		}
 
 		uint[] memory oldQtys = new uint[](len); 
 		uint totalQty = 0;
@@ -748,7 +755,7 @@ library TokenLib {
 			applyFees: false,
 			feeAddrOwner_A: address(0),
 			feeAddrOwner_B: address(0),
-			transferType: StructLib.TransferType.Undefined //TODO ???
+			transferType: StructLib.TransferType.RelatedTransfer //TODO ???
 		});
 
 		TransferLib.transferOrTrade(
