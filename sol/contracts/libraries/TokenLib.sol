@@ -638,7 +638,7 @@ library TokenLib {
 		uint multDiv
 	) public {
 		require(tokenTypeIdFrom != 0, "retokenizeSecToken: invalid token type id");
-		require(mult != 0 && multDiv != 0, "retokenizeSecToken: multiplication coefficients");
+		require(mult != 0 && multDiv != 0 && multDiv >= mult, "retokenizeSecToken: wrong multiplication coefficients");
 		require(a.mintQty == 0, "retokenizeSecToken: mint qty should be 0"); // because it will be reassigned in the code
 		uint len = ledgers.length;
 		require(len > 0, "retokenizeSecToken: empty ledger array");

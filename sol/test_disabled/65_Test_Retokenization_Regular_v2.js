@@ -75,12 +75,25 @@ contract("DiamondProxy", accounts => {
             accounts });
 
         await stmStErc20Facet.createEntity({id: 2, addr: CONST.testAddr99});
+        await stmStErc20Facet.createEntity({id: 3, addr: CONST.testAddr99});
+        await stmStErc20Facet.createEntity({id: 4, addr: CONST.testAddr99});
         await stmStErc20Facet.setAccountEntity({id: 1, addr: accounts[0]});
+        await stmStErc20Facet.setAccountEntity({id: 2, addr: accounts[1]});
+        await stmStErc20Facet.setAccountEntity({id: 3, addr: accounts[2]});
+        await stmStErc20Facet.setAccountEntity({id: 4, addr: accounts[3]});
     });
 
     beforeEach(async () => {
-        global.TaddrNdx += 2;
-        await stmStErc20Facet.setAccountEntityBatch([{id: 1, addr: accounts[global.TaddrNdx]}, {id: 1, addr: accounts[global.TaddrNdx + 1]}]);
+        global.TaddrNdx += 5;
+        await stmStErc20Facet.setAccountEntityBatch(
+            [
+                {id: 1, addr: accounts[global.TaddrNdx]}, 
+                {id: 1, addr: accounts[global.TaddrNdx + 1]},
+                {id: 1, addr: accounts[global.TaddrNdx + 2]},
+                {id: 1, addr: accounts[global.TaddrNdx + 3]},
+                {id: 1, addr: accounts[global.TaddrNdx + 4]},
+            ]
+        );
         if (CONST.logTestAccountUsage)
             console.log(`addrNdx: ${global.TaddrNdx} - contract @ ${stm.address} (owner: ${accounts[0]})`);
     });
@@ -224,7 +237,7 @@ contract("DiamondProxy", accounts => {
             }
             await stmStLedgerFacet.retokenizeSecToken(args, [A, B], CONST.tokenType.TOK_T1, 0, 1);
         } catch (ex) { 
-            assert(ex.reason == 'retokenizeSecToken: multiplication coefficients', `unexpected: ${ex.reason}`);
+            assert(ex.reason == 'retokenizeSecToken: wrong multiplication coefficients', `unexpected: ${ex.reason}`);
             return;
         }
         await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
@@ -248,7 +261,7 @@ contract("DiamondProxy", accounts => {
             }
             await stmStLedgerFacet.retokenizeSecToken(args, [A, B], CONST.tokenType.TOK_T1, 1, 0);
         } catch (ex) { 
-            assert(ex.reason == 'retokenizeSecToken: multiplication coefficients', `unexpected: ${ex.reason}`);
+            assert(ex.reason == 'retokenizeSecToken: wrong multiplication coefficients', `unexpected: ${ex.reason}`);
             return;
         }
         await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
@@ -272,7 +285,31 @@ contract("DiamondProxy", accounts => {
             }
             await stmStLedgerFacet.retokenizeSecToken(args, [A, B], CONST.tokenType.TOK_T1, 0, 0);
         } catch (ex) { 
-            assert(ex.reason == 'retokenizeSecToken: multiplication coefficients', `unexpected: ${ex.reason}`);
+            assert(ex.reason == 'retokenizeSecToken: wrong multiplication coefficients', `unexpected: ${ex.reason}`);
+            return;
+        }
+        await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
+        assert.fail('expected contract exception');
+    });
+
+    it(`retokenize - should not allow retokanizing with multiplier being larger than divider`, async () => {
+        const A = accounts[global.TaddrNdx];
+        const B = accounts[global.TaddrNdx + 1];
+        
+        try {
+            const args = {
+                tokTypeId: 0,
+                mintQty: 0,
+                mintSecTokenCount: 2,
+                batchOwner: A,
+                origTokFee: CONST.nullFees,
+                origCcyFee_percBips_ExFee: 0,
+                metaKeys: [],
+                metaValues: []
+            }
+            await stmStLedgerFacet.retokenizeSecToken(args, [A, B], CONST.tokenType.TOK_T1, 2, 1);
+        } catch (ex) { 
+            assert(ex.reason == 'retokenizeSecToken: wrong multiplication coefficients', `unexpected: ${ex.reason}`);
             return;
         }
         await stmOwnedFacet.setReadOnly(false, { from: accounts[0] });
@@ -376,41 +413,156 @@ contract("DiamondProxy", accounts => {
     });
 
     it(`retokenize - should retokenize`, async () => {
-        const A = accounts[global.TaddrNdx];
-        const B = accounts[global.TaddrNdx + 1];
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
 
-        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
-        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON, 1, A, CONST.nullFees, 0, [], [], { from: accounts[0], });
-
-        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * 2, 1, B, CONST.nullFees, 0, [], [], { from: accounts[0], });
-        await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * 2, 1, B, CONST.nullFees, 0, [], [], { from: accounts[0], });
-
-        const args = {
-            tokTypeId: 0,
-            mintQty: 0,
-            mintSecTokenCount: 2,
-            batchOwner: A,
-            origTokFee: CONST.nullFees,
-            origCcyFee_percBips_ExFee: 0,
-            metaKeys: [],
-            metaValues: []
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
         }
 
         await validateRetokanizationOutcome({
-            ledgers: [A, B],
+            ledgers,
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+        });
+    });
+
+    it(`retokenize - should retokenize same token type`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
+
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
+
+        await validateRetokanizationOutcome({
+            ledgers,
             burnTokTypeId: CONST.tokenType.TOK_T1,
             mintTokTypeId: CONST.tokenType.TOK_T1,
             batchOwner: accounts[0],
         });
     });
 
+    it(`retokenize - should retokenize half of all tokens`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
 
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
 
+        await validateRetokanizationOutcome({
+            ledgers,
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+            mult: 1,
+            multDiv: 2,
+        });
+    });
+
+    it(`retokenize - should retokenize 3/7 of all tokens`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
+
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
+
+        await validateRetokanizationOutcome({
+            ledgers,
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+            mult: 3,
+            multDiv: 7,
+        });
+    });
+
+    it(`retokenize - should retokenize tokens when one of the ledgers is an owner`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
+
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
+
+        await validateRetokanizationOutcome({
+            ledgers,
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: A,
+            mult: 1,
+            multDiv: 2,
+        });
+    });
+
+    it(`retokenize - should retokenize in multiple transactions`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[global.TaddrNdx + 3], accounts[global.TaddrNdx + 4]];
+        const ledgers = [A, B, C, D, E];
+
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
+
+        await validateRetokanizationOutcome({
+            ledgers: [A, B],
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+            mult: 1,
+            multDiv: 2,
+        });
+
+        await validateRetokanizationOutcome({
+            ledgers: [C],
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+            mult: 1,
+            multDiv: 2,
+        });
+
+        await validateRetokanizationOutcome({
+            ledgers: [D, E],
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[0],
+            mult: 1,
+            multDiv: 2,
+        });
+    });
+
+    it(`retokenize - should retokenize tokens for accounts in different entities`, async () => {
+        const [A, B, C, D, E] = [accounts[global.TaddrNdx], accounts[global.TaddrNdx + 1], accounts[global.TaddrNdx + 2], accounts[2], accounts[3]];
+        const ledgers = [A, B, C, D, E];
+
+        for(let i = 0; i < ledgers.length; i++) {
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON * (i + 1), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+            await stmStMintableFacet.mintSecTokenBatch(CONST.tokenType.TOK_T2, CONST.GT_CARBON * (i + 2), 1, ledgers[i], CONST.nullFees, 0, [], [], { from: accounts[0], });
+        }
+
+        await validateRetokanizationOutcome({
+            ledgers,
+            burnTokTypeId: CONST.tokenType.TOK_T1,
+            mintTokTypeId: CONST.tokenType.TOK_T2,
+            batchOwner: accounts[1],
+            mult: 1,
+            multDiv: 2,
+        });
+    });
 
 
     const validateRetokanizationOutcome = async({
         ledgers = [], 
-        burnTokTypeId = 0, 
+        burnTokTypeId, 
         mult = 1, 
         multDiv = 1, 
         metaKeys = [], 
@@ -461,7 +613,7 @@ contract("DiamondProxy", accounts => {
             totalBurnedQty += toBeBurnedPerAcc[currLedger];
         }
 
-        totalMinted = Math.floor(Math.floor(totalBurnedQty * mult) / multDiv);
+        totalMinted = totalBurnedQty; // because now in retokenization we mint as much as we burn
 
         // recording ledger of the minted tokens if it is not recorded yet
         if(ledgersBefore[mintParams.batchOwner] === undefined) {
@@ -487,17 +639,52 @@ contract("DiamondProxy", accounts => {
             truffleAssert.eventEmitted(
                 tx, 
                 'RetokenizationBurningToken', 
-                ev => {
-                    return (ev.owner == ledgers[i] && ev.tokenTypeId == burnTokTypeId && ev.burnQty == toBeBurnedPerAcc[ledgers[i]] && ev.k_stIds.length === 0);
-                }
+                ev => (ev.owner == ledgers[i] && ev.tokenTypeId == burnTokTypeId && ev.burnQty == toBeBurnedPerAcc[ledgers[i]] && ev.k_stIds.length === 0)
             ); 
         }
         
         // validate that minting event was emitted
         // const maxId = (await stmStLedgerFacet.getSecToken_MaxId()).toNumber();
         // need to manually calculate batch max id because of the transfers that happen
-        truffleAssert.eventEmitted(tx, 'RetokenizationMintingToken', ev => ev.owner == mintParams.batchOwner && ev.tokenTypeId == burnTokTypeId && ev.qty == totalMinted);
+        truffleAssert.eventEmitted(tx, 'RetokenizationMintingToken', ev => ev.owner == mintParams.batchOwner && ev.tokenTypeId == mintTokTypeId && ev.qty == totalMinted);
         // truffleAssert.eventEmitted(tx, 'RetokenizationMintingToken', ev => ev.owner == mintParams.batchOwner && ev.tokenTypeId == burnTokTypeId && ev.batchId == maxId && ev.qty == totalMinted);
+
+        //validate transfer events
+        const eventsData = {}
+
+        truffleAssert.eventEmitted(tx, 'TransferedFullSecToken', ev => {
+            if(eventsData[ev.to]) {
+                eventsData[ev.to] += Number(ev.qty.toString());
+            } else {
+                eventsData[ev.to] = Number(ev.qty.toString());
+            }
+            
+            return ev.from == mintParams.batchOwner && ev.transferType.toString() == CONST.transferType.RELATED_TRANSFER;
+        });
+
+        try {
+            truffleAssert.eventEmitted(tx, 'TransferedPartialSecToken', ev => {
+                if(eventsData[ev.to]) {
+                    eventsData[ev.to] += Number(ev.qty.toString());
+                } else {
+                    eventsData[ev.to] = Number(ev.qty.toString());
+                }
+
+                return ev.from == mintParams.batchOwner && ev.transferType.toString() == CONST.transferType.RELATED_TRANSFER;
+            });
+        } catch(err) {
+            if(!err.toString().includes('AssertionError: Event of type TransferedPartialSecToken was not emitted')) {
+                throw err;
+            }
+        }
+        
+
+        for(let addr of ledgers) {
+            if(addr != batchOwner) {
+                assert(eventsData[addr], 'no transfer event was found for one of the destination addresses');
+                assert(eventsData[addr] = toBeBurnedPerAcc[addr], 'no transfer event was found for one of the destination addresses');
+            }
+        }
 
         // check global total burned
         const burnedTokQtyAfter = await stmStBurnableFacet.getSecToken_totalBurnedQty.call();
@@ -548,7 +735,7 @@ contract("DiamondProxy", accounts => {
                 assert(Number(totalCurrentQtyAfter) == Number(totalCurrentQtyBefore) - totalBurnedQty, 'unexpected remaining cuurrent TONS in ST after burn');
                 assert(Number(totalMintQtyAfter) == Number(totalMintQtyBefore), 'unexpected remaining minted TONS in ST after burn');
             } else if(currTokTypeId == mintTokTypeId) {
-                assert(Number(totalCurrentQtyAfter) == Number(totalCurrentQtyBefore), 'unexpected remaining cuurrent TONS in ST after burn');
+                assert(Number(totalCurrentQtyAfter) == Number(totalCurrentQtyBefore) + totalMinted, 'unexpected remaining cuurrent TONS in ST after burn');
                 assert(Number(totalMintQtyAfter) == Number(totalMintQtyBefore) + totalMinted, 'unexpected remaining minted TONS in ST after burn');
             } else {
                 assert(Number(totalCurrentQtyAfter) == Number(totalCurrentQtyBefore), 'unexpected remaining cuurrent TONS in ST after burn');
