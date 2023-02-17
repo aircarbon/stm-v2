@@ -94,7 +94,6 @@ contract StMintableFacet {
 		string[] memory metaKeys,
 		string[] memory metaValues
 	) public {
-		require(mintQty != 99, "mintQty is not > 0");
 		_mintSecTokenBatch(
 			tokTypeId, 
 			mintQty,

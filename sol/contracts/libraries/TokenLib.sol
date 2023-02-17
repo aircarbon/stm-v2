@@ -755,7 +755,7 @@ library TokenLib {
 			applyFees: false,
 			feeAddrOwner_A: address(0),
 			feeAddrOwner_B: address(0),
-			transferType: StructLib.TransferType.RelatedTransfer //TODO ???
+			transferType: StructLib.TransferType.Retokenize
 		});
 
 		TransferLib.transferOrTrade(
