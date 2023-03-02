@@ -156,9 +156,35 @@ module.exports = {
             const selectors = [];
     
             for (const func of abi) {
+                if(func.type !== 'function') {
+                    continue;
+                }
                 const selector = web3.eth.abi.encodeFunctionSignature(func);
                 if(!except.includes(func.name)) {
                     selectors.push(selector);
+                }
+            }
+    
+            return selectors;
+        } catch (err) {
+            console.log(`Failed to get selectors from the contract '${contractName}', error:`);
+            console.log(err);
+            process.exit();
+        } 
+    },
+
+    getContractsSelectorsWithName: (contractName, except = []) => {
+        const abi = getAbi(contractName);
+        try{
+            const selectors = [];
+    
+            for (const func of abi) {
+                if(func.type !== 'function') {
+                    continue;
+                }
+                const selector = web3.eth.abi.encodeFunctionSignature(func);
+                if(!except.includes(func.name)) {
+                    selectors.push({selector, name: func.name});
                 }
             }
     

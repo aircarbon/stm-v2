@@ -15,12 +15,54 @@ module.exports = {
 
     Deploy: async (p) => {
         try {
-            const { deployer, artifacts, contractType, custodyType, nameOverride, symbolOverride } = p;
-            const deployImpl = async(contr, contractName, args = []) => {
+            var ip = "unknown";
+            publicIp.v4().then(p => ip = p).catch(e => { console.log("\tWARN: could not get IP - will write 'unknown'"); });
+            const hostName = os.hostname();
+
+            const { deployer, artifacts, contractType, custodyType, nameOverride, symbolOverride, git_commit, version, isTest } = p;
+
+            const deployImpl = async(contr, contractName, contractLinkedToProxy, args = []) => {
                 try{
-                    await deployer.deploy(contr, ...args);
+                    const deployedContr = await deployer.deploy(contr, ...args);
+                    // saving contract to the deployment table in the DB
+                    if(!isTest) {
+                        await db.SaveContractDeployment({
+                            contractName: contractName,
+                            networkId: deployer.network_id,
+                            addr: deployedContr.address,
+                            linkedToAddr: contractLinkedToProxy,
+                            txHash: deployedContr.transactionHash,
+                            version: version,
+                            gitCommit: git_commit,
+                            deployerHostName: hostName,
+                            ip: ip,
+                        });
+                    }
                 } catch (err) {
                     console.log(`Failed to deploy contract '${contractName}', error:`);
+                    console.log(err);
+                    process.exit();
+                }
+            }
+
+            const saveFuncToDb = async (funcName, funcSelector, contrAddr, txHash, initAddr, calldata) => {
+                try{
+                    if(!isTest) {
+                        await db.SaveContractFunction({
+                            networkId: deployer.network_id,
+                            action: "ADD",
+                            funcName,
+                            funcSelector,
+                            contrAddr,
+                            txHash,
+                            initAddr,
+                            calldata,
+                            deployerHostName: hostName,
+                            ip
+                        });
+                    }
+                } catch (err) {
+                    console.log(`Failed to save function '${funcName}' to db, error:`);
                     console.log(err);
                     process.exit();
                 }
@@ -33,7 +75,6 @@ module.exports = {
             }
             const owners = accountAndKeys.map(p => p.addr);
 
-            var stmAddr;
             //const contractType = process.env.CONTRACT_TYPE;
             if (contractType != 'CASHFLOW_BASE' && contractType != 'CASHFLOW_CONTROLLER' && contractType != 'COMMODITY') throw ('Unknown contractType');
 
@@ -67,8 +108,16 @@ module.exports = {
             const StTransferableFacet = artifacts.require('./StTransferableFacet.sol');
             const DiamondProxy = artifacts.require('./DiamondProxy.sol');
 
+            // deploying DiamondCutFacet
+            await deployImpl(DiamondCutFacet, 'DiamondCutFacet');
+            
+            // deploying DiamondProxy
+            await deployImpl(DiamondProxy, 'DiamondProxy', 'this', [owners[0], DiamondCutFacet.address]);
+            const diamondProxyAddr = DiamondProxy.address;
+            const proxyRegistratable = await DiamondCutFacet.at(diamondProxyAddr);
+
             // deploying StructLib
-            await deployImpl(StructLib, 'StructLib');
+            await deployImpl(StructLib, 'StructLib', diamondProxyAddr);
             deployer.link(StructLib, LibMainStorage);
             deployer.link(StructLib, ValidationLib);
             deployer.link(StructLib, CcyLib);
@@ -91,7 +140,7 @@ module.exports = {
             deployer.link(StructLib, StTransferableFacet);
 
             // deploying LibMainStorage
-            await deployImpl(LibMainStorage, 'LibMainStorage');
+            await deployImpl(LibMainStorage, 'LibMainStorage', diamondProxyAddr);
             deployer.link(LibMainStorage, CcyCollateralizableFacet);
             deployer.link(LibMainStorage, DataLoadableFacet);
             deployer.link(LibMainStorage, OwnedFacet);
@@ -108,7 +157,7 @@ module.exports = {
             deployer.link(LibMainStorage, CcyLib);
 
             // deploying ValidationLib
-            await deployImpl(ValidationLib, 'ValidationLib');
+            await deployImpl(ValidationLib, 'ValidationLib', diamondProxyAddr);
             deployer.link(ValidationLib, CcyCollateralizableFacet);
             deployer.link(ValidationLib, DataLoadableFacet);
             deployer.link(ValidationLib, OwnedFacet);
@@ -121,11 +170,11 @@ module.exports = {
             deployer.link(ValidationLib, TokenLib);
 
             // deploying ValidationLib
-            await deployImpl(CcyLib, 'CcyLib');
+            await deployImpl(CcyLib, 'CcyLib', diamondProxyAddr);
             deployer.link(CcyLib, CcyCollateralizableFacet);
 
             // deploying LedgerLib
-            await deployImpl(LedgerLib, 'LedgerLib');
+            await deployImpl(LedgerLib, 'LedgerLib', diamondProxyAddr);
             deployer.link(LedgerLib, StErc20Facet);
             deployer.link(LedgerLib, StLedgerFacet);
             deployer.link(LedgerLib, StMintableFacet);
@@ -133,104 +182,73 @@ module.exports = {
             deployer.link(LedgerLib, TokenLib);
 
             // deploying LedgerLib
-            await deployImpl(LoadLib, 'LoadLib');
+            await deployImpl(LoadLib, 'LoadLib', diamondProxyAddr);
             deployer.link(LoadLib, DataLoadableFacet);
 
             // deploying SpotFeeLib
-            await deployImpl(SpotFeeLib, 'SpotFeeLib');
+            await deployImpl(SpotFeeLib, 'SpotFeeLib', diamondProxyAddr);
             deployer.link(SpotFeeLib, StFeesFacet);
             deployer.link(SpotFeeLib, StMintableFacet);
             deployer.link(SpotFeeLib, TokenLib);
 
             // deploying TransferLib
-            await deployImpl(TransferLib, 'TransferLib');
+            await deployImpl(TransferLib, 'TransferLib', diamondProxyAddr);
             deployer.link(TransferLib, StErc20Facet);
             deployer.link(TransferLib, StTransferableFacet);
             deployer.link(TransferLib, Erc20Lib);
             deployer.link(TransferLib, TokenLib);
 
             // deploying TransferLibView
-            await deployImpl(TransferLibView, 'TransferLibView');
+            await deployImpl(TransferLibView, 'TransferLibView', diamondProxyAddr);
             deployer.link(TransferLibView, StTransferableFacet);
 
             // deploying Erc20Lib
-            await deployImpl(Erc20Lib, 'Erc20Lib');
+            await deployImpl(Erc20Lib, 'Erc20Lib', diamondProxyAddr);
             deployer.link(Erc20Lib, StErc20Facet);
             deployer.link(Erc20Lib, StTransferableFacet);
             deployer.link(Erc20Lib, DataLoadableFacet);
 
             // deploying TokenLib
-            await deployImpl(TokenLib, 'TokenLib');
+            await deployImpl(TokenLib, 'TokenLib', diamondProxyAddr);
             deployer.link(TokenLib, StBurnableFacet);
             deployer.link(TokenLib, StLedgerFacet);
             deployer.link(TokenLib, StMintableFacet);
 
-            // deploying DiamondCutFacet
-            await deployImpl(DiamondCutFacet, 'DiamondCutFacet');
-
-            // deploying DiamondLoupeFacet
-            await deployImpl(DiamondLoupeFacet, 'DiamondLoupeFacet');
-            
-            // deploying DiamondProxy
-            await deployImpl(DiamondProxy, 'DiamondProxy', [owners[0], DiamondCutFacet.address]);
-            const proxyRegistratable = await DiamondCutFacet.at(DiamondProxy.address);
-
-            //deploying non-initializable proxies
-            await deployImpl(CcyCollateralizableFacet, 'CcyCollateralizableFacet');
-            await deployImpl(DataLoadableFacet, 'DataLoadableFacet');
-            await deployImpl(StBurnableFacet, 'StBurnableFacet');
-            await deployImpl(StFeesFacet, 'StFeesFacet');
-            await deployImpl(StLedgerFacet, 'StLedgerFacet');
-            await deployImpl(StMasterFacet, 'StMasterFacet');
-            await deployImpl(StMintableFacet, 'StMintableFacet');
-            await deployImpl(StTransferableFacet, 'StMasterFacet');
-
-            // registering the faucets
-            const diamondCutParams = [
-                {
-                    facetAddress: CcyCollateralizableFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('CcyCollateralizableFacet')
-                },
-                {
-                    facetAddress: DataLoadableFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('DataLoadableFacet')
-                },
-                {
-                    facetAddress: StBurnableFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('StBurnableFacet')
-                },
-                {
-                    facetAddress: StFeesFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('StFeesFacet')
-                },
-                {
-                    facetAddress: StLedgerFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('StLedgerFacet')
-                },
-                {
-                    facetAddress: StMintableFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('StMintableFacet')
-                },
-                {
-                    facetAddress: StTransferableFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('StTransferableFacet')
-                },
-                {
-                    facetAddress: DiamondLoupeFacet.address,
-                    action: CONST.FacetCutAction.Add,
-                    functionSelectors: CONST.getContractsSelectors('DiamondLoupeFacet')
-                },
+            //deploying non-initializable facets
+            const nonInitContracts = [
+                { name: 'DiamondLoupeFacet', contr: DiamondLoupeFacet },
+                { name: 'CcyCollateralizableFacet', contr: CcyCollateralizableFacet },
+                { name: 'DataLoadableFacet', contr: DataLoadableFacet },
+                { name: 'StBurnableFacet', contr: StBurnableFacet },
+                { name: 'StFeesFacet', contr: StFeesFacet },
+                { name: 'StLedgerFacet', contr: StLedgerFacet },
+                { name: 'StMintableFacet', contr: StMintableFacet },
+                { name: 'StTransferableFacet', contr: StTransferableFacet }
             ];
 
-            // registering the facets
-            await proxyRegistratable.diamondCut(diamondCutParams, CONST.nullAddr, "0x");
+            for(let contract of nonInitContracts) {
+                await deployImpl(contract.contr, contract.name, diamondProxyAddr);
+            }
+
+            // registering the faucets
+            const diamondCutParams = [];
+
+            for(let contract of nonInitContracts) {
+                diamondCutParams.push({
+                    facetAddress: contract.contr.address,
+                    action: CONST.FacetCutAction.Add,
+                    functionSelectors: CONST.getContractsSelectors(contract.name)
+                });
+            }
+
+            let tx = await proxyRegistratable.diamondCut(diamondCutParams, CONST.nullAddr, "0x");
+
+            // recording functions in the database
+            for(let contract of nonInitContracts) {
+                for(let funcSelector of CONST.getContractsSelectorsWithName(contract.name)) {
+                    await saveFuncToDb(funcSelector.name, funcSelector.selector, contract.contr.address, tx.tx);
+                }
+            }
 
             // derive primary owner/deployer (&[0]), and a further n more keypairs ("backup owners");
             // (bkp-owners are passed to contract ctor, and have identical permissions to the primary owner)
@@ -246,7 +264,7 @@ module.exports = {
             }
 
             //deploying OwnedFacet
-            await deployImpl(OwnedFacet, 'OwnedFacet');
+            await deployImpl(OwnedFacet, 'OwnedFacet', diamondProxyAddr);
             
             let abi = CONST.getAbi('OwnedFacet');
             let initFuncAbi = abi.find((func) => func.name === 'init');
@@ -258,7 +276,7 @@ module.exports = {
                 ]
             );
 
-            await proxyRegistratable.diamondCut([
+            tx = await proxyRegistratable.diamondCut([
                 {
                     facetAddress: OwnedFacet.address,
                     action: CONST.FacetCutAction.Add,
@@ -266,8 +284,13 @@ module.exports = {
                 }
             ], OwnedFacet.address, ownedInitCalldata);
 
+            // saving function to db
+            for(let funcSelector of CONST.getContractsSelectorsWithName('OwnedFacet', ['init'])) {
+                await saveFuncToDb(funcSelector.name, funcSelector.selector, OwnedFacet.address, tx.tx, OwnedFacet.address, ownedInitCalldata);
+            }
+
             //deploying StErc20Facet
-            await deployImpl(StErc20Facet, 'StErc20Facet');
+            await deployImpl(StErc20Facet, 'StErc20Facet', diamondProxyAddr);
 
             abi = CONST.getAbi('StErc20Facet');
             initFuncAbi = abi.find((func) => func.name === 'init');
@@ -279,7 +302,7 @@ module.exports = {
                 ]
             );
 
-            await proxyRegistratable.diamondCut([
+            tx = await proxyRegistratable.diamondCut([
                 {
                     facetAddress: StErc20Facet.address,
                     action: CONST.FacetCutAction.Add,
@@ -287,8 +310,13 @@ module.exports = {
                 }
             ], StErc20Facet.address, sterc20InitCalldata);
 
+            // saving function to db
+            for(let funcSelector of CONST.getContractsSelectorsWithName('StErc20Facet', ['init'])) {
+                await saveFuncToDb(funcSelector.name, funcSelector.selector, StErc20Facet.address, tx.tx, StErc20Facet.address, sterc20InitCalldata);
+            }
+
             //deploying StMasterFacet
-            await deployImpl(StMasterFacet, 'StMasterFacet');
+            await deployImpl(StMasterFacet, 'StMasterFacet', diamondProxyAddr);
             const contractName = `${process.env.CONTRACT_PREFIX}${nameOverride || CONST.contractProps[contractType].contractName}`;
 
             abi = CONST.getAbi('StMasterFacet');
@@ -304,13 +332,18 @@ module.exports = {
                 ]
             );
 
-            await proxyRegistratable.diamondCut([
+            tx = await proxyRegistratable.diamondCut([
                 {
                     facetAddress: StMasterFacet.address,
                     action: CONST.FacetCutAction.Add,
                     functionSelectors: CONST.getContractsSelectors('StMasterFacet', ['init'])
                 }
             ], StMasterFacet.address, masterInitCalldata);
+
+            // saving function to db
+            for(let funcSelector of CONST.getContractsSelectorsWithName('StMasterFacet', ['init'])) {
+                await saveFuncToDb(funcSelector.name, funcSelector.selector, StMasterFacet.address, tx.tx, StMasterFacet.address, masterInitCalldata);
+            }
 
             const stm = proxyRegistratable;
 
@@ -323,8 +356,6 @@ module.exports = {
 
             if (!deployer.network.includes("-fork")) {
                 // save to DB
-                var ip = "unknown";
-                publicIp.v4().then(p => ip = p).catch(e => { console.log("\tWARN: could not get IP - will write 'unknown'"); });
                 console.log(`>>> SAVING DEPLOYMENT: ${contractName} ${CONST.contractProps[contractType].contractVer} to ${process.env.sql_server}`);
                 await db.SaveDeployment({
                     contractName: contractName,
@@ -341,7 +372,7 @@ module.exports = {
 
                 // log & validate deployment
                 logEnv("DEPLOYMENT COMPLETE", owners, contractType, contractName);
-                const proxyOwned = await OwnedFacet.at(DiamondProxy.address);
+                const proxyOwned = await OwnedFacet.at(diamondProxyAddr);
 
                 const contractOwners = await proxyOwned.getOwners();
                 if (contractType != 'CASHFLOW_BASE' && contractOwners.length != CONST.RESERVED_ADDRESSES_COUNT) {

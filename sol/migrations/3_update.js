@@ -24,57 +24,126 @@ const CONST = require('../const.js');
 const chalk = require('chalk');
 
 const Web3 = require('web3');
-const web3 = new Web3();
 
 const  db  = require('../../orm/build');
 
-const deployments = {
-    LibMainStorage_addr: "0x108240A41a777A2338b76aA14D84Ae0DaB065778",
-    StructLib_addr: "0x43c9E54Cda6de70672C791c73e4202202294C867",
-    ValidationLib_addr: "0x7931215a8CeBeB644B1EFefC46A7acDAAdED1036",
-    TransferLib_addr: "0x78158e63D50b3cB6A49F1b5dc2c33b05883cc323",
-    TransferLibView_addr: "0x1cE1b9A5c3Df8894ACe22c696f375222c58B1a86",
-    SpotFeeLib_addr: "0x49ef2260846FDb95cDf94E989e57C473b81A07Ab",
-    LoadLib_addr: "0xC6aCbad4bD1F45da88B1a33d03521304083CFd70",
-    StFeesFacet_addr: "0x9E3c7d167D3B9cDd0a93677C6b5cB03b4f8ab4D4",
-    Erc20Lib_addr: "0xC1eEB44312e21114Af1c4af57Ecbdb2F194A414e",
-    LedgerLib_addr: "0x9c111764502F612591615eD5E54936dFb0d3D01B",
-    StErc20Facet_addr: "0xA4023124b9634537ba12C0978f7236c679830e13",
-    DataLoadableFacet_addr: "0x11D13B6451a426295Af06Fa253CE94815919D808",
-    TokenLib_addr: "0xe32177846078CD2F1DBE11E07Cf7C335CA01E30c",
-    StLedgerFacet_addr: "0xce89c6dd73204C9Db0181c7a4e50cC77022a9989",
-    StTransferableFacet_addr: "0x52164324bd557aA56e618e94de989984a5bE67b9",
-    CcyLib_addr: "0xdEdD38980747395d74Bb6Dfdab2e50d3cc0Ba085",
-    CcyCollateralizableFacet_addr: "0xCD6577EaB39CE9c8CdB5C6Eed5626882f9C801E3",
-    StMintableFacet_addr: "0x37591D8d5dbd7b29B08795B7C6CEb90667aA0422",
-    StBurnableFacet_addr: "0x3Af5aDC186C73a554947D532f19544611CcD5300",
-    DiamondCutFacet_addr: "0x013B843F9962540320Bc0ac006d465443b13D8e6",
-    DiamondLoupeFacet_addr: "0xa7Ec35a73573A8a545eA593226509A0BE08780e6",
-    OwnedFacet_addr: "0x262D794bfD726ceAD135f8d980E6Ab5Dc083425C",
-    StMasterFacet_addr: "0x800baf3b79F1B3661fFb0fD940Ce81169973adC7",
+const allContractsNames = [
+    'LibMainStorage',
+    'StructLib',
+    'ValidationLib',
+    'TransferLib',
+    'TransferLibView',
+    'SpotFeeLib',
+    'LoadLib',
+    'StFeesFacet',
+    'Erc20Lib',
+    'LedgerLib',
+    'StErc20Facet',
+    'DataLoadableFacet',
+    'TokenLib',
+    'StLedgerFacet',
+    'StTransferableFacet',
+    'CcyLib',
+    'CcyCollateralizableFacet',
+    'StMintableFacet',
+    'StBurnableFacet',
+    'DiamondCutFacet',
+    'DiamondLoupeFacet',
+    'OwnedFacet',
+    'StMasterFacet',
+];
+
+// here specify names of smart contracts (that are affected by changes) that will be deployed
+const contractsToBeRedeployed = [
+
+];
+
+// here specify function names and respective implementation contracts that should be updated
+const upgradeParams = [
+
+];
+
+const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
+    return db.GetFacetByName(networkId, contrName, linkedToAddr);
 }
 
-const deployOrGetDeployed = async(deployer, addr, contract) => {
-    if(addr) {
-        return contract.at(addr);
-    }
-    return deployer.deploy(contract);
-}
+// Rules before upgrading:
+// 1. All changes in smart contracts should be committed to github
+// 2. You cannot skip upgrades (e.g. if you at first made some changes in smart contracts ("change_1"), then made other changes("change_2"), 
+//    you need to upgrade smart contract with "change_1" at first, and only then upgrade it with "change_2". Cannot skip "change_1" or make 
+//    "change_2" at first and "change_1" later). Because the script will pick up latest smart contracts from the database.
 
+// SPECIFY PARAMS HERE
 module.exports = async function (deployer) {
+    if(process.env.UPGRADE !== 'true') {
+        return;
+    }
+
     console.log('3_update: ', deployer.network);
-    // const stm = await DiamondCutFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
-    // const stm = await DiamondCutFacet.at('0x9b197e9FbB891Ef0484439581aA8430983405F90');
-    // const stm = await DiamondCutFacet.at('0x4Dba44Bbd8A7D940C2453B6686fB435C469e64E4');
-    const stm = await DiamondCutFacet.at('0x48Ef17AaB4a38EcA1dDB8333Ae995b8703bDb187');
+    const version = process.env.VERSION;
+    const gitCommit = process.env.GIT_COMMIT;
+    const scAddr = process.env.SC;
+
+    if (!version) {
+        console.log(chalk.red.bold.inverse(`process.env.VERSION not provided.`));
+        process.exit(1);
+    }
+    if (!gitCommit) {
+        console.log(chalk.red.bold.inverse(`process.env.GIT_COMMIT not provided.`));
+        process.exit(1);
+    }
+    if(!scAddr) {
+        console.log(chalk.red.bold.inverse(`Bad process.env.SC, cannot upgrade.`));
+        process.exit(1);
+    }
+    console.log(chalk.red('process.env.VERSION'.padEnd(30, '.')), version);
+    console.log(chalk.red('process.env.GIT_COMMIT'.padEnd(30, '.')), gitCommit);
+    console.log(chalk.red('process.env.scAddr'.padEnd(30, '.')), scAddr);
+
+    let ip = "unknown";
+    publicIp.v4().then(p => ip = p).catch(e => { console.log("\tWARN: could not get IP - will write 'unknown'"); });
+    const hostName = os.hostname();
+    const stm = await DiamondCutFacet.at(scAddr);
+
+    const deployedContrAddr = {};
+    for(let contrName of allContractsNames) {
+        const result = await getLatestContrAddr(deployer.network_id, contrName, scAddr);
+        deployedContrAddr[contrName] = result?.recordset[0]?.addr;
+        if(!deployedContrAddr[contrName] && !contractsToBeRedeployed.includes(contrName)) {
+            console.log(chalk.red.bold.inverse(`Cannot find contract '${contrName}' linked to proxy '${scAddr}' for network '${deployer.network_id}' in DB.`));
+            process.exit(1);
+        }
+    }
+
+    const deployOrGetDeployed = async(contractName, contract) => {
+        if(contractsToBeRedeployed.includes(contractName)) {
+            console.log(`Deploygin '${contractName}' ...`);
+            const contr = deployer.deploy(contract);
     
+            await db.SaveContractDeployment({
+                contractName: contractName,
+                networkId: deployer.network_id,
+                addr: contr.address,
+                linkedToAddr: scAddr,
+                txHash: contr.transactionHash,
+                version: version,
+                gitCommit: gitCommit,
+                deployerHostName: hostName,
+                ip: ip,
+            });
+    
+            return contr;
+        }
+        return contract.at(deployedContrAddr[contractName]);
+    }
+
     // const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
     // console.log(await stmLoupe.facets());
 
     console.log('\nDeploying new Facets and registering them...');
 
     // deploying new LibMainStorage
-    const LibMainStorage_c = await deployOrGetDeployed(deployer, deployments.LibMainStorage_addr, LibMainStorage);
+    const LibMainStorage_c = await deployOrGetDeployed('LibMainStorage', LibMainStorage);
     console.log(chalk.green.bold(`LibMainStorage_addr: "${LibMainStorage_c.address}",`));
     deployer.link(LibMainStorage_c, StFeesFacet);
     deployer.link(LibMainStorage_c, ValidationLib);
@@ -93,7 +162,7 @@ module.exports = async function (deployer) {
     deployer.link(LibMainStorage_c, StBurnableFacet);
 
     // deploying new StructLib (because don't have address of an old one)
-    const StructLib_c = await deployOrGetDeployed(deployer, deployments.StructLib_addr, StructLib);
+    const StructLib_c = await deployOrGetDeployed('StructLib', StructLib);
     console.log(chalk.green.bold(`StructLib_addr: "${StructLib_c.address}",`));
     deployer.link(StructLib_c, StFeesFacet);
     deployer.link(StructLib_c, SpotFeeLib);
@@ -113,12 +182,12 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, StBurnableFacet);
 
     // deploying new CcyLib
-    const CcyLib_c = await deployOrGetDeployed(deployer, deployments.CcyLib_addr, CcyLib);
+    const CcyLib_c = await deployOrGetDeployed('CcyLib', CcyLib);
     console.log(chalk.green.bold(`CcyLib_addr: "${CcyLib_c.address}",`));
     deployer.link(CcyLib_c, CcyCollateralizableFacet);
 
     // deploygin new ValidationLib
-    const ValidationLib_c = await deployOrGetDeployed(deployer, deployments.ValidationLib_addr, ValidationLib);
+    const ValidationLib_c = await deployOrGetDeployed('ValidationLib', ValidationLib);
     console.log(chalk.green.bold(`ValidationLib_addr: "${ValidationLib_c.address}",`));
     deployer.link(ValidationLib_c, StFeesFacet);
     deployer.link(ValidationLib_c, StErc20Facet);
@@ -131,11 +200,11 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, TokenLib);
 
     // deploying new CcyCollateralizableFacet
-    const CcyCollateralizableFacet_c  = await deployOrGetDeployed(deployer, deployments.CcyCollateralizableFacet_addr, CcyCollateralizableFacet);
+    const CcyCollateralizableFacet_c  = await deployOrGetDeployed('CcyCollateralizableFacet', CcyCollateralizableFacet);
     console.log(chalk.green.bold(`CcyCollateralizableFacet_addr: "${CcyCollateralizableFacet_c.address}",`));
 
     // deploygin new TransferLib
-    const TransferLib_c = await deployOrGetDeployed(deployer, deployments.TransferLib_addr, TransferLib);
+    const TransferLib_c = await deployOrGetDeployed('TransferLib', TransferLib);
     console.log(chalk.green.bold(`TransferLib_addr: "${TransferLib_c.address}",`));
     deployer.link(TransferLib_c, Erc20Lib);
     deployer.link(TransferLib_c, StErc20Facet);
@@ -143,34 +212,34 @@ module.exports = async function (deployer) {
     deployer.link(TransferLib_c, TransferLib);
 
     // deploygin new TransferLibView
-    const TransferLibView_c = await deployOrGetDeployed(deployer, deployments.TransferLibView_addr, TransferLibView);
+    const TransferLibView_c = await deployOrGetDeployed('TransferLibView', TransferLibView);
     console.log(chalk.green.bold(`TransferLibView_addr: "${TransferLibView_c.address}",`));
     deployer.link(TransferLibView_c, StTransferableFacet);
 
     // deploygin new SpotFeeLib
-    const SpotFeeLib_c = await deployOrGetDeployed(deployer, deployments.SpotFeeLib_addr, SpotFeeLib);
+    const SpotFeeLib_c = await deployOrGetDeployed('SpotFeeLib', SpotFeeLib);
     console.log(chalk.green.bold(`SpotFeeLib_addr: "${SpotFeeLib_c.address}",`));
     deployer.link(SpotFeeLib_c, StFeesFacet);  
     deployer.link(SpotFeeLib_c, TokenLib);  
     deployer.link(SpotFeeLib_c, StMintableFacet);  
     
     // deploygin new LoadLib
-    const LoadLib_c = await deployOrGetDeployed(deployer, deployments.LoadLib_addr, LoadLib);
+    const LoadLib_c = await deployOrGetDeployed('LoadLib', LoadLib);
     console.log(chalk.green.bold(`LoadLib_addr: "${LoadLib_c.address}",`));
     deployer.link(LoadLib_c, DataLoadableFacet);    
 
     // deploying new StFeesFacet
-    const StFeesFacet_c = await deployOrGetDeployed(deployer, deployments.StFeesFacet_addr, StFeesFacet);
+    const StFeesFacet_c = await deployOrGetDeployed('StFeesFacet', StFeesFacet);
     console.log(chalk.green.bold(`StFeesFacet_addr: "${StFeesFacet_c.address}",`));
 
     // depoying new Erc20Lib
-    const Erc20Lib_c = await deployOrGetDeployed(deployer, deployments.Erc20Lib_addr, Erc20Lib);
+    const Erc20Lib_c = await deployOrGetDeployed('Erc20Lib', Erc20Lib);
     console.log(chalk.green.bold(`Erc20Lib_addr: "${Erc20Lib_c.address}",`));
     deployer.link(Erc20Lib_c, StErc20Facet);
     deployer.link(Erc20Lib_c, DataLoadableFacet);
     
     // depoying new LedgerLib
-    const LedgerLib_c = await deployOrGetDeployed(deployer, deployments.LedgerLib_addr, LedgerLib);
+    const LedgerLib_c = await deployOrGetDeployed('LedgerLib', LedgerLib);
     console.log(chalk.green.bold(`LedgerLib_addr: "${LedgerLib_c.address}",`));
     deployer.link(LedgerLib_c, StErc20Facet);
     deployer.link(LedgerLib_c, StLedgerFacet);
@@ -179,36 +248,42 @@ module.exports = async function (deployer) {
     deployer.link(LedgerLib_c, TokenLib);
 
     // deploying new StErc20Facets
-    const StErc20Facet_c = await deployOrGetDeployed(deployer, deployments.StErc20Facet_addr, StErc20Facet);
+    const StErc20Facet_c = await deployOrGetDeployed('StErc20Facet', StErc20Facet);
     console.log(chalk.green.bold(`StErc20Facet_addr: "${StErc20Facet_c.address}",`));
     deployer.link(StErc20Facet_c, DataLoadableFacet);
 
     // depoying new DataLoadableFacet
-    const DataLoadableFacet_c = await deployOrGetDeployed(deployer, deployments.DataLoadableFacet_addr, DataLoadableFacet);
+    const DataLoadableFacet_c = await deployOrGetDeployed('DataLoadableFacet', DataLoadableFacet);
     console.log(chalk.green.bold(`DataLoadableFacet_addr: "${DataLoadableFacet_c.address}",`));
 
     // depoying new Erc20Lib
-    const TokenLib_c = await deployOrGetDeployed(deployer, deployments.TokenLib_addr, TokenLib);
+    const TokenLib_c = await deployOrGetDeployed('TokenLib', TokenLib);
     console.log(chalk.green.bold(`TokenLib_addr: "${TokenLib_c.address}",`));
     deployer.link(TokenLib_c, StLedgerFacet);
     deployer.link(TokenLib_c, StMintableFacet);
     deployer.link(TokenLib_c, StBurnableFacet);
 
     // deploying new StLedgerFacet
-    const StLedgerFacet_c = await deployOrGetDeployed(deployer, deployments.StLedgerFacet_addr, StLedgerFacet);
+    const StLedgerFacet_c = await deployOrGetDeployed('StLedgerFacet', StLedgerFacet);
     console.log(chalk.green.bold(`StLedgerFacet_addr: "${StLedgerFacet_c.address}",`));
 
     // deploying new StTransferableFacet
-    const StTransferableFacet_c = await deployOrGetDeployed(deployer, deployments.StTransferableFacet_addr, StTransferableFacet);
+    const StTransferableFacet_c = await deployOrGetDeployed('StTransferableFacet', StTransferableFacet);
     console.log(chalk.green.bold(`StTransferableFacet_addr: "${StTransferableFacet_c.address}",`));
 
     // deploying new StMintableFacet
-    const StMintableFacet_c = await deployOrGetDeployed(deployer, deployments.StMintableFacet_addr, StMintableFacet);
+    const StMintableFacet_c = await deployOrGetDeployed('StMintableFacet', StMintableFacet);
     console.log(chalk.green.bold(`StMintableFacet_addr: "${StMintableFacet_c.address}",`));
 
     // deploying new StBurnableFacet
-    const StBurnableFacet_c = await deployOrGetDeployed(deployer, deployments.StBurnableFacet_addr, StBurnableFacet);
+    const StBurnableFacet_c = await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
     console.log(chalk.green.bold(`StBurnableFacet_addr: "${StBurnableFacet_c.address}",`));
+
+
+
+
+
+
 
     // registering the Facet
     console.log('Cutting 1...');

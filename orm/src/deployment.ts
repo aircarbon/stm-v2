@@ -206,6 +206,131 @@ export async function GetDeploymentByType(
 }
 
 /**
+ * Get deploy facet contract by network id and contract name
+ * @param networkId
+ * @param contractType
+ */
+ export async function GetFacetByName(
+  networkId: string,
+  contractName: string,
+  linkedToAddr: string
+) {
+  const sqlPool = await getPool("admin");
+  const result = await sqlPool
+    .request()
+    .input("network_id", sql.NVarChar, networkId)
+    .input("contract_name", sql.NVarChar, contractName)
+    .input("linked_to_addr", sql.NVarChar, linkedToAddr)
+    .query(
+      `SELECT TOP 1 [addr] FROM [contract_deployed] \
+            WHERE [network_id] = @network_id \
+            AND [contract_name] = @contract_name \
+            AND [linked_to_addr] = @linked_to_addr \
+            ORDER BY [deployed_utc] DESC`
+    );
+  return result;
+}
+
+/**
+ * Save deployment contract
+ * @param contract
+ */
+ export async function SaveContractFunction({
+  networkId,
+  action,
+  funcName,
+  funcSelector,
+  contrAddr,
+  txHash,
+  initAddr,
+  calldata,
+  deployerHostName,
+  ip,
+}: {
+  networkId: string;
+  action: string;
+  funcName: string;
+  funcSelector: string;
+  contrAddr: string;
+  txHash: string;
+  initAddr: string;
+  calldata: string;
+  deployerHostName: string;
+  ip: string;
+}) {
+  const sqlPool = await getPool("erc20");
+  const result = await sqlPool
+    .request()
+    .input("network_id", sql.Int, networkId)
+    .input("action", sql.NVarChar, action)
+    .input("function_name", sql.NVarChar, funcName)
+    .input("func_selector", sql.NVarChar, funcSelector)
+    .input("contract_addr", sql.NVarChar, contrAddr)
+    .input("tx_hash", sql.NVarChar, txHash)
+    .input("init_addr", sql.NVarChar, initAddr)
+    .input("calldata", sql.NVarChar, calldata)
+    .input("host_name", sql.NVarChar, deployerHostName)
+    .input("ip", sql.NVarChar, ip)
+    .query(
+      `INSERT INTO [contract_function] VALUES \
+      (@network_id, @action, @function_name, @func_selector, @contract_addr, @tx_hash, @init_addr, @calldata, GETUTCDATE(), @host_name, @ip)`
+    );
+  console.log(
+    `DB: updated contract with ${action} for function ${funcName} for contract ${contrAddr} at network id of ${networkId} - ok`,
+    result.rowsAffected
+  );
+  return true;
+}
+
+/**
+ * Save deployment contract
+ * @param contract
+ */
+ export async function SaveContractDeployment({
+  contractName,
+  networkId,
+  addr,
+  linkedToAddr,
+  txHash,
+  version,
+  gitCommit,
+  deployerHostName,
+  ip,
+}: {
+  contractName: string;
+  networkId: string;
+  addr: string;
+  linkedToAddr: string;
+  txHash: string;
+  version: string;
+  gitCommit: string;
+  deployerHostName: string;
+  ip: string;
+}) {
+  const sqlPool = await getPool("erc20");
+  const result = await sqlPool
+    .request()
+    .input("contract_name", sql.NVarChar, contractName)
+    .input("network_id", sql.Int, networkId)
+    .input("addr", sql.NVarChar, addr)
+    .input("linked_to_addr", sql.NVarChar, linkedToAddr)
+    .input("tx_hash", sql.NVarChar, txHash)
+    .input("version", sql.NVarChar, version)
+    .input("git_commit", sql.NVarChar, gitCommit)
+    .input("host_name", sql.NVarChar, deployerHostName)
+    .input("ip", sql.NVarChar, ip)
+    .query(
+      `INSERT INTO [contract_deployed] VALUES \
+      (@contract_name, @network_id, @addr, @linked_to_addr, @tx_hash, GETUTCDATE(), @version, @git_commit, @host_name, @ip)`
+    );
+  console.log(
+    `DB: saved contract deployment network ${networkId} @ ${addr} - ok`,
+    result.rowsAffected
+  );
+  return true;
+}
+
+/**
  * Save deployment contract
  * @param contract
  */
