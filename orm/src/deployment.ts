@@ -241,6 +241,7 @@ export async function GetDeploymentByType(
   funcName,
   funcSelector,
   contrAddr,
+  linkedToAddr,
   txHash,
   initAddr,
   calldata,
@@ -252,6 +253,7 @@ export async function GetDeploymentByType(
   funcName: string;
   funcSelector: string;
   contrAddr: string;
+  linkedToAddr: string;
   txHash: string;
   initAddr: string;
   calldata: string;
@@ -266,6 +268,7 @@ export async function GetDeploymentByType(
     .input("function_name", sql.NVarChar, funcName)
     .input("func_selector", sql.NVarChar, funcSelector)
     .input("contract_addr", sql.NVarChar, contrAddr)
+    .input("linked_to_addr", sql.NVarChar, linkedToAddr)
     .input("tx_hash", sql.NVarChar, txHash)
     .input("init_addr", sql.NVarChar, initAddr)
     .input("calldata", sql.NVarChar, calldata)
@@ -273,7 +276,7 @@ export async function GetDeploymentByType(
     .input("ip", sql.NVarChar, ip)
     .query(
       `INSERT INTO [contract_function] VALUES \
-      (@network_id, @action, @function_name, @func_selector, @contract_addr, @tx_hash, @init_addr, @calldata, GETUTCDATE(), @host_name, @ip)`
+      (@network_id, @action, @function_name, @func_selector, @contract_addr, @linked_to_addr, @tx_hash, @init_addr, @calldata, GETUTCDATE(), @host_name, @ip)`
     );
   console.log(
     `DB: updated contract with ${action} for function ${funcName} for contract ${contrAddr} at network id of ${networkId} - ok`,

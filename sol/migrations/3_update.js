@@ -55,12 +55,19 @@ const allContractsNames = [
 
 // here specify names of smart contracts (that are affected by changes) that will be deployed
 const contractsToBeRedeployed = [
-
+    'StMintableFacet'
 ];
 
 // here specify function names and respective implementation contracts that should be updated
 const upgradeParams = [
-
+    {
+        action: CONST.FacetCutAction.Replace,
+        contractName: 'StMintableFacet',
+        funcs: [
+            'addMetaSecTokenBatch',
+            ''
+        ]
+    }
 ];
 
 const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
@@ -80,6 +87,12 @@ module.exports = async function (deployer) {
     }
 
     console.log('3_update: ', deployer.network);
+
+    if(contractsToBeRedeployed.length === 0 || upgradeParams.length === 0) {
+        console.log('Nothing to upgrade.');
+        return;
+    }
+
     const version = process.env.VERSION;
     const gitCommit = process.env.GIT_COMMIT;
     const scAddr = process.env.SC;
@@ -131,7 +144,8 @@ module.exports = async function (deployer) {
                 deployerHostName: hostName,
                 ip: ip,
             });
-    
+            
+            deployedContrAddr[contractName] = contr.address;
             return contr;
         }
         return contract.at(deployedContrAddr[contractName]);
@@ -279,50 +293,51 @@ module.exports = async function (deployer) {
     const StBurnableFacet_c = await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
     console.log(chalk.green.bold(`StBurnableFacet_addr: "${StBurnableFacet_c.address}",`));
 
+    // preparing params
+    const allParams = {
+        params: [],
+        initAddr: CONST.nullAddr,
+        calldata: "0x",
+        funcNames: []
+    };
 
+    for(let param of upgradeParams) {
+        allParams.params.push(
+            {
+                facetAddress: param.action === CONST.FacetCutAction.Remove ? CONST.nullAddr : deployedContrAddr[param.contrName],
+                action: param.action,
+                functionSelectors: CONST.getContractsSelectorsWithFuncName(param.contrName, param.funcs)
+            }
+        );
 
-
-
-
-
+        allParams.funcNames.push(param.funcs);
+    }
     // registering the Facet
-    console.log('Cutting 1...');
-    await stm.diamondCut([
-        // {
-        //     facetAddress: CONST.nullAddr,
-        //     action: CONST.FacetCutAction.Remove,
-        //     functionSelectors: CONST.getContractsSelectorsWithFuncName('StTransferableFacet', ['transferOrTrade', 'transfer_feePreview', 'transfer_feePreview_ExchangeOnly'])
-        // },
+    console.log('Cutting diamond...');
+    const tx = await stm.diamondCut(allParams.params, allParams.initAddr, allParams.calldata);
 
-        {
-            facetAddress: StTransferableFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName(
-                'StTransferableFacet', 
-                [
-                    'getLedgerHashcode', 
-                    'transfer_feePreview_ExchangeOnly', 
-                    'transfer_feePreview', 
-                    'transferOrTrade', 
-                    'transferOrTradeCustomFee', 
-                    'transferOrTradeBatch', 
-                    'transferOrTradeBatchCustomFee'
-                ]
-            )
-        },
-        {
-            facetAddress: StErc20Facet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StErc20Facet', ['transfer', 'transferFrom'])
-        },
-        {
-            facetAddress: StFeesFacet_c.address,
-            action: CONST.FacetCutAction.Replace,
-            functionSelectors: CONST.getContractsSelectorsWithFuncName('StFeesFacet', ['setFee_CcyType', 'setFee_CcyTypeBatch', 'setFee_TokType', 'setFee_TokTypeBatch'])
-        },
-    ], CONST.nullAddr, "0x");
+    // registering functions in the database
+    for(let param of allParams) {
+        for(let i = 0; i < param.funcs.length; i++) {
+            const funcSig = param.funcs[i];
+            await saveFuncToDb(funcSelector.name, funcSelector.selector, contract.contr.address, tx.tx);
+
+            await db.SaveContractFunction({
+                networkId: deployer.network_id,
+                action: param.action,
+                funcName: param.funcNames[i],
+                funcSelector: funcSig,
+                contrAddr: param.facetAddress,
+                linkedToAddr: scAddr,
+                txHash: tx.tx,
+                initAddr: allParams.initAddr,
+                calldata: allParams.calldata,
+                deployerHostName: hostName,
+                ip
+            });
+        }
+    }
 
     console.log('Done.');
-
     process.exit();
 };

@@ -45,29 +45,6 @@ module.exports = {
                 }
             }
 
-            const saveFuncToDb = async (funcName, funcSelector, contrAddr, txHash, initAddr, calldata) => {
-                try{
-                    if(!isTest) {
-                        await db.SaveContractFunction({
-                            networkId: deployer.network_id,
-                            action: "ADD",
-                            funcName,
-                            funcSelector,
-                            contrAddr,
-                            txHash,
-                            initAddr,
-                            calldata,
-                            deployerHostName: hostName,
-                            ip
-                        });
-                    }
-                } catch (err) {
-                    console.log(`Failed to save function '${funcName}' to db, error:`);
-                    console.log(err);
-                    process.exit();
-                }
-            }
-
             const MNEMONIC = process.env.DEV_MNEMONIC || process.env.PROD_MNEMONIC || require('../DEV_MNEMONIC.js').MNEMONIC;
             const accountAndKeys = [];
             for (let i=0 ; i < CONST.RESERVED_ADDRESSES_COUNT ; i++) {
@@ -115,6 +92,30 @@ module.exports = {
             await deployImpl(DiamondProxy, 'DiamondProxy', 'this', [owners[0], DiamondCutFacet.address]);
             const diamondProxyAddr = DiamondProxy.address;
             const proxyRegistratable = await DiamondCutFacet.at(diamondProxyAddr);
+
+            const saveFuncToDb = async (funcName, funcSelector, contrAddr, txHash, initAddr, calldata) => {
+                try{
+                    if(!isTest) {
+                        await db.SaveContractFunction({
+                            networkId: deployer.network_id,
+                            action: "ADD",
+                            funcName,
+                            funcSelector,
+                            contrAddr,
+                            linkedToAddr: diamondProxyAddr,
+                            txHash,
+                            initAddr,
+                            calldata,
+                            deployerHostName: hostName,
+                            ip
+                        });
+                    }
+                } catch (err) {
+                    console.log(`Failed to save function '${funcName}' to db, error:`);
+                    console.log(err);
+                    process.exit();
+                }
+            }
 
             // deploying StructLib
             await deployImpl(StructLib, 'StructLib', diamondProxyAddr);

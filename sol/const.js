@@ -202,6 +202,9 @@ module.exports = {
             const selectors = [];
     
             for (const func of abi) {
+                if(func.type !== 'function') {
+                    continue;
+                }
                 const selector = web3.eth.abi.encodeFunctionSignature(func);
                 if(funcs.includes(func.name)) {
                     selectors.push(selector);
