@@ -22,7 +22,8 @@ const DiamondLoupeFacet = artifacts.require('DiamondLoupeFacet');
 
 const CONST = require('../const.js');
 const chalk = require('chalk');
-
+const publicIp = require('public-ip');
+const os = require('os');
 const Web3 = require('web3');
 
 const  db  = require('../../orm/build');
@@ -47,7 +48,7 @@ const allContractsNames = [
     'CcyCollateralizableFacet',
     'StMintableFacet',
     'StBurnableFacet',
-    'DiamondCutFacet',
+    // 'DiamondCutFacet', // this smart contract is not supposed to be changed
     'DiamondLoupeFacet',
     'OwnedFacet',
     'StMasterFacet',
@@ -55,17 +56,21 @@ const allContractsNames = [
 
 // here specify names of smart contracts (that are affected by changes) that will be deployed
 const contractsToBeRedeployed = [
-    'StMintableFacet'
+    'Erc20Lib',
+    'StErc20Facet',
 ];
 
 // here specify function names and respective implementation contracts that should be updated
 const upgradeParams = [
     {
-        action: CONST.FacetCutAction.Replace,
-        contractName: 'StMintableFacet',
+        action: CONST.FacetCutAction.Remove,
+        contractName: 'StErc20Facet',
         funcs: [
-            'addMetaSecTokenBatch',
-            ''
+            'testFunction',
+        ],
+        // If we want to remove functions, then we should provide selectors for those functions in addition to their names
+        funcSelectors: [
+            '0xe16b4a9b'
         ]
     }
 ];
@@ -79,6 +84,7 @@ const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
 // 2. You cannot skip upgrades (e.g. if you at first made some changes in smart contracts ("change_1"), then made other changes("change_2"), 
 //    you need to upgrade smart contract with "change_1" at first, and only then upgrade it with "change_2". Cannot skip "change_1" or make 
 //    "change_2" at first and "change_1" later). Because the script will pick up latest smart contracts from the database.
+// 3. truffle version in package should be updated. For all other use cases we should use truffle v "^5.1.22", but for upgrade we need to use latest version
 
 // SPECIFY PARAMS HERE
 module.exports = async function (deployer) {
@@ -131,7 +137,7 @@ module.exports = async function (deployer) {
     const deployOrGetDeployed = async(contractName, contract) => {
         if(contractsToBeRedeployed.includes(contractName)) {
             console.log(`Deploygin '${contractName}' ...`);
-            const contr = deployer.deploy(contract);
+            const contr = await deployer.deploy(contract);
     
             await db.SaveContractDeployment({
                 contractName: contractName,
@@ -158,7 +164,6 @@ module.exports = async function (deployer) {
 
     // deploying new LibMainStorage
     const LibMainStorage_c = await deployOrGetDeployed('LibMainStorage', LibMainStorage);
-    console.log(chalk.green.bold(`LibMainStorage_addr: "${LibMainStorage_c.address}",`));
     deployer.link(LibMainStorage_c, StFeesFacet);
     deployer.link(LibMainStorage_c, ValidationLib);
     deployer.link(LibMainStorage_c, LibMainStorage);
@@ -177,7 +182,6 @@ module.exports = async function (deployer) {
 
     // deploying new StructLib (because don't have address of an old one)
     const StructLib_c = await deployOrGetDeployed('StructLib', StructLib);
-    console.log(chalk.green.bold(`StructLib_addr: "${StructLib_c.address}",`));
     deployer.link(StructLib_c, StFeesFacet);
     deployer.link(StructLib_c, SpotFeeLib);
     deployer.link(StructLib_c, Erc20Lib);
@@ -197,12 +201,10 @@ module.exports = async function (deployer) {
 
     // deploying new CcyLib
     const CcyLib_c = await deployOrGetDeployed('CcyLib', CcyLib);
-    console.log(chalk.green.bold(`CcyLib_addr: "${CcyLib_c.address}",`));
     deployer.link(CcyLib_c, CcyCollateralizableFacet);
 
     // deploygin new ValidationLib
     const ValidationLib_c = await deployOrGetDeployed('ValidationLib', ValidationLib);
-    console.log(chalk.green.bold(`ValidationLib_addr: "${ValidationLib_c.address}",`));
     deployer.link(ValidationLib_c, StFeesFacet);
     deployer.link(ValidationLib_c, StErc20Facet);
     deployer.link(ValidationLib_c, DataLoadableFacet);
@@ -214,12 +216,10 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, TokenLib);
 
     // deploying new CcyCollateralizableFacet
-    const CcyCollateralizableFacet_c  = await deployOrGetDeployed('CcyCollateralizableFacet', CcyCollateralizableFacet);
-    console.log(chalk.green.bold(`CcyCollateralizableFacet_addr: "${CcyCollateralizableFacet_c.address}",`));
+    await deployOrGetDeployed('CcyCollateralizableFacet', CcyCollateralizableFacet);
 
     // deploygin new TransferLib
     const TransferLib_c = await deployOrGetDeployed('TransferLib', TransferLib);
-    console.log(chalk.green.bold(`TransferLib_addr: "${TransferLib_c.address}",`));
     deployer.link(TransferLib_c, Erc20Lib);
     deployer.link(TransferLib_c, StErc20Facet);
     deployer.link(TransferLib_c, StTransferableFacet);
@@ -227,34 +227,28 @@ module.exports = async function (deployer) {
 
     // deploygin new TransferLibView
     const TransferLibView_c = await deployOrGetDeployed('TransferLibView', TransferLibView);
-    console.log(chalk.green.bold(`TransferLibView_addr: "${TransferLibView_c.address}",`));
     deployer.link(TransferLibView_c, StTransferableFacet);
 
     // deploygin new SpotFeeLib
     const SpotFeeLib_c = await deployOrGetDeployed('SpotFeeLib', SpotFeeLib);
-    console.log(chalk.green.bold(`SpotFeeLib_addr: "${SpotFeeLib_c.address}",`));
     deployer.link(SpotFeeLib_c, StFeesFacet);  
     deployer.link(SpotFeeLib_c, TokenLib);  
     deployer.link(SpotFeeLib_c, StMintableFacet);  
     
     // deploygin new LoadLib
     const LoadLib_c = await deployOrGetDeployed('LoadLib', LoadLib);
-    console.log(chalk.green.bold(`LoadLib_addr: "${LoadLib_c.address}",`));
     deployer.link(LoadLib_c, DataLoadableFacet);    
 
     // deploying new StFeesFacet
-    const StFeesFacet_c = await deployOrGetDeployed('StFeesFacet', StFeesFacet);
-    console.log(chalk.green.bold(`StFeesFacet_addr: "${StFeesFacet_c.address}",`));
+    await deployOrGetDeployed('StFeesFacet', StFeesFacet);
 
     // depoying new Erc20Lib
     const Erc20Lib_c = await deployOrGetDeployed('Erc20Lib', Erc20Lib);
-    console.log(chalk.green.bold(`Erc20Lib_addr: "${Erc20Lib_c.address}",`));
     deployer.link(Erc20Lib_c, StErc20Facet);
     deployer.link(Erc20Lib_c, DataLoadableFacet);
     
     // depoying new LedgerLib
     const LedgerLib_c = await deployOrGetDeployed('LedgerLib', LedgerLib);
-    console.log(chalk.green.bold(`LedgerLib_addr: "${LedgerLib_c.address}",`));
     deployer.link(LedgerLib_c, StErc20Facet);
     deployer.link(LedgerLib_c, StLedgerFacet);
     deployer.link(LedgerLib_c, StTransferableFacet);
@@ -263,70 +257,58 @@ module.exports = async function (deployer) {
 
     // deploying new StErc20Facets
     const StErc20Facet_c = await deployOrGetDeployed('StErc20Facet', StErc20Facet);
-    console.log(chalk.green.bold(`StErc20Facet_addr: "${StErc20Facet_c.address}",`));
     deployer.link(StErc20Facet_c, DataLoadableFacet);
 
     // depoying new DataLoadableFacet
-    const DataLoadableFacet_c = await deployOrGetDeployed('DataLoadableFacet', DataLoadableFacet);
-    console.log(chalk.green.bold(`DataLoadableFacet_addr: "${DataLoadableFacet_c.address}",`));
+    await deployOrGetDeployed('DataLoadableFacet', DataLoadableFacet);
 
     // depoying new Erc20Lib
     const TokenLib_c = await deployOrGetDeployed('TokenLib', TokenLib);
-    console.log(chalk.green.bold(`TokenLib_addr: "${TokenLib_c.address}",`));
     deployer.link(TokenLib_c, StLedgerFacet);
     deployer.link(TokenLib_c, StMintableFacet);
     deployer.link(TokenLib_c, StBurnableFacet);
 
     // deploying new StLedgerFacet
-    const StLedgerFacet_c = await deployOrGetDeployed('StLedgerFacet', StLedgerFacet);
-    console.log(chalk.green.bold(`StLedgerFacet_addr: "${StLedgerFacet_c.address}",`));
+    await deployOrGetDeployed('StLedgerFacet', StLedgerFacet);
 
     // deploying new StTransferableFacet
-    const StTransferableFacet_c = await deployOrGetDeployed('StTransferableFacet', StTransferableFacet);
-    console.log(chalk.green.bold(`StTransferableFacet_addr: "${StTransferableFacet_c.address}",`));
+    await deployOrGetDeployed('StTransferableFacet', StTransferableFacet);
 
     // deploying new StMintableFacet
-    const StMintableFacet_c = await deployOrGetDeployed('StMintableFacet', StMintableFacet);
-    console.log(chalk.green.bold(`StMintableFacet_addr: "${StMintableFacet_c.address}",`));
+    await deployOrGetDeployed('StMintableFacet', StMintableFacet);
 
     // deploying new StBurnableFacet
-    const StBurnableFacet_c = await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
-    console.log(chalk.green.bold(`StBurnableFacet_addr: "${StBurnableFacet_c.address}",`));
+    await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
 
     // preparing params
     const allParams = {
         params: [],
         initAddr: CONST.nullAddr,
-        calldata: "0x",
-        funcNames: []
+        calldata: "0x"
     };
 
     for(let param of upgradeParams) {
         allParams.params.push(
             {
-                facetAddress: param.action === CONST.FacetCutAction.Remove ? CONST.nullAddr : deployedContrAddr[param.contrName],
+                facetAddress: param.action === CONST.FacetCutAction.Remove ? CONST.nullAddr : deployedContrAddr[param.contractName],
                 action: param.action,
-                functionSelectors: CONST.getContractsSelectorsWithFuncName(param.contrName, param.funcs)
+                functionSelectors: param.action === CONST.FacetCutAction.Remove ? param.funcSelectors : CONST.getContractsSelectorsWithFuncName(param.contractName, param.funcs)
             }
         );
-
-        allParams.funcNames.push(param.funcs);
     }
     // registering the Facet
     console.log('Cutting diamond...');
     const tx = await stm.diamondCut(allParams.params, allParams.initAddr, allParams.calldata);
 
     // registering functions in the database
-    for(let param of allParams) {
-        for(let i = 0; i < param.funcs.length; i++) {
-            const funcSig = param.funcs[i];
-            await saveFuncToDb(funcSelector.name, funcSelector.selector, contract.contr.address, tx.tx);
-
+    for(let i = 0; i < allParams.params.length; i++) {
+        const param = allParams.params[i];
+        for(let j = 0; j < param.functionSelectors.length; j++) {
             await db.SaveContractFunction({
                 networkId: deployer.network_id,
-                action: param.action,
-                funcName: param.funcNames[i],
-                funcSelector: funcSig,
+                action: param.action === CONST.FacetCutAction.Add ? 'ADD' : param.action === CONST.FacetCutAction.Replace ? 'REPLACE' : param.action === CONST.FacetCutAction.Remove ? 'REMOVE' : 'UNKNOWN',
+                funcName: upgradeParams[i].funcs[j],
+                funcSelector: param.functionSelectors[j],
                 contrAddr: param.facetAddress,
                 linkedToAddr: scAddr,
                 txHash: tx.tx,
