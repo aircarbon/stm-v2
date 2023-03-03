@@ -99,12 +99,12 @@ module.exports = async function (deployer) {
         return;
     }
 
-    const version = process.env.VERSION;
+    const version = process.env.CONTRACT_VERSION;
     const gitCommit = process.env.GIT_COMMIT;
     const scAddr = process.env.SC;
 
     if (!version) {
-        console.log(chalk.red.bold.inverse(`process.env.VERSION not provided.`));
+        console.log(chalk.red.bold.inverse(`process.env.CONTRACT_VERSION not provided.`));
         process.exit(1);
     }
     if (!gitCommit) {
@@ -115,7 +115,7 @@ module.exports = async function (deployer) {
         console.log(chalk.red.bold.inverse(`Bad process.env.SC, cannot upgrade.`));
         process.exit(1);
     }
-    console.log(chalk.red('process.env.VERSION'.padEnd(30, '.')), version);
+    console.log(chalk.red('process.env.CONTRACT_VERSION'.padEnd(30, '.')), version);
     console.log(chalk.red('process.env.GIT_COMMIT'.padEnd(30, '.')), gitCommit);
     console.log(chalk.red('process.env.scAddr'.padEnd(30, '.')), scAddr);
 

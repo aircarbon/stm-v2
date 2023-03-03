@@ -166,15 +166,15 @@ module.exports = async function (deployer) {
   }
   const isTest = process.env.ISTEST === 'true';
   if(!isTest) {
-    if (!process.env.VERSION) {
-      console.log(chalk.red.bold.inverse(`process.env.VERSION not provided.`));
+    if (!process.env.CONTRACT_VERSION) {
+      console.log(chalk.red.bold.inverse(`process.env.CONTRACT_VERSION not provided.`));
       process.exit(1);
     }
     if (!process.env.GIT_COMMIT) {
       console.log(chalk.red.bold.inverse(`process.env.GIT_COMMIT not provided.`));
       process.exit(1);
     }
-    console.log(chalk.red('process.env.VERSION'.padEnd(30, '.')), process.env.VERSION);
+    console.log(chalk.red('process.env.CONTRACT_VERSION'.padEnd(30, '.')), process.env.CONTRACT_VERSION);
     console.log(chalk.red('process.env.GIT_COMMIT'.padEnd(30, '.')), process.env.GIT_COMMIT);
   }
   
@@ -221,7 +221,7 @@ module.exports = async function (deployer) {
     case 'COMMODITY':
       console.log('COMMODITY...');
       // deploy a singleton COMMODITY contract
-      await deploymentHelper.Deploy({ deployer, artifacts, contractType: 'COMMODITY', custodyType: process.env.CUSTODY_TYPE, git_commit: process.env.GIT_COMMIT, version: process.env.VERSION, isTest});
+      await deploymentHelper.Deploy({ deployer, artifacts, contractType: 'COMMODITY', custodyType: process.env.CUSTODY_TYPE, git_commit: process.env.GIT_COMMIT, version: process.env.CONTRACT_VERSION, isTest});
       if (!deployer.network.includes('-fork') && process.env.RESTORE_CONTRACT !== 'YES') {
 
         if(process.env.ISTEST === 'true') {
