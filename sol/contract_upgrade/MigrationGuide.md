@@ -7,10 +7,10 @@
 3. Create "DEV_MNEMONIC.js" file from the example "DEV_MNEMONIC.example.js" file and replace the example with the right mnemonic.
 4. Put the right node RPC endpoints in the "const.js" and "truffle-config.js" files. In "truffle-config.js" find the right network(s) you are planning to use and add the right http endpoint as a parameter of a "provider". In "const.js" file in function "getTestContextWeb3()", find the right network(s) you want to use, and add the correct wss and http node RPC endpoints.
 5. In "truffle-config.js" file, put the right gas price for the network(s) you are planning to use. The gas price is stored in the variable on the top of the file starting with "GWEI_" plus the name of the network. You can check the current gas prices at block explorers and put a bit more than the current one to ensure faster faster migration.
-6. Create environment file from the ".env.example" file and give it a name as ".env." plus the name of the environment you are making migration for. For example, if it is "DEMO_80001_AC", then the environment file should be called ".env.DEMO_80001_AC". In that file modify the right fields. For example, for "network_id" specify id of the blockchain to which you are going to make the migration (this can be checked on chainlist.org). Also, check that the database credentials are correct (check the latest credentials in the pinned messages on tech_dev slack channel).
+6. Create environment file from the ".env.example" file and give it a name as ".env." plus the name of the environment you are making migration for. For example, if it is "DEMO_80001_AC", then the environment file should be called ".env.DEMO_80001_AC". In that file modify the right fields. For example, for "network_id" specify id of the blockchain to which you are going to make the migration (this can be checked on chainlist.org). Also, check that the database credentials are correct (check the latest credentials in the pinned messages on tech_dev slack channel). Also, check that contracts version and github commit hash are provided.
 7. Find address of the current STM smart contract (from the respective database, from "global_config" table, from "global_contractAddress" config field).
 8. When putting addresses in the commands as parameters, remember to remove "0x" part in the beginning of the address.
-9. If you are running the commands from the remote environment (like AWS servers), you may want to put " &" in the end of every command, so that it runs asynchronously and is not attached to your SSH sessions.
+9. If you are running the commands from the remote environment (like AWS servers), you may want to put " &" in the end of every command, so that it runs asynchronously and is not attached to your SSH sessions. Or just use `screen`.
 
 10. Backup Whitelisted Addresses from Source smart contract (replace "[SOURCE_CONTRACT_NETWORK]" with the source network name, as well as "[SOURCE_CONTRACT_ADDRESS]" with the source STM smart contract that you had to find in step 7. Also, replace "[INSTANCE]" with that instance that you specified earlier in your environment file)
    
@@ -63,7 +63,7 @@
 
 6. Export to CSV Unconsolidated Balance report from ADMIN.
 
-7. Restore backup to target smart contract (will take 2-8 hours) (if you have changed the mnemonics in the previous step, you may need to change mnemonics back to the original one):
+7. Restore backup to target smart contract (will take up to 30 min) (if you have changed the mnemonics in the previous step, you may need to change mnemonics back to the original one):
 
         export INSTANCE_ID=[INSTANCE] && truffle exec contract_upgrade/restore.js -s=[SOURCE_CONTRACT_ADDRESS] -t=[TARGET_CONTRACT_NETWORK] -h=offchain --network=[TARGET_CONTRACT_NETWORK]
 
@@ -84,12 +84,20 @@
         [config_value] = '0x3D47037A40d01e7BB902b9E49D9249145b542b10'
         WHERE [config_key] = 'global_contractAddress'
 
-10. Reset Indexer
-    
+10. Reset TX Processor:
+        1. Go to AWS platform -> Elastic Container Service -> Clusters 
+        2. Search for Cluster with the name starting with `demo-ac-transaction-processor-...` (in case of demo). In case of other environment, search for an according cluster.
+        3. Select it, then go to Tasks tab
+        4. Select the running task, and then press Stop
+        5. The task will stop, and then will be automatically restarted. Refresh the table until the task is resturted and running. 
+
+11. Reset Indexer:
+
         curl --location --request GET 'https://indx.aircarbon.co/reset-sync' --header 'x-api-key: 53d22de76bdec67c530a50751a0721ae4af4f0961cba098e1d0f0c9d93967647'
 
-11.  Check GasPrice and GasLimit values on DB
-12.  Test internal corporate transactions (see Indexer list them)
-13.  Mint TEST, and trade.
-14.  Disable TEST token type
-15. OPEN MARKET - enableDashboard, open on HX
+12.  Check GasPrice and GasLimit values on DB
+13.  Test internal corporate transactions (see Indexer list them)
+14.  Mint TEST, and trade.
+15.  Disable TEST token type
+16. OPEN MARKET - enableDashboard, open on HX
+17. Login to web and admin platforms and check that the contract adress and contract versions are as they should be for the new address. Try to test by placing some orders and making some trades and/or retirements.
