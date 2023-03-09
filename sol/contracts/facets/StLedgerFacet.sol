@@ -16,6 +16,7 @@ contract StLedgerFacet {
 		uint mult, // multiplier
 		uint multDiv // multiplication divider (example: mult = 8, multDiv = 10, result -> 80%)
 	) external {
+		revert;
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(a.batchOwner);
@@ -35,6 +36,7 @@ contract StLedgerFacet {
 		string[] memory metaValues,
 		StructLib.RetokenizationBurningParam[] memory retokenizationBurningParam
 	) external {
+		revert;
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
 		ValidationLib.validateHasEntity(batchOwner);

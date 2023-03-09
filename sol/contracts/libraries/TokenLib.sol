@@ -637,6 +637,7 @@ library TokenLib {
 		uint mult, 
 		uint multDiv
 	) public {
+		revert;
 		require(tokenTypeIdFrom != 0, "retokenizeSecToken: invalid token type id");
 		require(mult != 0 && multDiv != 0 && multDiv >= mult, "retokenizeSecToken: wrong multiplication coefficients");
 		require(a.mintQty == 0, "retokenizeSecToken: mint qty should be 0"); // because it will be reassigned in the code
@@ -775,6 +776,7 @@ library TokenLib {
 		MintSecTokenBatchArgs memory a,
 		StructLib.RetokenizationBurningParam[] memory retokenizationBurningParam
 	) public {
+		revert;
 		uint len = retokenizationBurningParam.length;
 
 		// burn tokens (suppress events)
