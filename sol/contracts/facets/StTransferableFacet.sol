@@ -107,9 +107,11 @@ contract StTransferableFacet {
 		_transferOrTradeImpl(transferArgs, 0, 0, false);
 	}
 
-	function transferOrTradeCustomFee(StructLib.TransferArgs memory transferArgs, uint custFeeA, uint custFeeB) public {
+	function tradeCustomFee(StructLib.TransferArgs memory transferArgs, uint custFeeA, uint custFeeB) public {
 		ValidationLib.validateOnlyCustodian();
 		ValidationLib.validateOnlyWhenReadWrite();
+
+		require((transferArgs.qty_A > 0 && transferArgs.ccy_amount_B > 0) || (transferArgs.qty_B > 0 && transferArgs.ccy_amount_A > 0), 'tradeCustomFee: trade is not two-sided');
 
 		transferArgs.applyFees = true;
 		_transferOrTradeImpl(transferArgs, custFeeA, custFeeB, true);
@@ -127,7 +129,7 @@ contract StTransferableFacet {
 		}
 	}
 
-	function transferOrTradeBatchCustomFee(StructLib.TransferArgs[] memory transferArgs, uint[] memory custFeeA, uint[] memory custFeeB) public {
+	function tradeBatchCustomFee(StructLib.TransferArgs[] memory transferArgs, uint[] memory custFeeA, uint[] memory custFeeB) public {
 		ValidationLib.validateOnlyCustodian();
 		ValidationLib.validateOnlyWhenReadWrite();
 
@@ -136,6 +138,7 @@ contract StTransferableFacet {
 		require(custFeeA.length == len && custFeeB.length == len, "transferOrTradeBatchCustomFee: args array lengths dont match");
 
 		for(uint i = 0; i < len; i++) {
+			require((transferArgs[i].qty_A > 0 && transferArgs[i].ccy_amount_B > 0) || (transferArgs[i].qty_B > 0 && transferArgs[i].ccy_amount_A > 0), 'tradeCustomFee: trade is not two-sided');
 			transferArgs[i].applyFees = true;
 			_transferOrTradeImpl(transferArgs[i], custFeeA[i], custFeeB[i], true);
 		}
