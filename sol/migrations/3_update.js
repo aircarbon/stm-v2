@@ -19,6 +19,7 @@ const CcyCollateralizableFacet = artifacts.require('CcyCollateralizableFacet');
 const StMintableFacet = artifacts.require('StMintableFacet');
 const StBurnableFacet = artifacts.require('StBurnableFacet');
 const DiamondLoupeFacet = artifacts.require('DiamondLoupeFacet');
+const StMasterFacet = artifacts.require('StMasterFacet');
 
 const CONST = require('../const.js');
 const chalk = require('chalk');
@@ -58,21 +59,49 @@ const allContractsNames = [
 const contractsToBeRedeployed = [
     'Erc20Lib',
     'StErc20Facet',
+    'TransferLib',
+    'StTransferableFacet',
 ];
 
 // here specify function names and respective implementation contracts that should be updated
 const upgradeParams = [
+    // {
+    //     action: CONST.FacetCutAction.Remove,
+    //     contractName: 'StTransferableFacet',
+    //     funcs: [
+    //         'transferOrTradeCustomFee',
+    //         'transferOrTradeBatchCustomFee',
+    //     ],
+    //     // If we want to remove functions, then we should provide selectors for those functions in addition to their names
+    //     funcSelectors: [
+    //         '0x62b50094',
+    //         '0xc142bdcf',
+    //     ]
+    // },
     {
-        action: CONST.FacetCutAction.Remove,
+        action: CONST.FacetCutAction.Add,
+        contractName: 'StTransferableFacet',
+        funcs: [
+            'tradeCustomFee',
+            'tradeBatchCustomFee',
+        ],
+    },
+    {
+        action: CONST.FacetCutAction.Replace,
+        contractName: 'StTransferableFacet',
+        funcs: [
+            'transferOrTrade',
+            'transferOrTradeBatch',
+        ],
+    },
+    {
+        action: CONST.FacetCutAction.Replace,
         contractName: 'StErc20Facet',
         funcs: [
-            'testFunction',
+            'transferFrom',
+            'transfer',
         ],
-        // If we want to remove functions, then we should provide selectors for those functions in addition to their names
-        funcSelectors: [
-            '0xe16b4a9b'
-        ]
-    }
+    },
 ];
 
 const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
@@ -94,7 +123,7 @@ module.exports = async function (deployer) {
 
     console.log('3_update: ', deployer.network);
 
-    if(contractsToBeRedeployed.length === 0 || upgradeParams.length === 0) {
+    if(contractsToBeRedeployed.length === 0 && upgradeParams.length === 0) {
         console.log('Nothing to upgrade.');
         return;
     }
@@ -223,7 +252,7 @@ module.exports = async function (deployer) {
     deployer.link(TransferLib_c, Erc20Lib);
     deployer.link(TransferLib_c, StErc20Facet);
     deployer.link(TransferLib_c, StTransferableFacet);
-    deployer.link(TransferLib_c, TransferLib);
+    deployer.link(TransferLib_c, TokenLib);
 
     // deploygin new TransferLibView
     const TransferLibView_c = await deployOrGetDeployed('TransferLibView', TransferLibView);
@@ -280,6 +309,9 @@ module.exports = async function (deployer) {
     // deploying new StBurnableFacet
     await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
 
+    // deploying new StMasterFacet
+    // await deployOrGetDeployed('StMasterFacet', StMasterFacet);
+
     // preparing params
     const allParams = {
         params: [],
@@ -321,5 +353,27 @@ module.exports = async function (deployer) {
     }
 
     console.log('Done.');
+
+    const stmMaster = await StMasterFacet.at(scAddr);
+    const currVer = await stmMaster.version();
+
+    if(currVer !== version) {
+        console.log(`Current version: '${currVer}'.`);
+        console.log(`Updating to version '${version}' ...`);
+
+        const stmErc20 = await StErc20Facet.at(scAddr);
+        await stmErc20.setVersion(version);
+    } else {
+        console.log(`Version remains the same: '${currVer}'`);
+    }
+
+    // update version on DB
+    await db.UpdateContractVersion({
+        networkId: deployer.network_id,
+        addr: scAddr,
+        newVersion: version
+    });
+
+    console.log('✅ Done all, exiting script.');
     process.exit();
 };

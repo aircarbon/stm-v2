@@ -231,6 +231,29 @@ export async function GetDeploymentByType(
   return result;
 }
 
+export async function UpdateContractVersion({
+  networkId,
+  addr,
+  newVersion
+}: {
+  networkId: string;
+  addr: string;
+  newVersion: string;
+}) {
+  const sqlPool = await getPool("erc20");
+  const result = await sqlPool
+    .request()
+    .input("network_id", sql.Int, networkId)
+    .input("addr", sql.NVarChar, addr)
+    .input("newVersion", sql.NVarChar, newVersion)
+    .query(`UPDATE [contract] SET [contract_ver] = @newVersion WHERE [addr] = @addr AND [network_id] = @network_id`);
+  console.log(
+    `DB: updated contract version ${newVersion} for contract ${addr} at network id of ${networkId} - ok`,
+    result.rowsAffected
+  );
+  return true;
+}
+
 /**
  * Save deployment contract
  * @param contract
