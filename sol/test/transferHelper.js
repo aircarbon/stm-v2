@@ -8,6 +8,470 @@ const CONST = require('../const.js');
 
 module.exports = {
 
+    transferLedgerCustomFee: async(a) => {
+        const { stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
+            ledger_A,     ledger_B, 
+            qty_A,        tokTypeId_A, k_stIds_A,
+            qty_B,        tokTypeId_B, k_stIds_B,
+            ccy_amount_A, ccyTypeId_A,
+            ccy_amount_B, ccyTypeId_B,
+            applyFees,
+            transferType,
+            feeA,
+            feeB,
+        } = a;
+        // console.dir(a);
+        //console.log('ccyTypeId_A', ccyTypeId_A);
+        //console.log('ccyTypeId_B', ccyTypeId_B);
+
+        // ledger entries before
+        var ledgerA_before, ledgerA_after;
+        var ledgerB_before, ledgerB_after;
+        var feeOwnerLedgerForA_before, feeOwnerLedgerForB_before, feeOwnerLedgerForA_after, feeOwnerLedgerForB_after;
+        const whitelisted = await stmStErc20Facet.getWhitelist();
+
+        const ledgerA_Whitelisted = whitelisted.includes(ledger_A);
+        const ledgerB_Whitelisted = whitelisted.includes(ledger_B);
+
+        // const feeOwnerAddr = await stmStErc20Facet.getEntityFeeOwner(1);
+        const ledger_A_entityId = (await stmStLedgerFacet.getAccountEntity(ledger_A)).toNumber();
+        const ledger_B_entityId = (await stmStLedgerFacet.getAccountEntity(ledger_B)).toNumber();
+        const entityIdOfLedgerA = ledgerA_Whitelisted ? ledger_A_entityId : -1;
+        const entityIdOfLedgerB = ledgerB_Whitelisted ? ledger_B_entityId : -1;
+        const feeOwnerAddr_A = ledgerA_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerA) : undefined;
+        const feeOwnerAddr_B = ledgerB_Whitelisted ? await stmStErc20Facet.getEntityFeeOwner(entityIdOfLedgerB) : undefined;
+
+        const sameFeeOwner = feeOwnerAddr_A === feeOwnerAddr_B;
+
+        ledgerA_before = await stmStLedgerFacet.getLedgerEntry(ledger_A);
+        ledgerB_before = await stmStLedgerFacet.getLedgerEntry(ledger_B);
+
+        feeOwnerLedgerForA_before = ledgerA_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_A) : undefined;
+        feeOwnerLedgerForB_before = ledgerB_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_B) : undefined;
+
+        // expected net delta per currency, wrt. account A
+        const deltaCcy_fromA = [];
+        deltaCcy_fromA[ccyTypeId_A] = 0;
+        deltaCcy_fromA[ccyTypeId_B] = 0;
+        deltaCcy_fromA[ccyTypeId_A] -= ccy_amount_A;
+        deltaCcy_fromA[ccyTypeId_B] += ccy_amount_B;
+        
+        // expected currency fees paid by A and B - (ledger fees >0 overrides global fees)
+        var fee_ccy_A = 0;
+        if (ledger_A != feeOwnerAddr_A) { // fees not applied by contract if fee-sender == fee-receiver
+            fee_ccy_A = feeA;
+        }
+
+        var fee_ccy_B = 0;
+        if (ledger_B != feeOwnerAddr_B) { // fees not applied by contract if fee-sender == fee-receiver
+            fee_ccy_B = feeB;
+        }
+
+        // fee preview
+        const feesPreview = await stmStTransferableFacet.transfer_feePreview({ 
+                ledger_A,                             ledger_B, 
+                   qty_A: qty_A.toString(),           tokTypeId_A, 
+                   qty_B: qty_B.toString(),           tokTypeId_B, 
+            ccy_amount_A: ccy_amount_A.toString(),    ccyTypeId_A, 
+            ccy_amount_B: ccy_amount_B.toString(),    ccyTypeId_B, 
+               applyFees,
+               feeAddrOwner_A: ledgerA_Whitelisted ? feeOwnerAddr_A : CONST.nullAddr,
+               feeAddrOwner_B: ledgerB_Whitelisted ? feeOwnerAddr_B : CONST.nullAddr,
+               k_stIds_A: k_stIds_A || [],
+               k_stIds_B: k_stIds_B || [],
+            transferType: transferType || CONST.transferType.UNDEFINED,
+        },);
+        
+        // console.log('sumFees_tok_A', sumFees_tok_A.toFixed());
+        // console.log('sumFees_tok_B', sumFees_tok_B.toFixed());
+        // console.log('sumFees_ccy_A', sumFees_ccy_A.toFixed());
+        // console.log('sumFees_ccy_B', sumFees_ccy_B.toFixed());
+        const exchangeFee_tok_A = applyFees ? Big(feesPreview[0].fee_tok_A) : Big(0);
+        const exchangeFee_tok_B = applyFees ? Big(feesPreview[0].fee_tok_B) : Big(0);
+        const exchangeFee_ccy_A = fee_ccy_A;
+        const exchangeFee_ccy_B = fee_ccy_B;
+        const originatorFees_tok_A = feesPreview.slice(1).map(p => p.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        const originatorFees_tok_B = feesPreview.slice(1).map(p => p.fee_tok_B).reduce((a,b) => Big(a).plus(Big(b)), Big(0));
+        // console.log('originatorFees_tok_A', originatorFees_tok_A.toFixed());
+        // console.log('originatorFees_tok_B', originatorFees_tok_B.toFixed());
+        const originatorFeeData = feesPreview.slice(1).map(p => { return {
+            fee_tok_A: p.fee_tok_A,
+            fee_tok_B: p.fee_tok_B,
+            fee_to_A: p.fee_to_A,
+            fee_to_B: p.fee_to_B
+        }});
+        //console.log(`originatorFeeData.length=${originatorFeeData.length}`, originatorFeeData);
+        for (let i = 0; i < originatorFeeData.length; i++) {
+            originatorFeeData[i].ledgerBefore_A = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_A);
+            originatorFeeData[i].ledgerBefore_B = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_B);
+        }
+
+        // ** TRANSFER **
+        const transferTx = await stmStTransferableFacet.tradeCustomFee(
+            { 
+                ledger_A,                          ledger_B, 
+                qty_A: qty_A.toString(),        tokTypeId_A, 
+                qty_B: qty_B.toString(),        tokTypeId_B, 
+                ccy_amount_A: ccy_amount_A.toString(), ccyTypeId_A, 
+                ccy_amount_B: ccy_amount_B.toString(), ccyTypeId_B, 
+                applyFees,
+                // feeAddrOwner_A and feeAddrOwner_B are dummy fields, they are overriden in the contract anyway
+                feeAddrOwner_A: CONST.nullAddr,
+                feeAddrOwner_B: CONST.nullAddr,
+                k_stIds_A: k_stIds_A || [],
+                k_stIds_B: k_stIds_B || [],
+                transferType: transferType || CONST.transferType.UNDEFINED, // TODO: add new variable from the transferArgs here,
+            },
+            feeA,
+            feeB,
+            { from: accounts[0] }
+        );
+        //truffleAssert.prettyPrintEmittedEvents(transferTx);
+
+        //await CONST.logGas(web3, transferTx, `TransferHelper`);
+
+        // validate trade events
+        if (qty_A > 0 && ccy_amount_B > 0) { // trade tokens A <--> currecncy B
+            truffleAssert.eventEmitted(transferTx, 'TradedCcyTok', ev => 
+                ev.ccyTypeId == ccyTypeId_B && ev.tokTypeId == tokTypeId_A && Big(ev.ccyAmount).eq(Big(ccy_amount_B)) && Big(ev.tokQty).eq(Big(qty_A)));
+        }
+        if (qty_B > 0 && ccy_amount_A > 0) { // trade tokens B <--> currecncy A
+            truffleAssert.eventEmitted(transferTx, 'TradedCcyTok', 
+                ev => ev.ccyTypeId == ccyTypeId_A && ev.tokTypeId == tokTypeId_B && Big(ev.ccyAmount).eq(Big(ccy_amount_A)) && Big(ev.tokQty).eq(Big(qty_B)));
+        }
+
+        // ledger entries after
+        ledgerA_after = await stmStLedgerFacet.getLedgerEntry(ledger_A);
+        ledgerB_after = await stmStLedgerFacet.getLedgerEntry(ledger_B);
+        feeOwnerLedgerForA_after = ledgerA_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_A) : undefined;
+        feeOwnerLedgerForB_after = ledgerB_Whitelisted ? await stmStLedgerFacet.getLedgerEntry(feeOwnerAddr_B) : undefined;
+
+        for (let i = 0; i < originatorFeeData.length; i++) {
+            originatorFeeData[i].ledgerAfter_A = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_A);
+            originatorFeeData[i].ledgerAfter_B = await stmStLedgerFacet.getLedgerEntry(originatorFeeData[i].fee_to_B);
+        }
+
+        // validate fees
+        var orig_tot_ccyFees = new BN(0);
+        var orig_ccyFee_toA = new BN(0);
+        var orig_ccyFee_toB = new BN(0);
+
+        if (applyFees) {
+
+            // validate ccy fee events & global totals
+            const eventCcy_fees = []
+            eventCcy_fees[ccyTypeId_A] = new BN(0);
+            eventCcy_fees[ccyTypeId_B] = new BN(0);
+            if (ccy_amount_A > 0 || ccy_amount_B > 0) {
+                truffleAssert.eventEmitted(transferTx, 'TransferedLedgerCcy', ev => { 
+                    //if (ev.transferType != CONST.transferType.USER) { 
+                    if (ev.transferType == CONST.transferType.EXCHANGE_FEE) { 
+                        eventCcy_fees[ev.ccyTypeId] = eventCcy_fees[ev.ccyTypeId].add(ev.amount);
+                        //console.log(`EXCHANGE CCY FEE: ${ev.from} --> ${ev.to} ccyTypeId=${ev.ccyTypeId} ... amount=${Number(ev.amount)} >> eventCcy_fees[ev.ccyTypeId]=${eventCcy_fees[ev.ccyTypeId].toString()}`);
+                    }
+
+                    if (ev.transferType == CONST.transferType.ORIG_FEE) { 
+                        orig_tot_ccyFees = orig_tot_ccyFees.add(ev.amount);
+                        //console.log(`ORIGINATOR CCY FEE: ${ev.from} --> ${ev.to} ccyTypeId=${ev.ccyTypeId} ... amount=${Number(ev.amount)} >> orig_tot_ccyFees=${orig_tot_ccyFees.toString()}`);
+                        if (ev.to == ledger_A) orig_ccyFee_toA = orig_ccyFee_toA.add(ev.amount);
+                        if (ev.to == ledger_B) orig_ccyFee_toB = orig_ccyFee_toB.add(ev.amount);
+                    }
+                    return true;
+                });
+            }
+        }
+
+        // validate currency transfer events
+        if (ccy_amount_A > 0 || ccy_amount_B > 0) {
+            truffleAssert.eventEmitted(transferTx, 'TransferedLedgerCcy', ev => {
+
+                return (
+                // main transfer events
+                (ccy_amount_A > 0 && ev.from == ledger_A && ev.to == ledger_B && ev.ccyTypeId == ccyTypeId_A && ev.amount.eq(new BN(ccy_amount_A)))
+             || (ccy_amount_B > 0 && ev.from == ledger_B && ev.to == ledger_A && ev.ccyTypeId == ccyTypeId_B && ev.amount.eq(new BN(ccy_amount_B)))
+                // exchange fee transfer events
+             || (ccy_amount_A > 0 && ev.from == ledger_A && ev.to == feeOwnerAddr_A && ev.ccyTypeId == ccyTypeId_A)
+             || (ccy_amount_B > 0 && ev.from == ledger_B && ev.to == feeOwnerAddr_B && ev.ccyTypeId == ccyTypeId_B)
+                );
+            });
+        }
+
+        // validate currency ledger balances are updated: A -> B
+        if (ccy_amount_A > 0) {
+            const A_bal_aft_ccyA = Big(ledgerA_after.ccys.find(p => p.ccyTypeId == ccyTypeId_A).balance);
+            const B_bal_aft_ccyA = Big(ledgerB_after.ccys.find(p => p.ccyTypeId == ccyTypeId_A).balance);
+            const A_bal_bef_ccyA = Big(ledgerA_before.ccys.find(p => p.ccyTypeId == ccyTypeId_A).balance);
+            const B_bal_bef_ccyA = Big(ledgerB_before.ccys.find(p => p.ccyTypeId == ccyTypeId_A).balance);
+
+            assert(A_bal_aft_ccyA.minus(A_bal_bef_ccyA).plus(Big(fee_ccy_A)).eq(Big(deltaCcy_fromA[ccyTypeId_A]).times(+1)),
+                `(1) unexpected ledger A balance ${A_bal_aft_ccyA.toFixed()} after transfer A -> B amount ${ccy_amount_A} ccy type ${ccyTypeId_A}`);
+
+            assert(B_bal_aft_ccyA.minus(B_bal_bef_ccyA).eq(Big(deltaCcy_fromA[ccyTypeId_A]).times(-1)
+                    .plus(Big(orig_ccyFee_toB.toString())) // orig ccy fee paid by owner to B
+                    .minus(Big(exchangeFee_ccy_B.toString()))), // ex ccy-fee mirror
+                `(2) unexpected ledger B balance ${B_bal_aft_ccyA.toFixed()} after transfer A -> B amount ${ccy_amount_A} ccy type ${ccyTypeId_A}`);
+        }
+
+        // validate currency ledger balances are updated: B -> A
+        if (ccy_amount_B > 0) {
+            const B_bal_aft_ccyB = Big(ledgerB_after.ccys.find(p => p.ccyTypeId == ccyTypeId_B).balance);
+            const A_bal_aft_ccyB = Big(ledgerA_after.ccys.find(p => p.ccyTypeId == ccyTypeId_B).balance);
+            const B_bal_bef_ccyB = Big(ledgerB_before.ccys.find(p => p.ccyTypeId == ccyTypeId_B).balance);
+            const A_bal_bef_ccyB = Big(ledgerA_before.ccys.find(p => p.ccyTypeId == ccyTypeId_B).balance);
+
+            assert(B_bal_aft_ccyB.minus(B_bal_bef_ccyB).plus(Big(fee_ccy_B)).eq(Big(deltaCcy_fromA[ccyTypeId_B]).times(-1)),
+                `(1) unexpected ledger B balance ${B_bal_aft_ccyB} after transfer B -> A amount ${ccy_amount_B} ccy type ${ccyTypeId_B}`);
+
+            assert(A_bal_aft_ccyB.minus(A_bal_bef_ccyB).eq(Big(deltaCcy_fromA[ccyTypeId_B]).times(+1)
+                    .plus(Big(orig_ccyFee_toA.toString())) // orig ccy fee paid by owner to A
+                    .minus(Big(exchangeFee_ccy_A.toString()))), // ex ccy-fee mirror
+                `(2) unexpected ledger A balance ${A_bal_aft_ccyB} after transfer B -> A amount ${ccy_amount_B} ccy type ${ccyTypeId_B}`);
+        }
+
+        const expectedCcy_tfd = []; 
+        expectedCcy_tfd[ccyTypeId_A] = Big(0);
+        expectedCcy_tfd[ccyTypeId_B] = Big(0);
+        expectedCcy_tfd[ccyTypeId_A] = expectedCcy_tfd[ccyTypeId_A].plus(ccy_amount_A);
+        expectedCcy_tfd[ccyTypeId_B] = expectedCcy_tfd[ccyTypeId_B].plus(ccy_amount_B);
+        if (applyFees) {
+            if (ccy_amount_A > 0) {
+                expectedCcy_tfd[ccyTypeId_A] = expectedCcy_tfd[ccyTypeId_A].plus(Big(fee_ccy_A));
+                expectedCcy_tfd[ccyTypeId_A] = expectedCcy_tfd[ccyTypeId_A].plus(Big(exchangeFee_ccy_B.toString())); // ex ccy-fee mirror
+
+                expectedCcy_tfd[ccyTypeId_A] = expectedCcy_tfd[ccyTypeId_A].plus(Big(orig_ccyFee_toA.toString())); // orig ccy fee paid by owner to A
+                expectedCcy_tfd[ccyTypeId_A] = expectedCcy_tfd[ccyTypeId_A].plus(Big(orig_ccyFee_toB.toString())); // orig ccy fee paid by owner to B
+            }
+            if (ccy_amount_B > 0) {
+                expectedCcy_tfd[ccyTypeId_B] = expectedCcy_tfd[ccyTypeId_B].plus(Big(fee_ccy_B));
+                expectedCcy_tfd[ccyTypeId_B] = expectedCcy_tfd[ccyTypeId_B].plus(Big(exchangeFee_ccy_A.toString())); // ex ccy-fee mirror
+
+                expectedCcy_tfd[ccyTypeId_B] = expectedCcy_tfd[ccyTypeId_B].plus(Big(orig_ccyFee_toA.toString())); // orig ccy fee paid by owner to A
+                expectedCcy_tfd[ccyTypeId_B] = expectedCcy_tfd[ccyTypeId_B].plus(Big(orig_ccyFee_toB.toString())); // orig ccy fee paid by owner to B
+            }
+        }
+
+
+        const tokFullEvents = [];
+        const tokPartialEvents = [];
+        // default exchange fee acc
+        // if transfer is to/from system account, no fees should be paid
+        const contractOwnerIsTransfering = ledger_A == feeOwnerAddr_A || ledger_B == feeOwnerAddr_B;
+        if (qty_A > 0 || qty_B > 0) {
+            //truffleAssert.prettyPrintEmittedEvents(transferTx);
+            
+            // we expect n full events (possibly 0), and maximum one partial event (possibly 0)
+            try { truffleAssert.eventEmitted(transferTx, 'TransferedFullSecToken',    ev => { tokFullEvents.push(ev);    return true; }); }
+            catch {}
+            try { truffleAssert.eventEmitted(transferTx, 'TransferedPartialSecToken', ev => { tokPartialEvents.push(ev); return true; }); }
+            catch {}
+
+            // user token events (non-fees)
+            if (qty_A > 0) {
+                assert(tokFullEvents.filter(p => p.from == ledger_A && (p.transferType == transferType || p.transferType == CONST.transferType.USER)).length > 0 ||
+                       tokPartialEvents.filter(p => p.from == ledger_A && (p.transferType == transferType || p.transferType == CONST.transferType.USER)).length == 1,
+                       'unexpected transfer full vs. partial event count after transfer for ledger A');
+            }
+            if (qty_B > 0) {
+                assert(tokFullEvents.filter(p => p.from == ledger_B && (p.transferType == transferType || p.transferType == CONST.transferType.USER)).length > 0 ||
+                       tokPartialEvents.filter(p => p.from == ledger_B && (p.transferType == transferType || p.transferType == CONST.transferType.USER)).length == 1,
+                       'unexpected transfer full vs. partial event count after transfer for ledger B');
+            }
+            if ((qty_A > 0 && qty_B == 0) || (qty_B > 0 && qty_A == 0)) { // one-sided xfer
+                assert(tokPartialEvents.filter(p => p.transferType == transferType).length <= (!applyFees ? 1 : 2), 'unexpected transfer partial event count after single-sided eeu transfer');
+            }
+            else { // two-sided tok swap
+                assert(tokPartialEvents.filter(p => p.transferType == CONST.transferType.USER).length <= (!applyFees ? 2 : 3), 'unexpected transfer partial event count after two-sided eeu transfer');
+            }
+
+            // originator token fee events
+            originatorFeeData.forEach(of => {
+                if (of.fee_tok_A > 0) {
+                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to_A == of.fee_to_A && p2.fee_tok_A > 0).length;
+                    const fullCount = tokFullEvents.filter(p => p.from == ledger_A && p.to == of.fee_to_A && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_A && p.to == of.fee_to_A && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    assert(fullCount > 0 || partialCount == expectedFeeEventCount,
+                           'unexpected originator fee transfer full vs. partial event count after transfer for ledger A');
+                }
+                if (of.fee_tok_B > 0) {
+                    const expectedFeeEventCount = originatorFeeData.filter(p2 => p2.fee_to_B == of.fee_to_B && p2.fee_tok_B > 0).length;
+                    const fullCount = tokFullEvents.filter(p => p.from == ledger_B && p.to == of.fee_to_B && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    const partialCount = tokPartialEvents.filter(p => p.from == ledger_B && p.to == of.fee_to_B && p.transferType == CONST.transferType.ORIG_FEE).length;
+                    
+                    assert(fullCount > 0 || partialCount == expectedFeeEventCount,
+                           'unexpected originator fee transfer full vs. partial event count after transfer for ledger B');
+                }
+            });
+            // don't double count sender/receiver and master contract owner, if the contract owner is on one side of the transfer
+            assert(Number(ledgerA_before.spot_sumQty) + 
+                   Number(ledgerB_before.spot_sumQty) + 
+                   (contractOwnerIsTransfering ? 0 : (feeOwnerLedgerForA_before ? Number(feeOwnerLedgerForA_before.spot_sumQty) : 0)) + // exchange fee receiver for A before
+                   (contractOwnerIsTransfering || sameFeeOwner ? 0 : (feeOwnerLedgerForB_before ? Number(feeOwnerLedgerForB_before.spot_sumQty) : 0)) // exchange fee receiver for B before
+                   ==
+                   Number(ledgerA_after.spot_sumQty)  + 
+                   Number(ledgerB_after.spot_sumQty)  + 
+                   (contractOwnerIsTransfering ? 0 : (feeOwnerLedgerForA_after ? Number(feeOwnerLedgerForA_after.spot_sumQty) : 0)) + // exchange fee receiver for A after
+                   (contractOwnerIsTransfering || sameFeeOwner ? 0 : (feeOwnerLedgerForB_after ? Number(feeOwnerLedgerForB_after.spot_sumQty) : 0)) + // exchange fee receiver for B after
+                   (contractOwnerIsTransfering ? 0 : originatorFeeData.map(p => p.fee_tok_A).reduce((a,b) => Number(a) + Number(b), Number(0))) + // originator fees paid by A
+                   (contractOwnerIsTransfering ? 0 : originatorFeeData.map(p => p.fee_tok_B).reduce((a,b) => Number(a) + Number(b), Number(0)))   // originator fees paid by B
+                   , 'unexpected total quantity sum across ledger before vs. after');
+        }
+
+        // validate originator token fees are moved
+        originatorFeeData.forEach(p => {
+          const allOriginatorFeesPaidToLedger_A = Big(originatorFeeData.filter(p2 => p2.fee_to == p.fee_to_A).map(p2 => p2.fee_tok_A).reduce((a,b) => Big(a).plus(Big(b)), Big(0)));
+          const allOriginatorFeesPaidToLedger_B = Big(originatorFeeData.filter(p2 => p2.fee_to == p.fee_to_B).map(p2 => p2.fee_tok_B).reduce((a,b) => Big(a).plus(Big(b)), Big(0)));
+
+        //   console.log(`   p.ledgerBefore.spot_sumQty ${p.fee_to}`, p.ledgerBefore.spot_sumQty.toString());
+        //   console.log(`    p.ledgerAfter.spot_sumQty ${p.fee_to}`, p.ledgerAfter.spot_sumQty.toString());
+        //   console.log(`allOriginatorFeesPaidToLedger ${p.fee_to}`, allOriginatorFeesPaidToLedger.toFixed());
+
+            // originator ledger after >= ledger before + all originator fees paid to that ledger (will be > if the fee receiver account is also the main user TX receiver account)
+            assert(Big(p.ledgerAfter_A.spot_sumQty.toString()).gte(Big(p.ledgerBefore_A.spot_sumQty.toString()).plus(allOriginatorFeesPaidToLedger_A))
+                , `unexpected originator ${p.fee_to_A} token sum across ledger before vs. after`);
+
+            assert(Big(p.ledgerAfter_B.spot_sumQty.toString()).gte(Big(p.ledgerBefore_B.spot_sumQty.toString()).plus(allOriginatorFeesPaidToLedger_B))
+                , `unexpected originator ${p.fee_to_B} token sum across ledger before vs. after`);
+        });
+
+        // calculate expected exchange token fees separately from fee preview
+        var gf, lf, fix, bps, min, max;
+        gf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, entityIdOfLedgerA, tokTypeId_A, CONST.nullAddr) : CONST.nullFees;
+        lf = ledgerA_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_A, ledger_A) : CONST.nullFees;
+
+        fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed); //ledgerFee_Fix.gt(0) ? ledgerFee_Fix : globalFee_Fix;
+        bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips); //ledgerFee_Bps.gt(0) ? ledgerFee_Bps : globalFee_Bps;
+        min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min); //ledgerFee_Min.gt(0) ? ledgerFee_Min : globalFee_Min;
+        max = lf.fee_max > 0 ? Big(lf.fee_max) : Big(gf.fee_max); //ledgerFee_Max.gt(0) ? ledgerFee_Max : globalFee_Max;
+        var ex_tokFee_A = 0;
+        if (ledger_A != feeOwnerAddr_A && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
+            ex_tokFee_A = Math.floor(Number(fix) + Number((qty_A / 10000) * Number(bps)));
+            if (Big(ex_tokFee_A).gt(max) && max.gt(0)) ex_tokFee_A = max.toFixed();
+            if (Big(ex_tokFee_A).lt(min) && min.gt(0)) ex_tokFee_A = min.toFixed();
+        }
+        //console.log('ex_eeuFee_A', ex_eeuFee_A); 
+        assert(exchangeFee_tok_A.eq(Big(ex_tokFee_A)), 'unexpected fee preview exchange token fee (A)');
+
+        gf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, entityIdOfLedgerB, tokTypeId_B, CONST.nullAddr) : CONST.nullFees;
+        lf = ledgerB_Whitelisted ? await stmStFeesFacet.getFee(CONST.getFeeType.TOK, 0, tokTypeId_B, ledger_B) : CONST.nullFees;
+        // globalFee_Fix = Big(await stm.globalFee_tokType_Fix(tokTypeId_B));
+        // ledgerFee_Fix = Big(await stm.ledgerFee_tokType_Fix(tokTypeId_B, ledger_B));
+        // globalFee_Bps = Big(await stm.globalFee_tokType_Bps(tokTypeId_B));
+        // ledgerFee_Bps = Big(await stm.ledgerFee_tokType_Bps(tokTypeId_B, ledger_B));
+        // globalFee_Min = Big(await stm.globalFee_tokType_Min(tokTypeId_B));
+        // ledgerFee_Min = Big(await stm.ledgerFee_tokType_Min(tokTypeId_B, ledger_B));
+        // globalFee_Max = Big(await stm.globalFee_tokType_Max(tokTypeId_B));
+        // ledgerFee_Max = Big(await stm.ledgerFee_tokType_Max(tokTypeId_B, ledger_B));
+        fix = lf.fee_fixed > 0 ? Big(lf.fee_fixed) : Big(gf.fee_fixed); //ledgerFee_Fix.gt(0) ? ledgerFee_Fix : globalFee_Fix;
+        bps = lf.fee_percBips > 0 ? Big(lf.fee_percBips) : Big(gf.fee_percBips); //ledgerFee_Bps.gt(0) ? ledgerFee_Bps : globalFee_Bps;
+        min = lf.fee_min > 0 ? Big(lf.fee_min) : Big(gf.fee_min); //ledgerFee_Min.gt(0) ? ledgerFee_Min : globalFee_Min;
+        max = lf.fee_max > 0 ? Big(lf.fee_max) : Big(gf.fee_max); //ledgerFee_Max.gt(0) ? ledgerFee_Max : globalFee_Max;
+        var ex_tokFee_B = 0;
+        if (ledger_B != feeOwnerAddr_B && applyFees) { // fees not applied by contract if fee-sender == fee-receiver
+            ex_tokFee_B = Math.floor(Number(fix) + Number((qty_B / 10000) * Number(bps))); 
+            if (Big(ex_tokFee_B).gt(max) && max.gt(0)) ex_tokFee_B = max.toFixed();
+            if (Big(ex_tokFee_B).lt(min) && min.gt(0)) ex_tokFee_B = min.toFixed();                     
+        }        
+        //console.log('ex_eeuFee_B', ex_eeuFee_B);
+        assert(exchangeFee_tok_B.eq(Big(ex_tokFee_B)), 'unexpected fee preview exchange token fee (B)');
+
+        // validate tokens are moved       
+        var totalTokQty_tfd_incFees = new BN(qty_A.toString()).add(new BN(qty_B.toString()));
+        var totalqty_AllSecSecTokenTypes_fees = new BN(0);
+        if (qty_A > 0) {
+            var netTokQty_tfd = 0;
+            totalTokQty_tfd_incFees = totalTokQty_tfd_incFees.add(new BN(ex_tokFee_A));
+            totalqty_AllSecSecTokenTypes_fees = totalqty_AllSecSecTokenTypes_fees.add(new BN(ex_tokFee_A));
+            netTokQty_tfd += qty_A; // transfered by A
+            netTokQty_tfd -= qty_B; // received from B
+
+            // console.log('                       qty_A', qty_A.toString());
+            // console.log('                       qty_B', qty_B.toString());
+            // console.log('                   netTokQty_tfd', netTokQty_tfd.toString());
+            // console.log('---');
+            // console.log(' ledgerA_after.spot_sumQty', ledgerA_after.spot_sumQty.toString());
+            // console.log('ledgerA_before.spot_sumQty', ledgerA_before.spot_sumQty.toString());
+            // console.log('                 ex_eeuFee_A', ex_eeuFee_A.toString());
+            // console.log('        originatorFees_tok_A', originatorFees_tok_A.toString());
+            assert(ledgerA_after.spot_sumQty == Number(ledgerA_before.spot_sumQty) - netTokQty_tfd - ex_tokFee_A - Number(originatorFees_tok_A.toFixed()), 'unexpected ledger A tokens sum after transfer A -> B');
+
+            // console.log('---');
+            // console.log(' ledgerB_after.spot_sumQty', ledgerB_after.spot_sumQty.toString());
+            // console.log('ledgerB_before.spot_sumQty', ledgerB_before.spot_sumQty.toString());
+            // console.log('                 ex_eeuFee_B', ex_eeuFee_B.toString());
+            // console.log('        originatorFees_tok_B', originatorFees_tok_B.toString());
+            if (!contractOwnerIsTransfering) {
+                assert(ledgerB_after.spot_sumQty == Number(ledgerB_before.spot_sumQty) + netTokQty_tfd - ex_tokFee_B - Number(originatorFees_tok_B.toFixed()), 'unexpected ledger B quantity sum after transfer A -> B');
+            }
+
+            totalTokQty_tfd_incFees = totalTokQty_tfd_incFees.add(new BN(originatorFees_tok_A.toFixed()));
+        }
+        if (qty_B > 0) {
+            var netTokQty_tfd = 0;
+            totalTokQty_tfd_incFees = totalTokQty_tfd_incFees.add(new BN(ex_tokFee_B));
+            totalqty_AllSecSecTokenTypes_fees = totalqty_AllSecSecTokenTypes_fees.add(new BN(ex_tokFee_B));
+            netTokQty_tfd += qty_B; // transfered by B
+            netTokQty_tfd -= qty_A; // received from A
+
+            assert(ledgerB_after.spot_sumQty == Number(ledgerB_before.spot_sumQty) - netTokQty_tfd - ex_tokFee_B - Number(originatorFees_tok_B.toFixed()), 'unexpected ledger B quantity sum after transfer B -> A');
+            
+            // console.log('ledgerA_after.spot_sumQty', ledgerA_after.spot_sumQty.toString());
+            // console.log('ledgerA_before.spot_sumQty', ledgerA_before.spot_sumQty.toString());
+            // console.log('netTokQty_tfd', netTokQty_tfd.toString());
+            // console.log('ex_tokFee_A', ex_tokFee_A.toString());
+            // console.log('originatorFees_tok_A', originatorFees_tok_A.toString());
+            if (!contractOwnerIsTransfering) {
+                assert(ledgerA_after.spot_sumQty == Number(ledgerA_before.spot_sumQty) + netTokQty_tfd - ex_tokFee_A - Number(originatorFees_tok_A.toFixed()), 'unexpected ledger A tokens sum after transfer B -> A');
+            }
+            
+            totalTokQty_tfd_incFees = totalTokQty_tfd_incFees.add(new BN(originatorFees_tok_B.toFixed()));
+        }
+
+        // validate token fee sum quantity in contract owner
+        // console.log(' owner_after.spot_sumQty', owner_after.spot_sumQty);
+        // console.log('owner_before.spot_sumQty', owner_before.spot_sumQty);
+        // console.log('       totalqty_AllSecSecTokenTypes_fees', totalqty_AllSecSecTokenTypes_fees);
+        if (!contractOwnerIsTransfering) {
+            // assert(new BN(owner_after.spot_sumQty).sub(new BN(owner_before.spot_sumQty))
+            //         .eq(totalqty_AllSecSecTokenTypes_fees), 'unexpected contract owner (exchange fee receiver) token quantity after transfer');
+
+            if(feeOwnerAddr_A !== feeOwnerAddr_B) {
+                if(ledgerA_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForA_after.spot_sumQty).sub(new BN(feeOwnerLedgerForA_before.spot_sumQty))
+                        .eq(new BN(ex_tokFee_A)), 'unexpected contract owner (exchange fee receiver A) token quantity after transfer');
+                }
+    
+                if(ledgerB_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForB_after.spot_sumQty).sub(new BN(feeOwnerLedgerForB_before.spot_sumQty))
+                        .eq(new BN(ex_tokFee_B)), 'unexpected contract owner (exchange fee receiver B) token quantity after transfer');
+                }
+            } else {
+                if(ledgerA_Whitelisted) {
+                    assert(new BN(feeOwnerLedgerForA_after.spot_sumQty).sub(new BN(feeOwnerLedgerForA_before.spot_sumQty))
+                        .eq((new BN(ex_tokFee_A)).add(new BN(ex_tokFee_B))), 'unexpected contract owner (exchange fee receiver A (same as B)) token quantity after transfer');
+                }
+            }
+        }
+
+        // validate token global totals
+        // console.log(' totalTokQty_tfd_before', totalTokQty_tfd_before.toString());
+        // console.log('  totalTokQty_tfd_after', totalTokQty_tfd_after.toString());
+        // console.log('totalTokQty_tfd_incFees', totalTokQty_tfd_incFees.toString());
+        //assert(totalTokQty_tfd_after.sub(totalTokQty_tfd_before).eq(totalTokQty_tfd_incFees), 'unexpected total quantity carbon after transfer');
+
+        return {
+            transferTx, 
+            tokFullEvents,              tokPartialEvents,
+            ledgerA_before,             ledgerA_after,  
+            ledgerB_before,             ledgerB_after,
+            feeOwnerLedgerForA_before, feeOwnerLedgerForB_before, 
+            feeOwnerLedgerForA_after, feeOwnerLedgerForB_after,
+            originatorFees_tok_A,       originatorFees_tok_B,
+            exchangeFee_tok_A,          exchangeFee_tok_B,
+            exchangeFee_ccy_A,          exchangeFee_ccy_B,
+            orig_ccyFee_toA,            orig_ccyFee_toB,
+        };
+    },
+
     transferLedger: async(a) => {
         const { stmStLedgerFacet, stmStFeesFacet, stmStTransferableFacet, stmStErc20Facet, accounts,
             ledger_A,     ledger_B, 

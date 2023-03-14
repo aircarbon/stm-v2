@@ -502,7 +502,7 @@ library TransferLib {
 		if (ld.contractType != StructLib.ContractType.CASHFLOW_BASE) {
 			//**
 			// Taking originator fees only if the transaction is a trade
-			if (a.applyFees && a.transferType == StructLib.TransferType.Undefined && (a.qty_A > 0 && a.ccy_amount_B > 0) || (a.qty_B > 0 && a.ccy_amount_A > 0)) {
+			if (a.applyFees && a.transferType == StructLib.TransferType.Undefined && ((a.qty_A > 0 && a.ccy_amount_B > 0) || (a.qty_B > 0 && a.ccy_amount_A > 0))) {
 				if (exFees.fee_ccy_A + exFees.fee_ccy_B > 0) {
 					require(
 						a.ccyTypeId_A != 0 || a.ccyTypeId_B != 0,
