@@ -9,7 +9,169 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StTransferableFacet {
+	enum BilaeralTradeType {
+		Biofuel,
+		BrokerPortal,
+		Type3, // placeholder
+		Type4, // placeholder
+		Type5, // placeholder
+		Type6, // placeholder
+		Type7, // placeholder
+		Type8, // placeholder
+		Type9, // placeholder
+		Type10 // placeholder
+	}
+
+	enum BilaeralTradeAction {
+		Requested,
+		Confirmed,
+		Cancelled
+	}
+
 	uint256 constant MAX_BATCHES_PREVIEW = 128; // library constants not accessible in contract; must duplicate TransferLib value
+
+	event bilateralTradeRequested(
+		BilaeralTradeType indexed tradeType,
+		address indexed ledger_A, 
+		address indexed ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string metadata
+	);
+
+	event bilateralTradeConfirmed(
+		BilaeralTradeType indexed tradeType,
+		bytes32 referenceTx,
+		address indexed ledger_A, 
+		address indexed ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string metadata
+	);
+
+	event bilateralTradeCancelled(
+		BilaeralTradeType indexed tradeType,
+		bytes32 referenceTx,
+		address indexed ledger_A, 
+		address indexed ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string metadata
+	);
+
+	/**
+	 * @param tradeType type of bilateral trade (/biofuel, broker portal, etc.)
+	 * @param ledger_A address of the buyer (buyer buys for currency)
+	 * @param ledger_B address of the seller (seller sells the asset)
+	 * @param ccyTypeId id of the currency
+	 * @param tokenTypeId id of the topken (the asset)
+	 * @param ccyQty quantity of the currency
+	 * @param tokenQty quantity of the token (the asset)
+	 * @param metadata additional data
+	*/
+	function recordBilateralTrade(
+		BilaeralTradeType tradeType,
+		address ledger_A, 
+		address ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string calldata metadata
+	) external {
+		_bilateralTradeAction(
+			tradeType, 
+			BilaeralTradeAction.Requested, 
+			0x0, 
+			ledger_A, 
+			ledger_B, 
+			ccyTypeId, 
+			tokenTypeId, 
+			ccyQty, 
+			tokenQty, 
+			metadata
+		);
+	}
+
+	/**
+	 * @param tradeType type of bilateral trade (/biofuel, broker portal, etc.)
+	 * @param referenceTx hash of the reference transaction
+	 * @param ledger_A address of the buyer (buyer buys for currency)
+	 * @param ledger_B address of the seller (seller sells the asset)
+	 * @param ccyTypeId id of the currency
+	 * @param tokenTypeId id of the topken (the asset)
+	 * @param ccyQty quantity of the currency
+	 * @param tokenQty quantity of the token (the asset)
+	 * @param metadata additional data
+	*/
+	function confirmBilateralTrade(
+		BilaeralTradeType tradeType,
+		bytes32 referenceTx,
+		address ledger_A, 
+		address ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string calldata metadata
+	) external {
+		require(referenceTx != 0x0, "confirmBilateralTrade: invalid referenceTx");
+		_bilateralTradeAction(
+			tradeType, 
+			BilaeralTradeAction.Confirmed, 
+			referenceTx, 
+			ledger_A, 
+			ledger_B, 
+			ccyTypeId, 
+			tokenTypeId, 
+			ccyQty, 
+			tokenQty, 
+			metadata
+		);
+	}
+
+	/**
+	 * @param tradeType type of bilateral trade (/biofuel, broker portal, etc.)
+	 * @param referenceTx hash of the reference transaction
+	 * @param ledger_A address of the buyer (buyer buys for currency)
+	 * @param ledger_B address of the seller (seller sells the asset)
+	 * @param ccyTypeId id of the currency
+	 * @param tokenTypeId id of the topken (the asset)
+	 * @param ccyQty quantity of the currency
+	 * @param tokenQty quantity of the token (the asset)
+	 * @param metadata additional data
+	*/
+	function cancelBilateralTrade(
+		BilaeralTradeType tradeType,
+		bytes32 referenceTx,
+		address ledger_A, 
+		address ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string calldata metadata
+	) external {
+		require(referenceTx != 0x0, "cancelBilateralTrade: invalid referenceTx");
+		_bilateralTradeAction(
+			tradeType, 
+			BilaeralTradeAction.Cancelled, 
+			referenceTx, 
+			ledger_A, 
+			ledger_B, 
+			ccyTypeId, 
+			tokenTypeId, 
+			ccyQty, 
+			tokenQty, 
+			metadata
+		);
+	}
 
 	/**
 	 * @dev returns the hashcode of the ledger
@@ -179,5 +341,43 @@ contract StTransferableFacet {
 			transferArgs, 
 			StructLib.CustomFee(custFeeA, custFeeB, applyFees)
 		);
+	}
+
+	function _bilateralTradeAction(
+		BilaeralTradeType tradeType,
+		BilaeralTradeAction action, 
+		bytes32 referenceTx,
+		address ledger_A, 
+		address ledger_B, 
+		uint ccyTypeId,
+		uint tokenTypeId, 
+		uint ccyQty,
+		uint tokenQty,
+		string calldata metadata
+	) internal {
+		ValidationLib.validateOnlyCustodian();
+		ValidationLib.validateOnlyWhenReadWrite();
+
+		ValidationLib.validateHasEntity(ledger_A);
+		ValidationLib.validateHasEntity(ledger_B);
+
+		require(ledger_A != address(0), "_bilateralTradeAction: ledger A is zero");
+		require(ledger_B != address(0), "_bilateralTradeAction: ledger B is zero");
+
+		require(ccyQty > 0, "_bilateralTradeAction: ccy qty should be a positive number");
+		require(tokenQty > 0, "_bilateralTradeAction: token qty should be a positive number");
+
+		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+
+		require(ccyTypeId > 0 && ccyTypeId <= s.ctd._ct_Count, "_bilateralTradeAction: invalid ccyTypeId");
+		require(tokenTypeId >0 && tokenTypeId <= s.std._tt_Count, "_bilateralTradeAction: invalid tokenTypeId");
+
+		if(action == BilaeralTradeAction.Requested) {
+			emit bilateralTradeRequested(tradeType, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
+		} else if (action == BilaeralTradeAction.Confirmed) {
+			emit bilateralTradeConfirmed(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
+		} else {
+			emit bilateralTradeCancelled(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
+		}
 	}
 }
