@@ -20,6 +20,7 @@ const StMintableFacet = artifacts.require('StMintableFacet');
 const StBurnableFacet = artifacts.require('StBurnableFacet');
 const DiamondLoupeFacet = artifacts.require('DiamondLoupeFacet');
 const StMasterFacet = artifacts.require('StMasterFacet');
+const OwnedFacet = artifacts.require('OwnedFacet');
 
 const CONST = require('../const.js');
 const chalk = require('chalk');
@@ -57,9 +58,9 @@ const allContractsNames = [
 
 // here specify names of smart contracts (that are affected by changes) that will be deployed
 const contractsToBeRedeployed = [
-    'Erc20Lib',
-    'StErc20Facet',
-    'TransferLib',
+    // 'Erc20Lib',
+    // 'StErc20Facet',
+    // 'TransferLib',
     'StTransferableFacet',
 ];
 
@@ -78,30 +79,32 @@ const upgradeParams = [
     //         '0xc142bdcf',
     //     ]
     // },
+
     {
         action: CONST.FacetCutAction.Add,
         contractName: 'StTransferableFacet',
         funcs: [
-            'tradeCustomFee',
-            'tradeBatchCustomFee',
+            'recordBilateralTrade',
+            'confirmBilateralTrade',
+            'cancelBilateralTrade',
         ],
     },
-    {
-        action: CONST.FacetCutAction.Replace,
-        contractName: 'StTransferableFacet',
-        funcs: [
-            'transferOrTrade',
-            'transferOrTradeBatch',
-        ],
-    },
-    {
-        action: CONST.FacetCutAction.Replace,
-        contractName: 'StErc20Facet',
-        funcs: [
-            'transferFrom',
-            'transfer',
-        ],
-    },
+    // {
+    //     action: CONST.FacetCutAction.Replace,
+    //     contractName: 'StTransferableFacet',
+    //     funcs: [
+    //         'transferOrTrade',
+    //         'transferOrTradeBatch',
+    //     ],
+    // },
+    // {
+    //     action: CONST.FacetCutAction.Replace,
+    //     contractName: 'StErc20Facet',
+    //     funcs: [
+    //         'transferFrom',
+    //         'transfer',
+    //     ],
+    // },
 ];
 
 const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
@@ -186,7 +189,7 @@ module.exports = async function (deployer) {
         return contract.at(deployedContrAddr[contractName]);
     }
 
-    // const stmLoupe = await DiamondLoupeFacet.at('0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D');
+    const stmLoupe = await deployOrGetDeployed('DiamondLoupeFacet', DiamondLoupeFacet);
     // console.log(await stmLoupe.facets());
 
     console.log('\nDeploying new Facets and registering them...');
@@ -208,6 +211,8 @@ module.exports = async function (deployer) {
     deployer.link(LibMainStorage_c, TokenLib);
     deployer.link(LibMainStorage_c, StMintableFacet);
     deployer.link(LibMainStorage_c, StBurnableFacet);
+    deployer.link(LibMainStorage_c, OwnedFacet);
+    deployer.link(LibMainStorage_c, StMasterFacet);
 
     // deploying new StructLib (because don't have address of an old one)
     const StructLib_c = await deployOrGetDeployed('StructLib', StructLib);
@@ -227,6 +232,11 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, CcyCollateralizableFacet);
     deployer.link(StructLib_c, StMintableFacet);
     deployer.link(StructLib_c, StBurnableFacet);
+    deployer.link(StructLib_c, OwnedFacet);
+    deployer.link(StructLib_c, StMasterFacet);
+
+    // deploying new StMasterFacet
+    await deployOrGetDeployed('StMasterFacet', StMasterFacet);
 
     // deploying new CcyLib
     const CcyLib_c = await deployOrGetDeployed('CcyLib', CcyLib);
@@ -243,6 +253,10 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, StMintableFacet);
     deployer.link(ValidationLib_c, StBurnableFacet);
     deployer.link(ValidationLib_c, TokenLib);
+    deployer.link(ValidationLib_c, OwnedFacet);
+
+    // deploygin new OwnedFacet
+    await deployOrGetDeployed('OwnedFacet', OwnedFacet);
 
     // deploying new CcyCollateralizableFacet
     await deployOrGetDeployed('CcyCollateralizableFacet', CcyCollateralizableFacet);
@@ -291,7 +305,7 @@ module.exports = async function (deployer) {
     // depoying new DataLoadableFacet
     await deployOrGetDeployed('DataLoadableFacet', DataLoadableFacet);
 
-    // depoying new Erc20Lib
+    // depoying new TokenLib
     const TokenLib_c = await deployOrGetDeployed('TokenLib', TokenLib);
     deployer.link(TokenLib_c, StLedgerFacet);
     deployer.link(TokenLib_c, StMintableFacet);
@@ -308,9 +322,6 @@ module.exports = async function (deployer) {
 
     // deploying new StBurnableFacet
     await deployOrGetDeployed('StBurnableFacet', StBurnableFacet);
-
-    // deploying new StMasterFacet
-    // await deployOrGetDeployed('StMasterFacet', StMasterFacet);
 
     // preparing params
     const allParams = {
@@ -372,6 +383,13 @@ module.exports = async function (deployer) {
         networkId: deployer.network_id,
         addr: scAddr,
         newVersion: version
+    });
+
+    console.log(`Starting updating ABI for contract ${scAddr}`);
+
+    await db.UpdateABI({
+        deployedAddress: scAddr,
+        deployedAbi: JSON.stringify(CONST.generateContractTotalAbi()),
     });
 
     console.log('✅ Done all, exiting script.');

@@ -56,8 +56,8 @@ library StructLib {
 		// AC: BLOCK_TRADE
 		BlockTrade,
 
-		OtherFee6, // AC: TBD
-		OtherFee7, // AC: TBD
+		OtherFee6, // AC: Minimum Balance Fee
+		OtherFee7, // AC: No Movement Fee
 		OtherFee8, // AC: TBD
 		OtherFee9, // AC: TBD
 		OtherFee10, // AC: TBD
