@@ -22,12 +22,6 @@ contract StTransferableFacet {
 		Type10 // placeholder
 	}
 
-	enum BilaeralTradeAction {
-		Requested,
-		Confirmed,
-		Cancelled
-	}
-
 	uint256 constant MAX_BATCHES_PREVIEW = 128; // library constants not accessible in contract; must duplicate TransferLib value
 
 	event bilateralTradeRequested(
@@ -77,7 +71,7 @@ contract StTransferableFacet {
 	*/
 	function recordBilateralTrade(
 		BilaeralTradeType tradeType,
-		address ledger_A, 
+		address ledger_A,
 		address ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
@@ -85,9 +79,8 @@ contract StTransferableFacet {
 		uint tokenQty,
 		string calldata metadata
 	) external {
-		_bilateralTradeAction(
+		_bilateralTradeValidation(
 			tradeType, 
-			BilaeralTradeAction.Requested, 
 			0x0, 
 			ledger_A, 
 			ledger_B, 
@@ -97,6 +90,8 @@ contract StTransferableFacet {
 			tokenQty, 
 			metadata
 		);
+
+		emit bilateralTradeRequested(tradeType, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
 	}
 
 	/**
@@ -122,9 +117,8 @@ contract StTransferableFacet {
 		string calldata metadata
 	) external {
 		require(referenceTx != 0x0, "confirmBilateralTrade: invalid referenceTx");
-		_bilateralTradeAction(
+		_bilateralTradeValidation(
 			tradeType, 
-			BilaeralTradeAction.Confirmed, 
 			referenceTx, 
 			ledger_A, 
 			ledger_B, 
@@ -134,6 +128,8 @@ contract StTransferableFacet {
 			tokenQty, 
 			metadata
 		);
+
+		emit bilateralTradeConfirmed(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
 	}
 
 	/**
@@ -159,9 +155,8 @@ contract StTransferableFacet {
 		string calldata metadata
 	) external {
 		require(referenceTx != 0x0, "cancelBilateralTrade: invalid referenceTx");
-		_bilateralTradeAction(
+		_bilateralTradeValidation(
 			tradeType, 
-			BilaeralTradeAction.Cancelled, 
 			referenceTx, 
 			ledger_A, 
 			ledger_B, 
@@ -171,6 +166,8 @@ contract StTransferableFacet {
 			tokenQty, 
 			metadata
 		);
+
+		emit bilateralTradeCancelled(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
 	}
 
 	/**
@@ -343,9 +340,8 @@ contract StTransferableFacet {
 		);
 	}
 
-	function _bilateralTradeAction(
+	function _bilateralTradeValidation(
 		BilaeralTradeType tradeType,
-		BilaeralTradeAction action, 
 		bytes32 referenceTx,
 		address ledger_A, 
 		address ledger_B, 
@@ -371,13 +367,5 @@ contract StTransferableFacet {
 
 		require(ccyTypeId > 0 && ccyTypeId <= s.ctd._ct_Count, "_bilateralTradeAction: invalid ccyTypeId");
 		require(tokenTypeId >0 && tokenTypeId <= s.std._tt_Count, "_bilateralTradeAction: invalid tokenTypeId");
-
-		if(action == BilaeralTradeAction.Requested) {
-			emit bilateralTradeRequested(tradeType, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
-		} else if (action == BilaeralTradeAction.Confirmed) {
-			emit bilateralTradeConfirmed(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
-		} else {
-			emit bilateralTradeCancelled(tradeType, referenceTx, ledger_A, ledger_B, ccyTypeId, tokenTypeId, ccyQty, tokenQty, metadata);
-		}
 	}
 }
