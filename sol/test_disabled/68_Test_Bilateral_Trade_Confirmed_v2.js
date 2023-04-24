@@ -321,10 +321,10 @@ contract("DiamondProxy", accounts => {
         const metadata = '';
         const referenceTx = '0x4a907f4f291acbc730a3dafe37b2a5dbc33c9cbd1df42d7ab5fcbbe6322846d0';
 
-        const tx = await stmStTransferableFacet.confirmBilateralTrade(0, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.confirmBilateralTrade(1, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeConfirmed', ev => { 
-            return ev.tradeType == 0
+            return ev.tradeType == 1
                 && ev.referenceTx == referenceTx
                 && ev.ledger_A == A 
                 && ev.ledger_B == B
@@ -346,10 +346,10 @@ contract("DiamondProxy", accounts => {
         const metadata = '{ FOB: "China North", Shipping: "5 weeks" }';
         const referenceTx = '0x4a907f4f291acbc730a3dafe37b2a5dbc33c9cbd1df42d7ab5fcbbe6322846d0';
 
-        const tx = await stmStTransferableFacet.confirmBilateralTrade(0, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.confirmBilateralTrade(1, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeConfirmed', ev => { 
-            return ev.tradeType == 0
+            return ev.tradeType == 1
                 && ev.referenceTx == referenceTx
                 && ev.ledger_A == A 
                 && ev.ledger_B == B
@@ -371,10 +371,10 @@ contract("DiamondProxy", accounts => {
         const metadata = '{ FOB: "China North", Shipping: "5 weeks" }';
         const referenceTx = '0x4a907f4f291acbc730a3dafe37b2a5dbc33c9cbd1df42d7ab5fcbbe6322846d0';
 
-        const tx = await stmStTransferableFacet.confirmBilateralTrade(1, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.confirmBilateralTrade(2, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeConfirmed', ev => { 
-            return ev.tradeType == 1
+            return ev.tradeType == 2
                 && ev.referenceTx == referenceTx 
                 && ev.ledger_A == A 
                 && ev.ledger_B == B

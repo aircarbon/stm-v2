@@ -290,10 +290,10 @@ contract("DiamondProxy", accounts => {
         const tokQty = CONST.KT_CARBON;
         const metadata = '';
 
-        const tx = await stmStTransferableFacet.recordBilateralTrade(0, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.recordBilateralTrade(1, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeRequested', ev => { 
-            return ev.tradeType == 0
+            return ev.tradeType == 1
                 && ev.ledger_A == A 
                 && ev.ledger_B == B
                 && ev.ccyTypeId == ccyTypeId
@@ -313,10 +313,10 @@ contract("DiamondProxy", accounts => {
         const tokQty = CONST.KT_CARBON;
         const metadata = '{ FOB: "China North", Shipping: "5 weeks" }';
 
-        const tx = await stmStTransferableFacet.recordBilateralTrade(0, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.recordBilateralTrade(1, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeRequested', ev => { 
-            return ev.tradeType == 0
+            return ev.tradeType == 1
                 && ev.ledger_A == A 
                 && ev.ledger_B == B
                 && ev.ccyTypeId == ccyTypeId
@@ -336,10 +336,10 @@ contract("DiamondProxy", accounts => {
         const tokQty = CONST.KT_CARBON;
         const metadata = '{ FOB: "China North", Shipping: "5 weeks" }';
 
-        const tx = await stmStTransferableFacet.recordBilateralTrade(1, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+        const tx = await stmStTransferableFacet.recordBilateralTrade(2, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
 
         truffleAssert.eventEmitted(tx, 'bilateralTradeRequested', ev => { 
-            return ev.tradeType == 1
+            return ev.tradeType == 2
                 && ev.ledger_A == A 
                 && ev.ledger_B == B
                 && ev.ccyTypeId == ccyTypeId

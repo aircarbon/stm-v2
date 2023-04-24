@@ -9,7 +9,8 @@ import { LibMainStorage } from "../libraries/LibMainStorage.sol";
 import { ValidationLib } from "../libraries/ValidationLib.sol";
 
 contract StTransferableFacet {
-	enum BilaeralTradeType {
+	enum BilateralTradeType {
+		Undefined, // placeholder that is not supposed to be used
 		Biofuel,
 		BrokerPortal,
 		Type3, // placeholder
@@ -25,7 +26,7 @@ contract StTransferableFacet {
 	uint256 constant MAX_BATCHES_PREVIEW = 128; // library constants not accessible in contract; must duplicate TransferLib value
 
 	event bilateralTradeRequested(
-		BilaeralTradeType indexed tradeType,
+		BilateralTradeType indexed tradeType,
 		address indexed ledger_A, 
 		address indexed ledger_B, 
 		uint ccyTypeId,
@@ -36,7 +37,7 @@ contract StTransferableFacet {
 	);
 
 	event bilateralTradeConfirmed(
-		BilaeralTradeType indexed tradeType,
+		BilateralTradeType indexed tradeType,
 		bytes32 referenceTx,
 		address indexed ledger_A, 
 		address indexed ledger_B, 
@@ -48,7 +49,7 @@ contract StTransferableFacet {
 	);
 
 	event bilateralTradeCancelled(
-		BilaeralTradeType indexed tradeType,
+		BilateralTradeType indexed tradeType,
 		bytes32 referenceTx,
 		address indexed ledger_A, 
 		address indexed ledger_B, 
@@ -70,7 +71,7 @@ contract StTransferableFacet {
 	 * @param metadata additional data
 	*/
 	function recordBilateralTrade(
-		BilaeralTradeType tradeType,
+		BilateralTradeType tradeType,
 		address ledger_A,
 		address ledger_B, 
 		uint ccyTypeId,
@@ -106,7 +107,7 @@ contract StTransferableFacet {
 	 * @param metadata additional data
 	*/
 	function confirmBilateralTrade(
-		BilaeralTradeType tradeType,
+		BilateralTradeType tradeType,
 		bytes32 referenceTx,
 		address ledger_A, 
 		address ledger_B, 
@@ -144,7 +145,7 @@ contract StTransferableFacet {
 	 * @param metadata additional data
 	*/
 	function cancelBilateralTrade(
-		BilaeralTradeType tradeType,
+		BilateralTradeType tradeType,
 		bytes32 referenceTx,
 		address ledger_A, 
 		address ledger_B, 
@@ -341,7 +342,7 @@ contract StTransferableFacet {
 	}
 
 	function _bilateralTradeValidation(
-		BilaeralTradeType tradeType,
+		BilateralTradeType tradeType,
 		bytes32 referenceTx,
 		address ledger_A, 
 		address ledger_B, 
