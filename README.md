@@ -21,6 +21,8 @@
 - `npm i truffle -g`
 - `npm i ganache-cli -g`
 
+Important: for testing, use `ganache-cli`, not `ganache`
+
 ## Configs / Target Environment
 
 Create the following .env config files, using the `.env.example` as a template:
