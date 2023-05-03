@@ -77,12 +77,6 @@
       "precommit": "truffle compile && npm run solium:lint"
     }
   },
-  "workspaces": {
-    "nohoist": [
-      "**/agent-base",
-      "**/agent-base/**"
-    ]
-  },
   "engines": {
     "node": ">= 10.18.0"
   }

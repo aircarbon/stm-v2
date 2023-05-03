@@ -17,13 +17,23 @@ Clone the repository locally:
 git clone https://github.com/aircarbon/stm-v2
 ```
 
+## Install the dependencies
+
+ ```sh
+npm uninstall -g truffle
+npm install -g truffle
+
+npm uninstall -g ganache-cli
+npm install -g ganache-cli@6.12.2
+ ```
+
 ## Build
 
 - Within the repository directory, run `yarn dev:setup` to install the project's dependencies.
 
 - Then, build the project by running `yarn dev:build`.
 
-Here's what `yarn build` doing behind the scenes:
+Here's what `yarn dev:*` doing behind the scenes:
 
 <br/>
 
