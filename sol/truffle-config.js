@@ -32,6 +32,7 @@
  const GWEI_MAINNET_137 = '80';
  const GWEI_TESTNET_97 = '10';
  const GWEI_TESTNET = '20';
+ const GWEI_INDONESIA_ETH = '1'; // https://www.polygongasstation.com/
  const GWEI_MATIC = '50'; // https://www.polygongasstation.com/
  const GWEI_ZKEVM = '1'; // https://www.polygongasstation.com/
  const GWEI_FANTOM = '5';
@@ -232,6 +233,29 @@
        skipDryRun: false,
        timeoutBlocks: 200,
      },
+
+     // Indonesia Private Chain
+     indonesia_private: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          '', // use speedy node https://docs.moralis.io/speedy-nodes/connect-to-polygon-node
+          0,
+          1000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_INDONESIA_ETH, 'gwei'),
+      network_id: '30407734',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
 
      // Matic (Mumbai) Testnet
      matic_testnet: {

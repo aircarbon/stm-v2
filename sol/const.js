@@ -644,6 +644,22 @@ function getTestContextWeb3(useWs) {
             'petersburg'
         ) } }
 
+        // indonesia private chain
+        : process.env.WEB3_NETWORK_ID == 30407734 ? { web3: new Web3(
+                useWs ?
+                '' :
+                ''
+            ),
+            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
+            'ropsten', // forCustomChain() requires a "known" name!?
+            {
+                name: 'indonesia_private',
+                networkId: 30407734,
+                chainId: 30407734,
+            },
+            // 'petersburg'
+        ) } }
+        
         // Matic Mainnet
         : process.env.WEB3_NETWORK_ID == 137 ? { web3: new Web3(
                 useWs ?
