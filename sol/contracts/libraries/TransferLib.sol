@@ -357,7 +357,7 @@ library TransferLib {
 				StructLib.sufficientCcy(
 					ld,
 					a.ledger_A,
-					a.ccyTypeId_A,
+					customFee.applyCustomFee && a.ccyTypeId_A == 0 ? a.ccyTypeId_B : a.ccyTypeId_A,
 					a.ccy_amount_A, /*amount sending*/
 					a.ccy_amount_B, /*amount receiving*/
 					int256(
@@ -375,7 +375,7 @@ library TransferLib {
 				StructLib.sufficientCcy(
 					ld,
 					a.ledger_B,
-					a.ccyTypeId_B,
+					customFee.applyCustomFee && a.ccyTypeId_B == 0 ? a.ccyTypeId_A : a.ccyTypeId_B,
 					a.ccy_amount_B, /*amount sending*/
 					a.ccy_amount_A, /*amount receiving*/
 					int256(
