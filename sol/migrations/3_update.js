@@ -120,7 +120,7 @@ const getLatestContrAddr = async(networkId, contrName, linkedToAddr) => {
 
 // SPECIFY PARAMS HERE
 module.exports = async function (deployer) {
-    if(process.env.UPGRADE !== 'true') {
+    if(process.env.UPGRADE !== 'true' || process.env.ISTEST === 'true') {
         return;
     }
 

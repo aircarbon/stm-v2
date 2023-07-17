@@ -82,8 +82,8 @@ module.exports = async function (deployer) {
     case 'DEV_80001_AC':
       console.log(`Deploying (AWS DEV / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
-    case 'INDONESIA_PRIVATE':
-      console.log(`Deploying (AWS INDONESIA PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+    case 'DEMO_IDX_30407734':
+      console.log(`Deploying (AWS DEMO_ADX_30407734 PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEMO':
       console.log(`Deploying (AWS DEV / DEMO) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
