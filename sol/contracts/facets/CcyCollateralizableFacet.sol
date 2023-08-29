@@ -33,22 +33,16 @@ contract CcyCollateralizableFacet {
 		CcyLib.addCcyType(s.ld, s.ctd, name, unit, decimals);
 	}
 
-	function renameCcyType(
-		uint ccyTypeId,
-		string memory name,
-		string memory unit,
-		uint16 decimals
-	) public {
+	function addCcyTypeBatch(
+		string[] calldata _name,
+		string[] calldata _unit,
+		uint16[] calldata _decimals
+	) external {
 		ValidationLib.validateOnlyOwner();
 		ValidationLib.validateOnlyWhenReadWrite();
+
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
-		s.ctd._ct_Ccy[ccyTypeId] = StructLib.Ccy({
-			id: ccyTypeId,
-			name: name,
-			unit: unit,
-			decimals: decimals
-		});
-		emit AddedCcyType(ccyTypeId, name, unit);
+		CcyLib.addCcyTypeBatch(s.ld, s.ctd, _name, _unit, _decimals);
 	}
 
 	/**
