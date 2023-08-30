@@ -29,11 +29,13 @@
 
  const GWEI_MAINNET_1 = '80';
  const GWEI_MAINNET_56 = '5'; // 5 gwei minimum [PoA validator cartel!]?! trial & error - not clear at all; <5 gwei seems to never mine...
- const GWEI_MAINNET_137 = '80';
+ const GWEI_MAINNET_137 = '200';
  const GWEI_TESTNET_97 = '10';
  const GWEI_TESTNET = '20';
  const GWEI_INDONESIA_ETH = '1'; // https://www.polygongasstation.com/
- const GWEI_MATIC = '50'; // https://www.polygongasstation.com/
+ const GWEI_IDX_DEV_ETH = '1'; // https://www.polygongasstation.com/
+ const GWEI_IDX_PROD_ETH = '1'; // https://www.polygongasstation.com/
+ const GWEI_MATIC = '200'; // https://www.polygongasstation.com/
  const GWEI_ZKEVM = '1'; // https://www.polygongasstation.com/
  const GWEI_FANTOM = '5';
 
@@ -234,8 +236,54 @@
        timeoutBlocks: 200,
      },
 
-     // Indonesia Private Chain
-     indonesia_private: {
+     // Matic (Mumbai) Testnet
+     matic_testnet: {
+       provider: function () {
+         var wallet = new HDWalletProvider(
+           DEV_MNEMONIC,
+           '', // use speedy node https://docs.moralis.io/speedy-nodes/connect-to-polygon-node
+           0,
+           1000,
+         );
+         var nonceTracker = new NonceTrackerSubprovider();
+         wallet.engine._providers.unshift(nonceTracker);
+         nonceTracker.setEngine(wallet.engine);
+         return wallet;
+        },
+       gas: 19000000, // 19m
+       gasPrice: web3.utils.toWei(GWEI_MATIC, 'gwei'),
+       network_id: '80001',
+       networkCheckTimeout: 90000,
+       confirmations: 1,
+       skipDryRun: false,
+       timeoutBlocks: 200,
+     },
+
+     // UAT IDX Dev Private Chain
+     idx_private_dev: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          '',
+          0,
+          1000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_DEV_ETH, 'gwei'),
+      network_id: '800135',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
+    // IDX PROD Private Demo
+    idx_private_demo: {
       provider: function () {
         var wallet = new HDWalletProvider(
           DEV_MNEMONIC,
@@ -256,29 +304,29 @@
       skipDryRun: false,
       timeoutBlocks: 200,
     },
-
-     // Matic (Mumbai) Testnet
-     matic_testnet: {
-       provider: function () {
-         var wallet = new HDWalletProvider(
-           DEV_MNEMONIC,
-           'https://polygon-test.sdax.co:8545', // use speedy node https://docs.moralis.io/speedy-nodes/connect-to-polygon-node
-           0,
-           1000,
-         );
-         var nonceTracker = new NonceTrackerSubprovider();
-         wallet.engine._providers.unshift(nonceTracker);
-         nonceTracker.setEngine(wallet.engine);
-         return wallet;
-        },
-       gas: 19000000, // 19m
-       gasPrice: web3.utils.toWei(GWEI_MATIC, 'gwei'),
-       network_id: '80001',
-       networkCheckTimeout: 90000,
-       confirmations: 1,
-       skipDryRun: false,
-       timeoutBlocks: 200,
-     },
+    
+    // IDX PROD Private Chain
+     idx_private_prod: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          require('./PROD_MNEMONIC.js').MNEMONIC,
+          '',
+          0,
+          5000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_PROD_ETH, 'gwei'),
+      network_id: '30407734',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
 
      // zkEVM Testnet
      zkevm_testnet: {
@@ -309,7 +357,7 @@
          var wallet = new HDWalletProvider(
            require('./PROD_MNEMONIC.js').MNEMONIC,
           //  'https://quizzical-wing:deck-hull-strut-parlor-cannon-sweep@nd-151-773-880.p2pify.com',
-          'https://condescending-knuth:crate-tiger-crummy-tablet-sheath-armory@nd-195-385-665.p2pify.com',
+          '',
           //  'https://polygon-main1.aircarbon.co:9545',
            0,
            1000,
