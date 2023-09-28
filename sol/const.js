@@ -580,7 +580,7 @@ function getTestContextWeb3(useWs) {
 
         // dev - DM
           process.env.WEB3_NETWORK_ID == 888 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
-        // dev - Dung
+        // dev - Antons
         : process.env.WEB3_NETWORK_ID == 666 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
 
         : process.env.WEB3_NETWORK_ID == 889 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
@@ -644,22 +644,6 @@ function getTestContextWeb3(useWs) {
             'petersburg'
         ) } }
 
-        // indonesia private chain
-        : process.env.WEB3_NETWORK_ID == 30407734 ? { web3: new Web3(
-                useWs ?
-                '' :
-                ''
-            ),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'indonesia_private',
-                networkId: 30407734,
-                chainId: 30407734,
-            },
-            // 'petersburg'
-        ) } }
-        
         // Matic Mainnet
         : process.env.WEB3_NETWORK_ID == 137 ? { web3: new Web3(
                 useWs ?
@@ -696,6 +680,68 @@ function getTestContextWeb3(useWs) {
             },
             'petersburg'
         ) } }
+
+        // IDX UAT Dev Private Chain
+        : process.env.WEB3_NETWORK_ID == 800135 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    '',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'idx_private_dev',
+                        networkId: 800135,
+                        chainId: 800135,
+                    },
+                    'petersburg'
+                )
+            }
+        }
+
+        // IDX Demo Private Chain
+        : process.env.WEB3_NETWORK_ID == 30407734 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    ''
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'idx_private_demo',
+                        networkId: 30407734,
+                        chainId: 30407734,
+                    },
+                    // 'petersburg'
+                )
+            }
+        }
+
+        // IDX PROD Private Chain
+        : process.env.WEB3_NETWORK_ID == 30407734 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    '',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'idx_private_prod',
+                        networkId: 30407734,
+                        chainId: 30407734,
+                    },
+                    'petersburg'
+                )
+            } 
+        }
 
         // zkEVM Testnet
         : process.env.WEB3_NETWORK_ID == 1402 ? { web3: new Web3(
