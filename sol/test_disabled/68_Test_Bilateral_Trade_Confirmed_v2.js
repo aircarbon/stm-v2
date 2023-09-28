@@ -254,25 +254,6 @@ contract("DiamondProxy", accounts => {
         assert.fail('expected contract exception');
     });
 
-    it(`Bilateral Trade - confirm - should fail to request trade with zero ccyQty`, async () => {
-        const A = accounts[global.TaddrNdx];
-        const B = accounts[global.TaddrNdx + 1];
-        const ccyTypeId = CONST.ccyType.USD;
-        const tokenTypeId = CONST.tokenType.TOK_T2;
-        const ccyQty = 0;
-        const tokQty = CONST.KT_CARBON;
-        const metadata = '';
-        const referenceTx = '0x4a907f4f291acbc730a3dafe37b2a5dbc33c9cbd1df42d7ab5fcbbe6322846d0';
-
-        try {
-            await stmStTransferableFacet.confirmBilateralTrade(0, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
-        } catch (ex) { 
-            assert(ex.reason == '_bilateralTradeAction: ccy qty should be a positive number', `unexpected: ${ex.reason}`); 
-            return; 
-        }
-        assert.fail('expected contract exception');
-    });
-
     it(`Bilateral Trade - confirm - should fail to request trade with zero tokenQty`, async () => {
         const A = accounts[global.TaddrNdx];
         const B = accounts[global.TaddrNdx + 1];
@@ -309,6 +290,31 @@ contract("DiamondProxy", accounts => {
             return; 
         }
         assert.fail('expected contract exception');
+    });
+
+    it(`Bilateral Trade - confirm - successfully emit an event with negative ccyQty`, async () => {
+        const A = accounts[global.TaddrNdx];
+        const B = accounts[global.TaddrNdx + 1];
+        const ccyTypeId = CONST.ccyType.USD;
+        const tokenTypeId = CONST.tokenType.TOK_T2;
+        const ccyQty = -20001;
+        const tokQty = CONST.KT_CARBON;
+        const metadata = '';
+        const referenceTx = '0x4a907f4f291acbc730a3dafe37b2a5dbc33c9cbd1df42d7ab5fcbbe6322846d0';
+
+        const tx = await stmStTransferableFacet.confirmBilateralTrade(1, referenceTx, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+
+        truffleAssert.eventEmitted(tx, 'bilateralTradeConfirmed', ev => { 
+            return ev.tradeType == 1
+                && ev.referenceTx == referenceTx
+                && ev.ledger_A == A 
+                && ev.ledger_B == B
+                && ev.ccyTypeId == ccyTypeId
+                && ev.tokenTypeId == tokenTypeId
+                && ev.ccyQty == ccyQty
+                && ev.tokenQty == tokQty
+                && ev.metadata == metadata
+        });
     });
 
     it(`Bilateral Trade - confirm - should successfully emit event with empty metadata`, async () => {
