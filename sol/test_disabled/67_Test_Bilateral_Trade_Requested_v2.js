@@ -245,24 +245,6 @@ contract("DiamondProxy", accounts => {
         assert.fail('expected contract exception');
     });
 
-    it(`Bilateral Trade - request - should fail to request trade with zero ccyQty`, async () => {
-        const A = accounts[global.TaddrNdx];
-        const B = accounts[global.TaddrNdx + 1];
-        const ccyTypeId = CONST.ccyType.USD;
-        const tokenTypeId = CONST.tokenType.TOK_T2;
-        const ccyQty = 0;
-        const tokQty = CONST.KT_CARBON;
-        const metadata = '';
-
-        try {
-            await stmStTransferableFacet.recordBilateralTrade(0, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
-        } catch (ex) { 
-            assert(ex.reason == '_bilateralTradeAction: ccy qty should be a positive number', `unexpected: ${ex.reason}`); 
-            return; 
-        }
-        assert.fail('expected contract exception');
-    });
-
     it(`Bilateral Trade - request - should fail to request trade with zero tokenQty`, async () => {
         const A = accounts[global.TaddrNdx];
         const B = accounts[global.TaddrNdx + 1];
@@ -279,6 +261,29 @@ contract("DiamondProxy", accounts => {
             return; 
         }
         assert.fail('expected contract exception');
+    });
+
+    it(`Bilateral Trade - request - successfully emit an event with negative ccyQty`, async () => {
+        const A = accounts[global.TaddrNdx];
+        const B = accounts[global.TaddrNdx + 1];
+        const ccyTypeId = CONST.ccyType.USD;
+        const tokenTypeId = CONST.tokenType.TOK_T2;
+        const ccyQty = -20001;
+        const tokQty = CONST.KT_CARBON;
+        const metadata = '';
+
+        const tx = await stmStTransferableFacet.recordBilateralTrade(1, A, B, ccyTypeId, tokenTypeId, ccyQty, tokQty, metadata);
+
+        truffleAssert.eventEmitted(tx, 'bilateralTradeRequested', ev => { 
+            return ev.tradeType == 1
+                && ev.ledger_A == A 
+                && ev.ledger_B == B
+                && ev.ccyTypeId == ccyTypeId
+                && ev.tokenTypeId == tokenTypeId
+                && ev.ccyQty == ccyQty
+                && ev.tokenQty == tokQty
+                && ev.metadata == metadata
+        });
     });
 
     it(`Bilateral Trade - request - should successfully emit event with empty metadata`, async () => {

@@ -31,7 +31,7 @@ contract StTransferableFacet {
 		address indexed ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string metadata
 	);
@@ -43,7 +43,7 @@ contract StTransferableFacet {
 		address indexed ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string metadata
 	);
@@ -55,7 +55,7 @@ contract StTransferableFacet {
 		address indexed ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string metadata
 	);
@@ -76,7 +76,7 @@ contract StTransferableFacet {
 		address ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string calldata metadata
 	) external {
@@ -113,7 +113,7 @@ contract StTransferableFacet {
 		address ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string calldata metadata
 	) external {
@@ -151,7 +151,7 @@ contract StTransferableFacet {
 		address ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string calldata metadata
 	) external {
@@ -348,7 +348,7 @@ contract StTransferableFacet {
 		address ledger_B, 
 		uint ccyTypeId,
 		uint tokenTypeId, 
-		uint ccyQty,
+		int ccyQty,
 		uint tokenQty,
 		string calldata metadata
 	) internal {
@@ -361,7 +361,6 @@ contract StTransferableFacet {
 		require(ledger_A != address(0), "_bilateralTradeAction: ledger A is zero");
 		require(ledger_B != address(0), "_bilateralTradeAction: ledger B is zero");
 
-		require(ccyQty > 0, "_bilateralTradeAction: ccy qty should be a positive number");
 		require(tokenQty > 0, "_bilateralTradeAction: token qty should be a positive number");
 
 		LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
