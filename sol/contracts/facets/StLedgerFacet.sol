@@ -112,6 +112,26 @@ contract StLedgerFacet {
 	}
 
 	/**
+	 * @dev returns the ledger entries for the accounts provided
+	 * @param accounts array of account addressed of the ledger owners whose holding needs to be queried from the ledger
+	 * @return ledgerEntries array
+	 * @param ledgerEntries returns the ledger entry for the account provided
+	 */
+	 function getLedgerEntryBatch(address[] calldata accounts)
+	 external
+	 view
+	 returns (StructLib.LedgerReturn[] memory ledgerEntries)
+ {
+	 LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+	 uint len = accounts.length;
+	 ledgerEntries = new StructLib.LedgerReturn[](len);
+
+	 for(uint i = 0; i < len; i++) {
+		ledgerEntries[i] = LedgerLib.getLedgerEntry(s.ld, s.std, s.ctd, accounts[i]);
+	 }
+ }
+
+	/**
 	 * @dev returns the ledger entry for the account provided
 	 * @param account account address of the ledger owner whose holding needs to be queried from the ledger
 	 * @return ledgerEntry
