@@ -170,6 +170,26 @@ contract StLedgerFacet {
 		secTokenBatch = LibMainStorage.getStorage().ld._batches[batchId];
 	}
 
+	/**
+	 * @dev returns a security token batches
+	 * @param batchIds an array of security token batch unique identifiers
+	 * @return secTokenBatches
+	 * @param secTokenBatches returns an array of security token batches
+	 */
+	 function getSecTokenBatches(uint256[] calldata batchIds)
+	 external
+	 view
+	 returns (StructLib.SecTokenBatch[] memory secTokenBatches)
+ {	
+	 uint len = batchIds.length;
+	 secTokenBatches = new StructLib.SecTokenBatch[](len);
+	 LibMainStorage.MainStorage storage s = LibMainStorage.getStorage();
+
+	 for(uint i = 0; i < len; i++) {
+		secTokenBatches[i] = s.ld._batches[batchIds[i]];
+	 }
+ }
+
 	// get token(s)
 	/**
 	 * @dev returns the security token base id
