@@ -1,5 +1,5 @@
 ├─ @aircarbon/orm@0.0.1
-│  ├─ licenses: [1m[31mUNKNOWN[39m[22m
+│  ├─ licenses: UNKNOWN
 ├─ @azure/abort-controller@1.0.4
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/Azure/azure-sdk-for-js
