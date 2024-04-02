@@ -82,6 +82,9 @@ module.exports = async function (deployer) {
     case 'DEV_80001_AC':
       console.log(`Deploying (AWS DEV / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
+    case 'DEV_80002_AC':
+      console.log(`Deploying (AWS DEV / Matic Testnet (Amoy)) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
     case 'DEMO_IDX_30407734':
       console.log(`Deploying (AWS DEMO_IDX_30407734 PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
@@ -93,6 +96,9 @@ module.exports = async function (deployer) {
         break;
     case 'DEV_EON_80001':
       console.log(`Deploying (AWS DEV_EON_30407734 EON / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
+    case 'DEV_JPM_25':
+      console.log(`Deploying (AWS DEV_JPM_25 JPM / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEMO':
       console.log(`Deploying (AWS DEV / DEMO) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);

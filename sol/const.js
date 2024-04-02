@@ -647,10 +647,8 @@ function getTestContextWeb3(useWs) {
         // Matic Mainnet
         : process.env.WEB3_NETWORK_ID == 137 ? { web3: new Web3(
                 useWs ?
-                'wss://polygon-main1.aircarbon.co:9546' :
-                // 'https://quizzical-wing:deck-hull-strut-parlor-cannon-sweep@nd-151-773-880.p2pify.com'
-            //    'https://polygon-main1.aircarbon.co:9545'
-                'https://condescending-knuth:crate-tiger-crummy-tablet-sheath-armory@nd-195-385-665.p2pify.com'
+                '' :
+                ''
 
             ),
             ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
@@ -663,12 +661,28 @@ function getTestContextWeb3(useWs) {
             'petersburg'
         ) } }
 
+        // Matic (Amoy) Testnet
+        : process.env.WEB3_NETWORK_ID == 80002 ? { web3: new Web3(
+            useWs ?
+            '' :
+            '',
+            options
+        ),
+        ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
+        'ropsten', // forCustomChain() requires a "known" name!?
+        {
+            name: 'amoy_testnet',
+            networkId: 80002,
+            chainId: 80002,
+        },
+        'petersburg'
+    ) } }
+
         // Matic (Mumbai) Testnet
         : process.env.WEB3_NETWORK_ID == 80001 ? { web3: new Web3(
                 useWs ?
-                'wss://competent-booth:stage-going-acts-possum-shield-twins@ws-nd-373-856-321.p2pify.com' :
-                'https://polygon-test.sdax.co:8545',
-                //'https://competent-booth:stage-going-acts-possum-shield-twins@nd-373-856-321.p2pify.com',
+                '' :
+                '',
                 options
             ),
             ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
@@ -737,6 +751,27 @@ function getTestContextWeb3(useWs) {
                         name: 'idx_private_prod',
                         networkId: 30407734,
                         chainId: 30407734,
+                    },
+                    'petersburg'
+                )
+            } 
+        }
+
+        // JPM Chain
+        : process.env.WEB3_NETWORK_ID == 25 ? {
+            web3: new Web3(
+                useWs ?
+                    '-' :
+                    'http://localhost:4000',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'jpm_testnet',
+                        networkId: 25,
+                        chainId: 25,
                     },
                     'petersburg'
                 )

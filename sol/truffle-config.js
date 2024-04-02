@@ -35,7 +35,8 @@
  const GWEI_INDONESIA_ETH = '1'; // https://www.polygongasstation.com/
  const GWEI_IDX_DEV_ETH = '1'; // https://www.polygongasstation.com/
  const GWEI_IDX_PROD_ETH = '1'; // https://www.polygongasstation.com/
- const GWEI_MATIC = '200'; // https://www.polygongasstation.com/
+ const GWEI_MATIC = '2'; // https://www.polygongasstation.com/
+ const GWEI_JPM_TESTNET = '0'; // https://www.polygongasstation.com/
  const GWEI_ZKEVM = '1'; // https://www.polygongasstation.com/
  const GWEI_FANTOM = '5';
 
@@ -236,6 +237,29 @@
        timeoutBlocks: 200,
      },
 
+     // Matic (Amoy) Testnet
+     amoy_testnet: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          '',
+          0,
+          1000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_MATIC, 'gwei'),
+      network_id: '80002',
+      networkCheckTimeout: 90000,
+       confirmations: 1,
+       skipDryRun: false,
+       timeoutBlocks: 200,
+     },
+
      // Matic (Mumbai) Testnet
      matic_testnet: {
        provider: function () {
@@ -328,6 +352,29 @@
       timeoutBlocks: 200,
     },
 
+    // JPM testnet
+    jpm_testnet: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          'http://localhost:4000',
+          0,
+          5000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_JPM_TESTNET, 'gwei'),
+      network_id: '25',
+      networkCheckTimeout: 90000,
+      confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
      // zkEVM Testnet
      zkevm_testnet: {
       provider: function () {
@@ -356,7 +403,6 @@
        provider: function () {
          var wallet = new HDWalletProvider(
            require('./PROD_MNEMONIC.js').MNEMONIC,
-          //  'https://quizzical-wing:deck-hull-strut-parlor-cannon-sweep@nd-151-773-880.p2pify.com',
           '',
           //  'https://polygon-main1.aircarbon.co:9545',
            0,
