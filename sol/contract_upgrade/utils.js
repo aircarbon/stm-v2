@@ -418,7 +418,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
     tokenFees = await Promise.all(tokenFeePromise);
   }
 
-  // get all stId
+  // get all stIds from ledgers
   const maxStId = Number(hexToNumberString(secTokenMintedCount));
   const existStId = [];
   ledgers.forEach((ledger) => {
@@ -430,6 +430,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
     });
   });
 
+  // get the remaining stIds (that are not in any ledger)
   const allFuncs = [];
   for (let index = 0; index < maxStId; index++) {
     if (!existStId.includes(index + 1)) {
@@ -438,7 +439,7 @@ async function createBackupDataFromOldContract(contracts, contractAddress, contr
   }
 
   const funcBatches = createBatches(allFuncs, 50);
-  let globalSecTokens = [];
+  let globalSecTokens = []; // all stId tokens (both in ledgers and not)
 
   for(let i = 0; i < funcBatches.length; i++) {
     console.log(`#${i+1}/${funcBatches.length} - getSecToken`);
@@ -576,7 +577,7 @@ async function createBackupData(contracts, contractAddress, contractType) {
   }
 
   let accountEntities = await retry(entitiesOfWlAddressesFuncs, 2000);
-  accountEntities = accountEntities.flat();
+  accountEntities = accountEntities.flat().map(e => e.toString());
 
   // get ledgers
   const ledgerOwners = previousLedgersOwners || (await newContract_StLedgerFacet.getLedgerOwners());

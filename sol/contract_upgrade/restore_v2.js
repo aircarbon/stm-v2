@@ -43,6 +43,11 @@ module.exports = async (callback) => {
   const contractAddress = `0x${argv?.s}`.toLowerCase();
   const newContractAddress = `0x${argv?.t}`.toLowerCase();
 
+  console.log('\n\n=============================================');
+  console.log('IMPORTANT NOTICE!');
+  console.log('ALL SYSTEM ACCOUNTS SHOULD SOME BALANCE FOR GAS FOR THIS SCRIPT TO WORK!');
+  console.log('=============================================\n\n');
+
   // return error if not a valid address
   if (!contractAddress.match(/^0x[0-9a-f]{40}$/i)) {
     return callback(new Error(`Invalid backup address: ${contractAddress}`));
@@ -77,7 +82,9 @@ module.exports = async (callback) => {
   console.log(`Name: ${name}`);
   console.log(`Version: ${version}`);
 
-  // add entities data to a new contract
+  // =================================================================
+  // =============== add entities data to a new contract =============
+  // =================================================================
   let entitiesWithFeeOwnersOnChain = await newContract_StErc20Facet.getAllEntitiesWithFeeOwners();
   entitiesWithFeeOwnersOnChain = entitiesWithFeeOwnersOnChain.map((obj) => { return {id: obj.id, addr: obj.addr}; });
   const entitiesOnChain = entitiesWithFeeOwnersOnChain.map((obj) => Number(obj.id));
@@ -103,7 +110,10 @@ module.exports = async (callback) => {
     // Entity fee owner can be updated later.
     await newContract_StErc20Facet.createEntity({id: DEFAULT_ENTITY_ID, addr: info.owners[0]});
   }
-  // add ccy data to new contract
+
+  // =================================================================
+  // ================= Add ccy data to new contract ==================
+  // =================================================================
   const ccyTypes = await newContract_CcyCollateralizableFacet.getCcyTypes();
   const { ccyTypes: currencyTypes } = helpers.decodeWeb3Object(ccyTypes);
   const currencyNames = currencyTypes.map((type) => type.name);
@@ -129,8 +139,10 @@ module.exports = async (callback) => {
   
   await series(ccyTypesPromises);
   await sleep(1000);
-
-  // add token types to new contract
+  
+  // =================================================================
+  // ================ Add token types to new contract ================
+  // =================================================================
   const tokTypes = await newContract_StLedgerFacet.getSecTokenTypes();
   const { tokenTypes } = helpers.decodeWeb3Object(tokTypes);
   const tokenNames = tokenTypes.map((type) => type.name);
@@ -166,7 +178,9 @@ module.exports = async (callback) => {
   console.log('Contract seal', hasSealed);
 
   if (!hasSealed) {
-    // load batches data to new contract
+    // =================================================================
+    // ============== load batches data to new contract ================
+    // =================================================================
     const maxBatchId = await newContract_StLedgerFacet.getSecTokenBatch_MaxId();
     console.log(`Max batch id: ${maxBatchId}`);
 
@@ -197,6 +211,11 @@ module.exports = async (callback) => {
     await series(batchesPromises);
     await sleep(1000);
 
+    // =================================================================
+    // ====================== Creating ledger entries ==================
+    // =================================================================
+    // This will create a ledger record that will contain only address, entity id, list of currencies with balances and 
+    // total minted/burned tokens.
     // get entities by 
     const entitiesByAccount = {};
     const accountsWithEntities = {};
@@ -209,7 +228,7 @@ module.exports = async (callback) => {
       }
     }    
 
-    // get ledgers
+    // get current ledgers from new smart contract
     const ledgerOwners = await newContract_StLedgerFacet.getLedgerOwners();
     const ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry(owner))))
       .map((ledger) => helpers.decodeWeb3Object(ledger))
@@ -226,7 +245,8 @@ module.exports = async (callback) => {
         };
       });
 
-    const whitelistedAddresses = await newContract_StErc20Facet.getWhitelist();
+  // get addresses that are already whitelisted in new smart contract
+  const whitelistedAddresses = await newContract_StErc20Facet.getWhitelist();
   
   // load ledgers data to new contract
   const ledgerOwnersMap = {};
@@ -235,10 +255,13 @@ module.exports = async (callback) => {
   for(let i = 0; i < data.ledgerOwners.length; i++) {
     const currLedgerOwner = data.ledgerOwners[i];
     ledgerOwnersMap[currLedgerOwner] = true;
+    
+    // adding a new ledger only if it not already added
     if(!ledgerOwners.includes(currLedgerOwner)) {
       // if there are no acocunt entities, then we assign 1 by default
       const entityId = entitiesByAccount[currLedgerOwner] || DEFAULT_ENTITY_ID;
 
+      // found an entry for an account that is not whitelisted, it is an error
       if(!whitelistedAddresses.includes(currLedgerOwner)) {
           console.log(`ERROR! The ledger owner is not whitelisted: ${currLedgerOwner}`);
           process.exit();
@@ -256,10 +279,10 @@ module.exports = async (callback) => {
 
   let ledgersBatches = createBatches(filteredLedgersWithOwners, 20);
 
-  console.log('\n Creating ledger entries (by batches).');
+  console.log('\n Creating ledger entries.');
   const ledgersPromises = ledgersBatches.map((ledgerBatch, index) => 
     function createLedgerEntryBatch(cb) {
-      console.log(`Creating ledger batch entry ${index + 1}/${ledgersBatches.length}`);
+      console.log(`Creating ledger entry ${index + 1}/${ledgersBatches.length}`);
 
       newContract_DataLoadableFacet
         .createLedgerEntryBatch(ledgerBatch.map((obj) => {
@@ -278,6 +301,10 @@ module.exports = async (callback) => {
 
   await series(ledgersPromises);
   await sleep(1000);
+
+  // =================================================================
+  // =========== Set entity ID for the remaining addresses ===========
+  // =================================================================
 
   // checking which of the addresses already have entity id assigned
   const wlAddressesBatches = createBatches(data.whitelistAddresses, 20);
@@ -305,7 +332,7 @@ module.exports = async (callback) => {
   let accountsWithEntIds = createBatches(accsToBeAssignedEntities, 50);
 
   const accEntPromises = accountsWithEntIds.map((accEntBatch, index) => 
-    function createAccEntBatchFuncs(cb) {
+    function setAccountEntityBatch(cb) {
       console.log(`Assigning entities for the remaining accounts ${index + 1}/${accountsWithEntIds.length}`);
 
       newContract_StErc20Facet.setAccountEntityBatch(accEntBatch)
@@ -317,9 +344,12 @@ module.exports = async (callback) => {
   await series(accEntPromises);
   await sleep(1000);
   
-  // adding sec tokens
+  // =================================================================
+  // ========== Adding stId tokens (the one in ledgers only) =========
+  // =================================================================
   let filteredTokens = [];
 
+  // iterating through all ledgers from the backup data
   for(let i = 0; i < data.ledgers.length; i++) {
     const currLedger = data.ledgers[i];
     const owner = data.ledgerOwners[i];
@@ -328,7 +358,7 @@ module.exports = async (callback) => {
       continue;
     }
 
-    // skip if already inserted
+    // checking which tokens are already added in the new smart contract and filtering them out, so that they are not added again
     let tokens = currLedger.tokens;
     if (ledgerOwners.includes(owner)) {
       const stIds = ledgers[ledgerOwners.indexOf(owner)].tokens.map((token) => token.stId);
@@ -351,15 +381,14 @@ module.exports = async (callback) => {
     prms.push(await CONST.getAccountAndKey(i));
   }
 
-  const accounts = await Promise.all(prms);
-  const addresses = accounts.map((acc) => acc.addr);
-
-  console.log('\n Adding Sec Tokens (by batches).');
+  // getting other system accounts so that transactions could go similtaneously
+  const addresses = prms.map((acc) => acc.addr);
+  console.log('\n Adding Sec Tokens (from ledgers).');
   
   const tokensPromises = tokensWithOwnersBatches.map((tokenWithOwnerBatch, index) => 
     function addSecTokenBatch(cb) {
       const currAddr = addresses[index % 9 + 1];
-      console.log(`addSecTokenBatch - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAddr}`);
+      console.log(`addSecTokenBatch (from ledger) - ${index + 1}/${tokensWithOwnersBatches.length} from ${currAddr}`);
 
       newContract_DataLoadableFacet
         .addSecTokenBatch(tokenWithOwnerBatch.map((batchWithOwner) => {
@@ -384,6 +413,10 @@ module.exports = async (callback) => {
 
   await series(tokensPromises);
   await sleep(1000);
+  
+  // =================================================================
+  // ======= Adding remaining stIds (that are not in ledgers) ======== 
+  // =================================================================
 
   // getSecToken for all tokens
   // addSecTokenBatch
@@ -399,7 +432,7 @@ module.exports = async (callback) => {
       const promises = batches[i].map((token) => newContract_StLedgerFacet.getSecToken(token.stId));
   
       const results = await Promise.all(promises);
-      tokensExist = [...tokensExist, ...results];
+      tokensExist = [...tokensExist, ...results]; // stIds that are already in the new smart contract
 
       i++;
     } catch(err) {
@@ -407,6 +440,7 @@ module.exports = async (callback) => {
     }
   } while(i < batches.length);
 
+  // iterating through globalSecTokens in the backed up data
   for(let i = 0; i < data.globalSecTokens.length; i++) {
     const token = data.globalSecTokens[i];
 
@@ -424,14 +458,15 @@ module.exports = async (callback) => {
     allTokens.push({token, transferedFullSecTokensEvent, exists});
   }
 
+  // filtering out those tokens that already exist in the new smart contract - no need to add them again
   allTokens = allTokens.filter((tokenObj) => !tokenObj.exists);
   let tokensBatches = createBatches(allTokens, 20);
 
-  console.log('\n Adding Sec Tokens (Global) (by batches).');
+  console.log('\n Adding Sec Tokens (Global) (not in ledgers).');
   const promises = tokensBatches.map((tokenBatch, index, allBatches) => 
     function addSecTokenBatch(cb) {
       const currAddr = addresses[index % 9 + 1];
-      console.log(`addSecTokenBatch global - ${index + 1}/${allBatches.length} - from ${currAddr}`);
+      console.log(`addSecTokenBatch (global) (not in ledgers) - ${index + 1}/${allBatches.length} - from ${currAddr}`);
 
       newContract_DataLoadableFacet.addSecTokenBatch(
           tokenBatch.map((tokenObj) => {
@@ -458,14 +493,21 @@ module.exports = async (callback) => {
   await series(promises);
   await sleep(1000);
 
-    await newContract_DataLoadableFacet.setTokenTotals(
-      data.secTokenBaseId,
-      toBN(data.secTokenMintedCount),
-      toBN(data.secTokenMintedQty),
-      toBN(data.secTokenBurnedQty),
-    );
+  // =================================================================
+  // ======================= Setting totals data =====================
+  // =================================================================
+  await newContract_DataLoadableFacet.setTokenTotals(
+    data.secTokenBaseId,
+    toBN(data.secTokenMintedCount),
+    toBN(data.secTokenMintedQty),
+    toBN(data.secTokenBurnedQty),
+  );
 
     await sleep(1000);
+
+  // =================================================================
+  // ==================== Setting fees for ccyTypes ==================
+  // =================================================================
 
     let allCcyTypesWithFees = data.ccyFees.map((ccyFee, index) => {
       const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[index % entityIds.length];
@@ -518,6 +560,10 @@ module.exports = async (callback) => {
   await series(ccyTypesPromises);
   await sleep(1000);
 
+  // =================================================================
+  // =================== Setting fees for tokenTypes =================
+  // =================================================================
+
   let allTokenTypesWithFees = data.tokenFees.map((tokenFee, index) => {
     const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[Math.floor(index / data.tokenTypes.length)];
     return {
@@ -563,7 +609,9 @@ module.exports = async (callback) => {
     await series(tokTypesPromises);
     await sleep(1000);
 
-    // setting fees for currency types for ledger owners
+    // =================================================================
+    // ======== Setting fees for ccyTypes for ledger owners ============
+    // =================================================================
     console.log('\nSetting fees for currency types for ledger owners...');
     let feesWithOwnerAndCcyTypes = [];
 
@@ -612,6 +660,10 @@ module.exports = async (callback) => {
     await series(feeCcyTypePromises);
     await sleep(1000);
 
+    // =================================================================
+    // ======= Setting fees for tokentypes for ledger owners ===========
+    // =================================================================
+
     // setting fees for token types for ledger owners
     console.log('\nSetting fees for token types for ledger owners...');
     let feesWithOwnerAndTokenTypes = [];
@@ -657,6 +709,10 @@ module.exports = async (callback) => {
     await series(feeTokenTypePromises);
     await sleep(1000);
   }
+
+  // ============================================================================
+  // == Sealing the contract and comparing the hashes with the original backup ==
+  // ============================================================================
 
   if (!hasSealed) await newContract_StMasterFacet.sealContract();
 
