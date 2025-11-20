@@ -1,5 +1,6 @@
 const CONST = require('../const.js');
 const  db  = require('../../orm/build');
+const fs = require('fs');
 
 module.exports = async function (deployer) {
     const stmAddr = process.env.stmAddr || '0xbfF80759BfCf6eF0cbc5fb740f132AEEeCeC0e5D';
@@ -7,11 +8,24 @@ module.exports = async function (deployer) {
     // const stmAddr = process.env.stmAddr || '0xDF1d7cCCcEF0E7B1F70D46CC503F2bBdc6e16f8a';
     console.log(`Starting updating ABI for contract ${stmAddr}`);
 
-    await db.UpdateABI({
-        deployedAddress: stmAddr,
-        deployedAbi: JSON.stringify(CONST.generateContractTotalAbi()),
-    });
+    // await db.UpdateABI({
+    //     deployedAddress: stmAddr,
+    //     deployedAbi: JSON.stringify(CONST.generateContractTotalAbi()),
+    // });
 
-    console.log('Done.');
-    process.exit();
+    fs.writeFile("abi-test.json", JSON.stringify(CONST.generateContractTotalAbi()), (err) => {
+        if (err) {
+          console.error('Error writing file:', err);
+
+          console.log('Done.');
+          process.exit();
+        } else {
+          console.log('File saved successfully');
+
+          console.log('Done.');
+          process.exit();
+        }
+      });
+
+    
 };
