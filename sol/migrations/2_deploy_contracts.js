@@ -85,6 +85,12 @@ module.exports = async function (deployer) {
     case 'DEV_80002_AC':
       console.log(`Deploying (AWS DEV / Matic Testnet (Amoy)) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
+    case 'DEV_AR_550839876':
+      console.log(`Deploying (AWS DEV_AR_550839876 PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
+    case 'PROD_AR_697769':
+      console.log(`Deploying (AWS PROD_AR_697769 PRIVATE / PROD) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
     case 'DEMO_IDX_30407734':
       console.log(`Deploying (AWS DEMO_IDX_30407734 PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
@@ -94,13 +100,22 @@ module.exports = async function (deployer) {
     case 'UAT_IDX_800135':
         console.log(`Deploying (AWS UAT_IDX_800135 PRIVATE / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
         break;
+    case 'PROD_IDX_30407734':
+        console.log(`Deploying (AWS PROD_IDX_30407734 PRIVATE / PROD) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+        break;
     case 'DEV_EON_80001':
-      console.log(`Deploying (AWS DEV_EON_30407734 EON / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      console.log(`Deploying (AWS DEV_EON_80001 EON / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
+    case 'DEV_EON_80002':
+      console.log(`Deploying (AWS DEV_EON_80002 EON / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEV_JPM_25':
       console.log(`Deploying (AWS DEV_JPM_25 JPM / DEV) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEMO':
+      console.log(`Deploying (AWS DEV / DEMO) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
+    case 'DEV_MPA':
       console.log(`Deploying (AWS DEV / DEMO) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
     case 'DEMO_97_AC':

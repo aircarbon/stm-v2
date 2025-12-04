@@ -26,6 +26,7 @@
  const NonceTrackerSubprovider = require('web3-provider-engine/subproviders/nonce-tracker');
 
  const DEV_MNEMONIC = process.env.DEV_MNEMONIC || require('./DEV_MNEMONIC.js').MNEMONIC;
+ const PROD_MNEMONIC = process.env.PROD_MNEMONIC || require('./PROD_MNEMONIC.js').MNEMONIC;
 
  const GWEI_MAINNET_1 = '80';
  const GWEI_MAINNET_56 = '5'; // 5 gwei minimum [PoA validator cartel!]?! trial & error - not clear at all; <5 gwei seems to never mine...
@@ -283,6 +284,52 @@
        timeoutBlocks: 200,
      },
 
+     // Argentina Dev Private Chain
+     ar_private_dev: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          '',
+          0,
+          1000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_DEV_ETH, 'gwei'),
+      network_id: '550839876',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
+    // Argentina Prod Private Chain
+    ar_private_prod: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          PROD_MNEMONIC,
+          '',
+          0,
+          1000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_DEV_ETH, 'gwei'),
+      network_id: '697769',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
      // UAT IDX Dev Private Chain
      idx_private_dev: {
       provider: function () {
@@ -300,29 +347,6 @@
       gas: 19000000, // 19m
       gasPrice: web3.utils.toWei(GWEI_IDX_DEV_ETH, 'gwei'),
       network_id: '800135',
-      networkCheckTimeout: 90000,
-      // confirmations: 1,
-      skipDryRun: false,
-      timeoutBlocks: 200,
-    },
-
-    // IDX PROD Private Demo
-    idx_private_demo: {
-      provider: function () {
-        var wallet = new HDWalletProvider(
-          DEV_MNEMONIC,
-          '', // use speedy node https://docs.moralis.io/speedy-nodes/connect-to-polygon-node
-          0,
-          1000,
-        );
-        var nonceTracker = new NonceTrackerSubprovider();
-        wallet.engine._providers.unshift(nonceTracker);
-        nonceTracker.setEngine(wallet.engine);
-        return wallet;
-       },
-      gas: 19000000, // 19m
-      gasPrice: web3.utils.toWei(GWEI_INDONESIA_ETH, 'gwei'),
-      network_id: '30407734',
       networkCheckTimeout: 90000,
       // confirmations: 1,
       skipDryRun: false,

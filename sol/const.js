@@ -678,22 +678,26 @@ function getTestContextWeb3(useWs) {
         'petersburg'
     ) } }
 
-        // Matic (Mumbai) Testnet
-        : process.env.WEB3_NETWORK_ID == 80001 ? { web3: new Web3(
+        // Argentina Dev Private Chain
+        : process.env.WEB3_NETWORK_ID == 550839876 ? {
+            web3: new Web3(
                 useWs ?
-                '' :
-                '',
+                    '' :
+                    '',
                 options
             ),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'matic_testnet',
-                networkId: 80001,
-                chainId: 80001,
-            },
-            'petersburg'
-        ) } }
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'ar_private_dev',
+                        networkId: 550839876,
+                        chainId: 550839876,
+                    },
+                    'petersburg'
+                )
+            }
+        }
 
         // IDX UAT Dev Private Chain
         : process.env.WEB3_NETWORK_ID == 800135 ? {
@@ -716,26 +720,6 @@ function getTestContextWeb3(useWs) {
             }
         }
 
-        // IDX Demo Private Chain
-        : process.env.WEB3_NETWORK_ID == 30407734 ? {
-            web3: new Web3(
-                useWs ?
-                    '' :
-                    ''
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'idx_private_demo',
-                        networkId: 30407734,
-                        chainId: 30407734,
-                    },
-                    // 'petersburg'
-                )
-            }
-        }
-
         // IDX PROD Private Chain
         : process.env.WEB3_NETWORK_ID == 30407734 ? {
             web3: new Web3(
@@ -751,6 +735,27 @@ function getTestContextWeb3(useWs) {
                         name: 'idx_private_prod',
                         networkId: 30407734,
                         chainId: 30407734,
+                    },
+                    'petersburg'
+                )
+            }
+        }
+
+        // Argentina PROD Private Chain
+        : process.env.WEB3_NETWORK_ID == 697769 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    '',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'ar_private_prod',
+                        networkId: 697769,
+                        chainId: 697769,
                     },
                     'petersburg'
                 )
