@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  stm-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: stm-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./sol:/app/sol
+      - sol_node_modules:/app/sol/node_modules
+    working_dir: /app/sol
+
+volumes:
+  sol_node_modules:

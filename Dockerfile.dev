@@ -1,0 +1,36 @@
+# Development Dockerfile
+# For local testing with mounted sol/ directory
+FROM node:18-bullseye
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 make g++ git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure git for HTTPS
+RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+
+# Copy project and install dependencies
+COPY . .
+RUN yarn install --frozen-lockfile
+
+WORKDIR /app/sol
+RUN yarn install --frozen-lockfile
+
+# Show setup instructions on start
+CMD echo "" && \
+    echo "=== STM-V2 Development Environment ===" && \
+    echo "" && \
+    echo "Setup checklist:" && \
+    echo "  1. Provide endpoints in const.js and truffle-config.js" && \
+    echo "  2. Provide mnemonics in PROD_MNEMONIC.js or DEV_MNEMONIC.js" && \
+    echo "" && \
+    echo "Example commands:" && \
+    echo "  npx truffle compile" && \
+    echo "  npx truffle exec customScript.js --network=matic_mainnet" && \
+    echo "  npx truffle exec customScript.js --network=idx_private_prod" && \
+    echo "  npx truffle exec customScript.js --network=ar_private_prod" && \
+    echo "" && \
+    /bin/bash

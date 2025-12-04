@@ -114,3 +114,30 @@ For setup of deployed contract ready for use, see `04_Web3_INIT_MULTI_DATA_AC.js
   *  https://github.com/ethereum/EIPs/issues/1662
 
 
+# Running Custom Scripts in Docker
+
+To interact with and debug smart contracts on any blockchain (Polygon, IDX, BACX private chains, etc.), you can use the provided Docker environment and run commands directly inside it. This avoids installing dependencies locally and makes quick deployments straightforward.
+
+Project files are mounted into the container, so you can edit and rerun scripts in real time without rebuilding the image. Especially `customScript.js` file.
+
+## Setup Checklist
+1. Set the RPC endpoints in `const.js` and `truffle-config.js`.
+2. Add the mnemonic in `PROD_MNEMONIC.js` or `DEV_MNEMONIC.js` (only if you need to run write transactions — use with caution).
+
+## Start (builds if needed, opens shell, removes container on exit)
+```bash
+docker compose run --rm --build stm-dev
+```
+
+## Clean Up Images and Volumes (when needed)
+```bash
+docker compose down --rmi local -v
+```
+
+## Example Commands
+```bash
+npx truffle compile
+npx truffle exec customScript.js --network matic_mainnet
+npx truffle exec customScript.js --network idx_private_prod
+npx truffle exec customScript.js --network ar_private_prod
+```
