@@ -94,7 +94,7 @@ const BATCH_COUNT = 3;                                              // pay the n
 const NEXT_ISSUER_PAYMENT_AMOUNT = new BN("1010000000000000000");   // 9 ETH paid ; 1 remaining ; 0.01 to cover for transfer function gas cost
 
 //  Local: ("export INSTANCE_ID=local && mocha test_web3 --timeout 10000000 --exit")
-//  BSC Testnet: ("export INSTANCE_ID=UAT_97_SD && mocha test_web3 --timeout 10000000 --exit")
+//  Remote network: ("export INSTANCE_ID=remote && mocha test_disabled --timeout 10000000 --exit")
 
 describe(`Cashflow Tokens Test Descriptions and Cases: `, async () => {
 

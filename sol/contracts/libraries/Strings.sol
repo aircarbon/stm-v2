@@ -54,9 +54,9 @@
  *      corresponding to the left and right parts of the string.
  */
 
-// SPDX-License-Identifier: ApacheV2
-
+// solhint-disable compiler-version
 pragma solidity >=0.5.0;
+// solhint-enable compiler-version
 
 library strings {
 	struct slice {

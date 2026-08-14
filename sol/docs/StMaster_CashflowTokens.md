@@ -22,7 +22,7 @@ CFT-type STM deployments inherit functionality from base (commodity) STM with th
 ## Example Flow - Native ETH 
 
 * Owner ("OWNER") - The address of the deployer, or owner, of the contract e.g. SingDax
-* Issuer ("ISSUER") - The address of the party making the security token issuance, e.g. Worldbridge
+* Issuer ("ISSUER") - The address of the party making the security token issuance, e.g. Example Issuer
 * Subscriber 1 ("SUB1") - The address of the 1st party purchasing tokens in the issuance
 * Subscriber 2 ("SUB2") - The address of the 2nd party purchasing tokens in the issuance
 * Secondary Buyer 1 ("BUYER1") - The address of the 1st party purchasing/receiving tokens from one of the Subscribers

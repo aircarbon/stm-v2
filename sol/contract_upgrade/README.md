@@ -1,41 +1,21 @@
-## Data migration
+# Contract data migration tools
 
-Step 1:
+These scripts back up and restore contract state. They intentionally contain no client endpoints, credentials, production addresses, deployment snapshots, or operational runbooks.
 
-Backup:
--s=SOURCE_CONTRACT_ADDRESS
--h=[onchain/offchain] generate ledger hash code onchain or offchain
+Supply all configuration at runtime through an ignored `.env.<instance>` file or environment variables. At minimum, remote work requires `RPC_URL`, `NETWORK_ID`, `MNEMONIC`, and the SQL configuration keys shown in `../.env.example`.
 
-```sh
-export INSTANCE_ID=UAT_97_AC && truffle exec contract_upgrade/backup.js -h=offchain -s='cada1b5846aa836d60c00f1ed77d04401c9e421e' --network=bsc_testnet_bn --compile
-```
-
-Step 2:
-Deploy:
-RESTORE_CONTRACT=YES Tell deployment script to skip the defaults
+Example shape:
 
 ```sh
-export INSTANCE_ID=UAT_80001_AC && node process_sol_js && truffle compile && export RESTORE_CONTRACT=YES && truffle migrate --network matic_testnet -f 2 --to 2
+INSTANCE_ID=<instance> truffle exec contract_upgrade/backup.js \
+  -h=offchain -s=<source-contract-address> --network=remote --compile
+
+INSTANCE_ID=<instance> RESTORE_CONTRACT=YES truffle migrate \
+  --network=remote -f 2 --to 2
+
+INSTANCE_ID=<instance> truffle exec contract_upgrade/restore.js \
+  -s=<backup-set> -t=<target-contract-address> -h=offchain \
+  --network=remote --compile
 ```
 
-Step 3:
-Restore:
--s=BACKUP_SET
--t=NEW_DEPLOY_CONTRACT_ADDRESS
--h=[onchain/offchain] generate ledger hash code onchain or offchain
-
-```sh
-export INSTANCE_ID=UAT_80001_AC && truffle exec contract_upgrade/restore.js -s='cada1b5846aa836d60c00f1ed77d04401c9e421e' -t='924A23F713a9Bf75Aae4f2F794C7BDc364Bd7C84' -h=offchain --network=matic_testnet --compile
-
-```
-
-Step4:
-Migrate new indexer (copy old indexer), add new column: networkId=97
-
-```sh
-cd contract_upgrade/cli
-yarn install
-cp .env.example .env
-# Change .env file to correct env
-yarn migrate:up
-```
+Before any production use, validate the procedure in an isolated environment and obtain approval for the exact source, target, backup, rollback, and reconciliation steps.

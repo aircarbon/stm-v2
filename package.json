@@ -1,8 +1,9 @@
 {
-  "name": "@aircarbon/stm",
+  "name": "@stm/root",
+  "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "workspaces": [
-    "stm",
     "orm"
   ],
   "scripts": {
@@ -18,6 +19,8 @@
     "@typescript-eslint/eslint-plugin": "^4.30.0",
     "@typescript-eslint/parser": "^4.30.0",
     "eslint": "^7.32.0",
+    "eslint-config-airbnb": "18.2.1",
+    "eslint-config-airbnb-base": "14.2.1",
     "eslint-config-productsway": "0.1.9",
     "husky": "^7.0.2",
     "lint-staged": ">=11.1.2",

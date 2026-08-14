@@ -243,7 +243,7 @@ library LedgerLib {
 						batch.tokTypeId,
 						batch.mintedQty,
 						batch.burnedQty,
-						// NOTE: string hashes are quickly exceeding block/view gas limits - ref: https://aircarbon.slack.com/archives/G0112BRQ0TG/p1600831061023700
+						// NOTE: string hashes quickly exceed block/view gas limits.
 						// re-instating; scaleable solution is segmenting GLH() w/ {mod,n}
 						hashStringArray(batch.metaKeys),
 						hashStringArray(batch.metaValues),

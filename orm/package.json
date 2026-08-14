@@ -1,6 +1,7 @@
 {
-  "name": "@aircarbon/orm",
+  "name": "@stm/orm",
   "version": "0.0.1",
+  "license": "AGPL-3.0-only",
   "description": "Awesome project developed with TypeORM.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",

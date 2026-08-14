@@ -31,7 +31,7 @@ var ledgerOwners, accounts;
     //   (todo: when not set, it runs exactly one ftm() pass per FT [todo later - will need a reference data source])
     //
 
-    console.log(chalk.green.bold(figlet.textSync(`AirCarbon`, { horizontalLayout: 'fitted', kerning: 'default' })));
+    console.log(chalk.green.bold(figlet.textSync(`STM`, { horizontalLayout: 'fitted', kerning: 'default' })));
     console.log(chalk.green.bold.inverse(`${''.padStart(16)}${' FUTURES SETTLEMENT ENGINE '}${''.padEnd(16)}`));
     console.log();
 
