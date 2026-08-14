@@ -34,13 +34,14 @@ const GAS_USD = 30; // ETH{||BNB}-USD fiat rate
 
 // misc
 const WEB3_NONCE_REPLACE = undefined; // set to replace/drop a slow mainnet TX
+const instanceId = process.env.INSTANCE_ID || '';
 const WEB3_GWEI_GAS_BID =
-    process.env.INSTANCE_ID.includes('_56')  ? '20' // BSC mainnet
-  : process.env.INSTANCE_ID.includes('_97')  ? '20' // BSC testnet
-  : process.env.INSTANCE_ID === 'PROD_52101' ? '1'  // AC privnet
-  : process.env.INSTANCE_ID === 'PROD_1'     ? '80' // ETH mainnet
+    instanceId.includes('_56')  ? '20' // BSC mainnet
+  : instanceId.includes('_97')  ? '20' // BSC testnet
+  : process.env.GAS_PRICE_GWEI
+    ? process.env.GAS_PRICE_GWEI
                                              : '5';
-const WEB3_GAS_LIMIT = process.env.INSTANCE_ID.includes('_80001') || process.env.INSTANCE_ID.includes('_137') ? 8000000 : 5000000 // BSC mainnet;
+const WEB3_GAS_LIMIT = instanceId.includes('_80001') || instanceId.includes('_137') ? 8000000 : 5000000 // BSC mainnet;
 
 // CFT helpers
 const nullCashflowArgs = {
@@ -71,17 +72,17 @@ const contractProps = {
     COMMODITY: {
         contractVer: contractVer,
         contractDecimals: 0,
-        contractName: `ACX`,
+        contractName: process.env.CONTRACT_NAME || `CommodityToken`,
         contractUnit: "KG", //"Ton(s)",
-        contractSymbol: "ACC",
+        contractSymbol: process.env.CONTRACT_SYMBOL || "COM",
         cashflowArgs: nullCashflowArgs,
     },
     CASHFLOW_BASE: {
         contractVer: contractVer,
         contractDecimals: 0,
-        contractName: `SDax_BaseBond`, // overriden by config; see 2_deploy_contracts.js
+        contractName: process.env.CONTRACT_NAME || `CashflowBase`,
         contractUnit: "Token(s)",      // "
-        contractSymbol: "SD1A",        // "
+        contractSymbol: process.env.CONTRACT_SYMBOL || "CFB",
         cashflowArgs: {                // "
               cashflowType: cashflowType.BOND,
                  term_Days: 365,       // ==> term_Blks
@@ -92,9 +93,9 @@ const contractProps = {
     CASHFLOW_CONTROLLER: {
         contractVer: contractVer,
         contractDecimals: 0,
-        contractName: `SDax_CFT-C`,
+        contractName: process.env.CONTRACT_NAME || `CashflowController`,
         contractUnit: "N/A",
-        contractSymbol: "SDCFTC",
+        contractSymbol: process.env.CONTRACT_SYMBOL || "CFC",
         cashflowArgs: nullCashflowArgs
     },
 };
@@ -154,7 +155,7 @@ module.exports = {
         const abi = getAbi(contractName);
         try{
             const selectors = [];
-    
+
             for (const func of abi) {
                 if(func.type !== 'function') {
                     continue;
@@ -164,20 +165,20 @@ module.exports = {
                     selectors.push(selector);
                 }
             }
-    
+
             return selectors;
         } catch (err) {
             console.log(`Failed to get selectors from the contract '${contractName}', error:`);
             console.log(err);
             process.exit();
-        } 
+        }
     },
 
     getContractsSelectorsWithName: (contractName, except = []) => {
         const abi = getAbi(contractName);
         try{
             const selectors = [];
-    
+
             for (const func of abi) {
                 if(func.type !== 'function') {
                     continue;
@@ -187,20 +188,20 @@ module.exports = {
                     selectors.push({selector, name: func.name});
                 }
             }
-    
+
             return selectors;
         } catch (err) {
             console.log(`Failed to get selectors from the contract '${contractName}', error:`);
             console.log(err);
             process.exit();
-        } 
+        }
     },
 
     getContractsSelectorsWithFuncName: (contractName, funcs = []) => {
         const abi = getAbi(contractName);
         try{
             const selectors = [];
-    
+
             for (const func of abi) {
                 if(func.type !== 'function') {
                     continue;
@@ -210,21 +211,21 @@ module.exports = {
                     selectors.push(selector);
                 }
             }
-    
+
             return selectors;
         } catch (err) {
             console.log(`Failed to get selectors from the contract '${contractName}', error:`);
             console.log(err);
             process.exit();
-        } 
+        }
     },
 
     expectRevertFromCall: async(func, params, err) => {
         try {
             await func(...params);
-        } catch (ex) { 
+        } catch (ex) {
             assert(ex.toString().includes(err), `unexpected: ${ex.reason}`);
-            return; 
+            return;
         }
         assert.fail('expected contract exception');
     },
@@ -232,9 +233,9 @@ module.exports = {
     expectRevert: async(func, params, err) => {
         try {
             await func(...params);
-        } catch (ex) { 
+        } catch (ex) {
             assert(ex.reason == err, `unexpected: ${ex.reason}`);
-            return; 
+            return;
         }
         assert.fail('expected contract exception');
     },
@@ -259,7 +260,7 @@ module.exports = {
         // whitelisting
         let allWLAddresses = await web3_call('getWhitelist', []);
         allWLAddresses = allWLAddresses.map(addr => addr.toString().toLowerCase());
-        
+
         let shouldBeWL = [];
 
         for(let addr of addresses) {
@@ -364,7 +365,7 @@ module.exports = {
     generateContractTotalAbi: () => {
         let files = fs.readdirSync('./build/contracts/');
         files = files.filter((fileName) => fileName.includes('Facet.json'));
-        
+
         let result = []
 
         if(files.length == 0) {
@@ -574,262 +575,36 @@ ${chalk.inverse(`$${(usdCost).toFixed(4)}`)} (@ $${GAS_USD} ETH[||BNB]/USD)`);
 };
 
 function getTestContextWeb3(useWs) {
-    const options = { keepAlive: true, withCredentials: false, timeout: 90000 };
-    
-    const context =
+    const networkId = Number(process.env.WEB3_NETWORK_ID || process.env.NETWORK_ID);
+    if (!Number.isInteger(networkId)) throw new Error('WEB3_NETWORK_ID or NETWORK_ID is required');
 
-        // dev - DM
-          process.env.WEB3_NETWORK_ID == 888 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
-        // dev - Antons
-        : process.env.WEB3_NETWORK_ID == 666 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
+    const localNetworkIds = [666, 888, 889, 890, 891];
+    if (localNetworkIds.includes(networkId)) {
+        const host = process.env.GANACHE_HOST || '127.0.0.1';
+        const port = process.env.GANACHE_PORT || '8545';
+        return { web3: new Web3(`http://${host}:${port}`), ethereumTxChain: {} };
+    }
 
-        : process.env.WEB3_NETWORK_ID == 889 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
-        // dev - Vince
-        : process.env.WEB3_NETWORK_ID == 890 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
-        // dev - Ankur
-        : process.env.WEB3_NETWORK_ID == 891 ?   { web3: new Web3('http://127.0.0.1:8545'),    ethereumTxChain: {} }
+    const rpcUrl = useWs ? (process.env.WS_RPC_URL || process.env.RPC_URL) : process.env.RPC_URL;
+    if (!rpcUrl) throw new Error(useWs ? 'WS_RPC_URL or RPC_URL is required' : 'RPC_URL is required');
 
-        // Ropsten - AC Geth
-        : process.env.WEB3_NETWORK_ID == 3 ?     { web3: new Web3('https://ac-dev0.net:9545'), ethereumTxChain: { chain: 'ropsten', hardfork: 'petersburg' } }
-      //: process.env.WEB3_NETWORK_ID == 3 ?     { web3: new Web3('https://ropsten.infura.io/v3/05a8b81beb9a41008f74864b5b1ed544'), ethereumTxChain: { chain: 'ropsten', hardfork: 'petersburg' } }
-
-        // Rinkeby - Infura (AirCarbon-AwsDev)
-        : process.env.WEB3_NETWORK_ID == 4 ?     { web3: new Web3('https://rinkeby.infura.io/v3/05a8b81beb9a41008f74864b5b1ed544'), ethereumTxChain: { chain: 'rinkeby', hardfork: 'petersburg' } }
-
-        // Sidechain Testnet - AC Geth
-        : process.env.WEB3_NETWORK_ID == 42101 ? { web3: new Web3(useWs ? 'wss://ac-dev1.net:9546' : 'https://ac-dev1.net:9545'),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'test_ac',
-                networkId: 42101,
-                chainId: 42101,
-            },
-            'petersburg'
-        ) } }
-
-        // Sidechain Prodnet - AC Geth
-        : process.env.WEB3_NETWORK_ID == 52101 ? { web3: new Web3(useWs ? 'wss://ac-prod0.aircarbon.co:9546' : 'https://ac-prod0.aircarbon.co:9545'),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'prodnet_ac',
-                networkId: 52101,
-                chainId: 52101,
-            },
-            'petersburg'
-        ) } }
-
-        // BSC Mainnet - Binance Smart Chain
-        : process.env.WEB3_NETWORK_ID == 56 ? { web3: new Web3(useWs ? 'wss://bsc-prod1.sdax.co:9546' : 'https://bsc-prod.sdax.co:9545'),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'bsc_mainnet_ac',
-                networkId: 56,
-                chainId: 56,
-            },
-            'petersburg'
-        ) } }
-
-        // BSC Testnet - Binance Smart Chain
-        : process.env.WEB3_NETWORK_ID == 97 ? { web3: new Web3(useWs ? 'wss://ac-prod1.aircarbon.co:8546' : 'https://ac-prod1.aircarbon.co:8545'),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'bsc_testnet_bn',
-                networkId: 97,
-                chainId: 97,
-            },
-            'petersburg'
-        ) } }
-
-        // Matic Mainnet
-        : process.env.WEB3_NETWORK_ID == 137 ? { web3: new Web3(
-                useWs ?
-                '' :
-                ''
-
-            ),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'matic_mainnet',
-                networkId: 137,
-                chainId: 137,
-            },
-            'petersburg'
-        ) } }
-
-        // Matic (Amoy) Testnet
-        : process.env.WEB3_NETWORK_ID == 80002 ? { web3: new Web3(
-            useWs ?
-            '' :
-            '',
-            options
-        ),
-        ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-        'ropsten', // forCustomChain() requires a "known" name!?
-        {
-            name: 'amoy_testnet',
-            networkId: 80002,
-            chainId: 80002,
-        },
-        'petersburg'
-    ) } }
-
-        // Argentina Dev Private Chain
-        : process.env.WEB3_NETWORK_ID == 550839876 ? {
-            web3: new Web3(
-                useWs ?
-                    '' :
-                    '',
-                options
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'ar_private_dev',
-                        networkId: 550839876,
-                        chainId: 550839876,
-                    },
-                    'petersburg'
-                )
-            }
-        }
-
-        // IDX UAT Dev Private Chain
-        : process.env.WEB3_NETWORK_ID == 800135 ? {
-            web3: new Web3(
-                useWs ?
-                    '' :
-                    '',
-                options
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'idx_private_dev',
-                        networkId: 800135,
-                        chainId: 800135,
-                    },
-                    'petersburg'
-                )
-            }
-        }
-
-        // IDX PROD Private Chain
-        : process.env.WEB3_NETWORK_ID == 30407734 ? {
-            web3: new Web3(
-                useWs ?
-                    '' :
-                    '',
-                options
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'idx_private_prod',
-                        networkId: 30407734,
-                        chainId: 30407734,
-                    },
-                    'petersburg'
-                )
-            }
-        }
-
-        // Argentina PROD Private Chain
-        : process.env.WEB3_NETWORK_ID == 697769 ? {
-            web3: new Web3(
-                useWs ?
-                    '' :
-                    '',
-                options
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'ar_private_prod',
-                        networkId: 697769,
-                        chainId: 697769,
-                    },
-                    'petersburg'
-                )
-            } 
-        }
-
-        // JPM Chain
-        : process.env.WEB3_NETWORK_ID == 25 ? {
-            web3: new Web3(
-                useWs ?
-                    '-' :
-                    'http://localhost:4000',
-                options
-            ),
-            ethereumTxChain: {
-                common: EthereumJsCommon.forCustomChain(
-                    'ropsten', // forCustomChain() requires a "known" name!?
-                    {
-                        name: 'jpm_testnet',
-                        networkId: 25,
-                        chainId: 25,
-                    },
-                    'petersburg'
-                )
-            } 
-        }
-
-        // zkEVM Testnet
-        : process.env.WEB3_NETWORK_ID == 1402 ? { web3: new Web3(
-            useWs ?
-            'wss://public.zkevm-test.net:2083' :
-            'https://public.zkevm-test.net:2083',
-            options
-        ),
-        ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-        'ropsten', // forCustomChain() requires a "known" name!?
-        {
-            name: 'zkevm_testnet',
-            networkId: 1402,
-            chainId: 1402,
-        },
-    ) } }
-        
-        // Fantom Testnet
-        : process.env.WEB3_NETWORK_ID == 4002 ? { web3: new Web3(
-                useWs ?
-                '' :
-                'https://rpc.testnet.fantom.network',
-                options
-            ),
-            ethereumTxChain: { common: EthereumJsCommon.forCustomChain(
-            'ropsten', // forCustomChain() requires a "known" name!?
-            {
-                name: 'fantom_testnet',
-                networkId: 4002,
-                chainId: 4002,
-            },
-            'petersburg'
-        ) } }
-
-        // ETH Mainnet - Infura (AirCarbon-AwsDev)
-      //: process.env.WEB3_NETWORK_ID == 1 ? { web3: new Web3('https://ac-dev0.net:10545'), ethereumTxChain: {} }
-        : process.env.WEB3_NETWORK_ID == 1 ? { web3: new Web3('https://mainnet.infura.io/v3/25a36609b48744bdaa0639e7c2b008d9'), ethereumTxChain: {} }
-
-        : undefined;
-    if (!context) throw('WEB3_NETWORK_ID is not set!');
-    return context;
+    const common = EthereumJsCommon.forCustomChain(
+        'mainnet',
+        { name: 'configured_network', networkId, chainId: networkId },
+        process.env.HARDFORK || 'petersburg',
+    );
+    return {
+        web3: new Web3(rpcUrl, { keepAlive: true, withCredentials: false, timeout: 90000 }),
+        ethereumTxChain: { common },
+    };
 }
-
 async function getAccountAndKey(accountNdx, mnemonic, coinTypeSlip44) {
     const MNEMONIC =
-        process.env.PROD_MNEMONIC !== undefined
+        process.env.MNEMONIC !== undefined
+            ? process.env.MNEMONIC
+            : process.env.PROD_MNEMONIC !== undefined
             ? process.env.PROD_MNEMONIC
-            : process.env.INSTANCE_ID.includes('PROD')
+            : instanceId.includes('PROD')
                 ? (require('./PROD_MNEMONIC.js').MNEMONIC)
                 : mnemonic || require('./DEV_MNEMONIC.js').MNEMONIC;
 

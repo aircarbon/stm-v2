@@ -1,55 +1,13 @@
-To run your local dev environment you will need a few things on your machine. Follow the steps below.
+# Development environment
 
-## Installations
+Use Node.js 16.20.0 from `.nvmrc` and Yarn 1.x.
 
-- Install [Node JS](https://nodejs.org/en/download/), version `16.x`
-
-- Install an IDE (preferably [VS Code](https://code.visualstudio.com/))
-
-- Install Git (if you don't already have it on your machine).
-  <br/>
-
-## Getting the sources
-
-Clone the repository locally:
-
-```
-git clone https://github.com/aircarbon/stm-v2
+```sh
+nvm use
+yarn install --frozen-lockfile
+cp sol/.env.example sol/.env.local
+cp sol/DEV_MNEMONIC.example.js sol/DEV_MNEMONIC.js
+yarn dev:build
 ```
 
-## Install the dependencies
-
- ```sh
-npm uninstall -g truffle
-npm install -g truffle
-
-npm uninstall -g ganache-cli
-npm install -g ganache-cli@6.12.2
- ```
-
-## Build
-
-- Within the repository directory, run `yarn dev:setup` to install the project's dependencies.
-
-- Then, build the project by running `yarn dev:build`.
-
-Here's what `yarn dev:*` doing behind the scenes:
-
-<br/>
-
-<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
-
-### 📄 package.json
-
-```json
-12    "dev:build": "cd orm && npm run build",
-13    "dev:setup": "yarn install && cd sol && yarn install",
-```
-
-<br/>
-
-## Congrats
-
-You now have your dev environment ready 🎉
-
-<br/>
+The example configuration is localhost-only. For a remote deployment, supply `RPC_URL`, `NETWORK_ID`, and `MNEMONIC` through the environment and use the `remote` Truffle network. Keep all rendered `.env` and `.npmrc` files untracked.

@@ -11,7 +11,7 @@ contract("StMaster", accounts => {
     var stm;
 
     const account = "0xf57B0adC78461888BF32d5FB92784CF3FC8f9956"; // dev contract owner
-    const privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // dev contract owner privkey
+    const privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // gitleaks:allow deterministic Ganache fixture
 
     beforeEach(async () => {
         stm = await st.deployed();
@@ -94,7 +94,7 @@ contract("StMaster", accounts => {
     it("web3 - public accessors - should work", async () => {
         var address = stm.address;
         var account = "0xf57B0adC78461888BF32d5FB92784CF3FC8f9956"; // owner
-        var privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // owner privkey
+        var privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // gitleaks:allow deterministic Ganache fixture
         const web3 = new Web3('http://127.0.0.1:8545');
 
         var contract = new web3.eth.Contract(abi, address);
@@ -128,13 +128,13 @@ contract("StMaster", accounts => {
     //     // LAB -- pure web3: sendRawTransaction (fast tx id) via Rinkeby Infura
     //     var address = stm.address; //"0x41ffed08c64B339A62DC8003b5b3cCEDC81BcB29"; // deployed addr
     //     var account = "0xf57B0adC78461888BF32d5FB92784CF3FC8f9956"; // owner
-    //     var privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // owner privkey
-    //     const infura_web3 = new Web3('https://rinkeby.infura.io/v3/93db2c7fd899496d8400e86100058297'); // ropsten_infura
+    //     var privateKey = "0CF8F198ACE6D2D92A2C1CD7F3FC9B42E2AF3B7FD7E64371922CB73A81493C1A"; // gitleaks:allow deterministic Ganache fixture
+    //     const remoteWeb3 = new Web3(process.env.RPC_URL);
 
-    //     const nonce = await infura_web3.eth.getTransactionCount(account, "pending");
+    //     const nonce = await remoteWeb3.eth.getTransactionCount(account, "pending");
     //     console.log('nonce', nonce);
     //     //infura_web3.eth.getTransactionCount(account, "pending", async function (err, nonce) {
-    //         var contract = new infura_web3.eth.Contract(abi, address);
+    //         var contract = new remoteWeb3.eth.Contract(abi, address);
 
     //         var data = contract.methods
     //             .mintSecTokenBatch(CONST.tokenType.TOK_T1, CONST.GT_CARBON, 1, '0xf57B0adC78461888BF32d5FB92784CF3FC8f9956')

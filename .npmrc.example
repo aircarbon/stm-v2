@@ -1,0 +1,4 @@
+# Copy to .npmrc for local use. Never commit the rendered file or a token.
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+always-auth=true

@@ -30,9 +30,9 @@ module.exports = {
             console.log('truffle setDefaults (COMMODITY)...');
             const spotTypes = (await stmStLedger.getSecTokenTypes()).tokenTypes.filter(p => p.settlementType == CONST.settlementType.SPOT);
             if (spotTypes.length == 0) {
-                await stmStLedger.addSecTokenType(`AirCarbon CORSIA Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
-                await stmStLedger.addSecTokenType(`AirCarbon Nature Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
-                await stmStLedger.addSecTokenType(`AirCarbon Premium Token`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`Example Token A`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`Example Token B`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
+                await stmStLedger.addSecTokenType(`Example Token C`, CONST.settlementType.SPOT, CONST.nullFutureArgs, CONST.nullAddr);
             }
 
             const ccyTypes = (await stmCcyCollateralizable.getCcyTypes()).ccyTypes;

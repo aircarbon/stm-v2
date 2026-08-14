@@ -45,7 +45,7 @@ module.exports = {
                 }
             }
 
-            const MNEMONIC = process.env.DEV_MNEMONIC || process.env.PROD_MNEMONIC || require('../DEV_MNEMONIC.js').MNEMONIC;
+            const MNEMONIC = process.env.MNEMONIC || process.env.DEV_MNEMONIC || process.env.PROD_MNEMONIC || require('../DEV_MNEMONIC.js').MNEMONIC;
             const accountAndKeys = [];
             for (let i=0 ; i < CONST.RESERVED_ADDRESSES_COUNT ; i++) {
                 accountAndKeys.push(await CONST.getAccountAndKey(i, MNEMONIC))
