@@ -1,0 +1,25 @@
+name: Offline snapshot checks
+
+on:
+  pull_request:
+    paths:
+      - sol/contract_upgrade/offline-rehearsal/**
+      - .github/workflows/offline-rehearsal.yml
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax and synthetic offline tests only
+        run: |
+          node --check sol/contract_upgrade/offline-rehearsal/rehearsal.cjs
+          node --check sol/contract_upgrade/offline-rehearsal/rehearsal.test.cjs
+          node --test sol/contract_upgrade/offline-rehearsal/rehearsal.test.cjs
