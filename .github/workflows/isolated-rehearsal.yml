@@ -1,0 +1,26 @@
+name: Isolated rehearsal checks
+on:
+  pull_request:
+    paths:
+      - 'sol/contract_upgrade/isolated-rehearsal/**'
+      - 'sol/contracts/**'
+      - '.github/workflows/isolated-rehearsal.yml'
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sol/contract_upgrade/isolated-rehearsal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm audit --omit=dev
