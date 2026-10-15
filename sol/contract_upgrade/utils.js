@@ -589,7 +589,13 @@ async function createBackupData(contracts, contractAddress, contractType) {
       ledgers.push(await newContract_StLedgerFacet.getLedgerEntry(ledgerOwners[i]));
     }
   } else {
-    ledgers = (await Promise.all(ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry(owner))));
+    // Batched rather than one Promise.all across every owner: several hundred simultaneous
+    // eth_calls get dropped by the RPC endpoint, surfacing as ProviderError -32603 with an
+    // empty originalError. retry() re-runs a whole batch if any call in it fails.
+    const ledgerEntryFuncs = ledgerOwners.map((owner) => newContract_StLedgerFacet.getLedgerEntry.bind(this, owner));
+    for (const batch of createBatches(ledgerEntryFuncs, 50)) {
+      ledgers = [...ledgers, ...(await retry(batch, 2000))];
+    }
   }
 
   ledgers = ledgers
@@ -679,14 +685,19 @@ async function createBackupData(contracts, contractAddress, contractType) {
   if (previousGlobalFees?.currencies) {
     ccyFees = previousGlobalFees.currencies;
   } else {
-    const ccyFeePromise = [];
+    // Bind rather than call: calling getFee here would start every request at once, and
+    // currencyTypes * entities is large enough for the RPC endpoint to start dropping them.
+    const ccyFeeFuncs = [];
     for (let index = 0; index < currencyTypes.length; index++) {
       for(let entityId of entities) {
-        ccyFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.CCY, entityId, currencyTypes[index].id, CONST.nullAddr));
+        ccyFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.CCY, entityId, currencyTypes[index].id, CONST.nullAddr));
       }
     }
     // will be recorded in "ccyFees" field of the backup object
-    ccyFees = await Promise.all(ccyFeePromise);
+    ccyFees = [];
+    for (const batch of createBatches(ccyFeeFuncs, 50)) {
+      ccyFees = [...ccyFees, ...(await retry(batch, 2000))];
+    }
   }
 
   // get all token types fee
@@ -694,14 +705,17 @@ async function createBackupData(contracts, contractAddress, contractType) {
   if (previousGlobalFees?.tokens) {
     tokenFees = previousGlobalFees.tokens;
   } else {
-    const tokenFeePromise = [];
+    const tokenFeeFuncs = [];
     for (let index = 0; index < tokenTypes.length; index++) {
       for(let entityId of entities) {
-        tokenFeePromise.push(newContract_StFeesFacet.getFee(CONST.getFeeType.TOK, entityId, tokenTypes[index].id, CONST.nullAddr));
+        tokenFeeFuncs.push(newContract_StFeesFacet.getFee.bind(this, CONST.getFeeType.TOK, entityId, tokenTypes[index].id, CONST.nullAddr));
       }
     }
     // will be recorded in "tokenFees" field of the backup object
-    tokenFees = await Promise.all(tokenFeePromise);
+    tokenFees = [];
+    for (const batch of createBatches(tokenFeeFuncs, 50)) {
+      tokenFees = [...tokenFees, ...(await retry(batch, 2000))];
+    }
   }
 
   // get all stId
