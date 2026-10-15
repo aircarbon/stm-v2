@@ -28,8 +28,8 @@ const DEFAULT_ENTITY_ID = 1; // If there are no entities, this default entity wi
 
 process.on('unhandledRejection', console.error);
 
-// how many items to process in one batch
-const BATCH_CHUNK_SIZE = 2;
+// how many items to process in one batch (6 batches: up to ~16m gas, under Amoy's 33.5m per-transaction cap)
+const BATCH_CHUNK_SIZE = 6;
 
 // create a sleep function to be used in the async series
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -200,7 +200,8 @@ module.exports = async (callback) => {
         (batches, index, allBatches) =>
           function loadSecTokenBatch(cb) {
             console.log(`Processing batches: ${index + 1}/${allBatches.length}`);
-            const batchCount = batches[1]?.id || batches[0]?.id;
+            // batches are sorted by id: the last one is the new max (batches[1] only worked for chunks of 2)
+            const batchCount = batches[batches.length - 1].id;
             newContract_DataLoadableFacet
               .loadSecTokenBatch(batches, batchCount)
               .then((result) => cb(null, result))

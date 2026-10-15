@@ -134,6 +134,12 @@ module.exports = async function (deployer) {
     case 'UAT_80002_AC':
       console.log(`Deploying (AWS UAT / Matic Testnet (Amoy) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
+    case 'UAT_83001_B3':
+      console.log(`Deploying (AWS UAT / B3 Private Blockchain (Testnet) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
+    case 'PROD_83000_B3':
+      console.log(`Deploying (AWS PROD / B3 Private Blockchain (Mainnet) instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
+      break;
     case 'UAT_4002_AC':
       console.log(`Deploying (AWS UAT / Fantom Testnet instance, saving to DB: ${chalk.inverse(process.env.sql_server)}`);
       break;
