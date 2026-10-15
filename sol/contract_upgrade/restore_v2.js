@@ -476,8 +476,8 @@ module.exports = async (callback) => {
               batchId: tokenObj.token.batchId,
               stId: tokenObj.token.stId,
               tokTypeId: tokenObj.token.tokTypeId,
-              mintedQty: Number(tokenObj.token.mintedQty),
-              currentQty: Number(tokenObj.token.currentQty),
+              mintedQty: tokenObj.token.mintedQty,
+              currentQty: tokenObj.token.currentQty,
               ft_price: tokenObj.token.ft_price,
               ft_lastMarkPrice: tokenObj.token.ft_lastMarkPrice,
               ft_ledgerOwner: tokenObj.token.ft_ledgerOwner,
@@ -566,9 +566,10 @@ module.exports = async (callback) => {
   // =================================================================
 
   let allTokenTypesWithFees = data.tokenFees.map((tokenFee, index) => {
-    const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[Math.floor(index / data.tokenTypes.length)];
+    // Backups store fees type-major, then entity, just like currency fees above.
+    const entityId = entityIds.length === 0 ? DEFAULT_ENTITY_ID : entityIds[index % entityIds.length];
     return {
-      tokenType: data.tokenTypes[index % data.tokenTypes.length],
+      tokenType: data.tokenTypes[Math.floor(index / (entityIds.length || 1))],
       fee: tokenFee,
       entityId
     }

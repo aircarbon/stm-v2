@@ -392,9 +392,10 @@
     // B3 UAT Dev Private Chain
     b3_private_dev: {
       provider: function () {
+        if (!process.env.B3_RPC_URL) throw new Error('B3_RPC_URL is required for the B3 network');
         var wallet = new HDWalletProvider(
           DEV_MNEMONIC,
-          '',
+          process.env.B3_RPC_URL,
           0,
           5000,
         );
@@ -415,9 +416,10 @@
     // B3 PROD Private Chain
     b3_private_prod: {
       provider: function () {
+        if (!process.env.B3_RPC_URL) throw new Error('B3_RPC_URL is required for the B3 network');
         var wallet = new HDWalletProvider(
-          require('./PROD_MNEMONIC.js').MNEMONIC,
-          '',
+          PROD_MNEMONIC,
+          process.env.B3_RPC_URL,
           0,
           5000,
         );
