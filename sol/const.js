@@ -762,6 +762,48 @@ function getTestContextWeb3(useWs) {
             } 
         }
 
+        // B3 UAT Dev Private Chain
+        : process.env.WEB3_NETWORK_ID == 83001 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    '',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'b3_private_dev',
+                        networkId: 83001,
+                        chainId: 83001,
+                    },
+                    'petersburg'
+                )
+            }
+        }
+
+        // B3 PROD Dev Private Chain
+        : process.env.WEB3_NETWORK_ID == 83000 ? {
+            web3: new Web3(
+                useWs ?
+                    '' :
+                    '',
+                options
+            ),
+            ethereumTxChain: {
+                common: EthereumJsCommon.forCustomChain(
+                    'ropsten', // forCustomChain() requires a "known" name!?
+                    {
+                        name: 'b3_private_prod',
+                        networkId: 83000,
+                        chainId: 83000,
+                    },
+                    'petersburg'
+                )
+            }
+        }
+
         // JPM Chain
         : process.env.WEB3_NETWORK_ID == 25 ? {
             web3: new Web3(

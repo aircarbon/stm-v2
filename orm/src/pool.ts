@@ -1,4 +1,5 @@
-import sqlConfig from './config';
+import sqlConfig, { dbType } from './config';
+import { createPgPool } from './pgAdapter';
 
 const sql = require('mssql');
 
@@ -9,6 +10,18 @@ const pools: Record<string, any> = {};
 export async function getPool(name: string): Promise<any> {
   if (!Object.prototype.hasOwnProperty.call(pools, name)) {
     const config = sqlConfig(name);
+
+    if (dbType() === 'postgres') {
+      const pgPool = await createPgPool(config);
+      const closePg = pgPool.close.bind(pgPool);
+      pgPool.close = () => {
+        delete pools[name];
+        return closePg();
+      };
+      pools[name] = pgPool;
+      return pools[name];
+    }
+
     const pool = new sql.ConnectionPool(config as any);
     const close = pool.close.bind(pool);
     pool.close = () => {

@@ -13,7 +13,7 @@ export async function AddConfigSetting(configKey: string, configValue: string) {
     .request()
     .input('config_key', sql.NVarChar(128), configKey)
     .input('config_value', sql.NVarChar(128), configValue)
-    .query(`INSERT INTO [global_config] VALUES (@config_key, @config_value)`);
+    .query(`INSERT INTO [global_config] ([config_key], [config_value]) VALUES (@config_key, @config_value)`);
   return result;
 }
 
@@ -26,7 +26,7 @@ export async function AddWhitelistAddress(addr: string) {
   const result = await sqlPool
     .request()
     .input('addr', sql.NVarChar(42), addr.substr(0, 42))
-    .query(`INSERT INTO [whitelist_addr] VALUES (@addr)`);
+    .query(`INSERT INTO [whitelist_addr] ([addr]) VALUES (@addr)`);
   return result;
 }
 
