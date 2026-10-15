@@ -1,5 +1,4 @@
 import sqlConfig, { dbType } from './config';
-import { createPgPool } from './pgAdapter';
 
 const sql = require('mssql');
 
@@ -12,6 +11,7 @@ export async function getPool(name: string): Promise<any> {
     const config = sqlConfig(name);
 
     if (dbType() === 'postgres') {
+      const { createPgPool } = await import('./pgAdapter');
       const pgPool = await createPgPool(config);
       const closePg = pgPool.close.bind(pgPool);
       pgPool.close = () => {
