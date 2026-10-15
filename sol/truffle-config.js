@@ -25,6 +25,11 @@
  const HDWalletProvider = require('@truffle/hdwallet-provider');
  const NonceTrackerSubprovider = require('web3-provider-engine/subproviders/nonce-tracker');
 
+ // At most 5 open connections per RPC node; further requests queue. Backup and restore start hundreds of calls
+ // at once (e.g. 250 getAccountEntityBatch), and each would otherwise open its own TLS connection: the node
+ // (QuickNode on Amoy) resets part of them or answers 429 Too Many Requests. Read when the provider creates its agent.
+ require('http').Agent.defaultMaxSockets = 5;
+
  const DEV_MNEMONIC = process.env.DEV_MNEMONIC || require('./DEV_MNEMONIC.js').MNEMONIC;
  const PROD_MNEMONIC = process.env.PROD_MNEMONIC || require('./PROD_MNEMONIC.js').MNEMONIC;
 
@@ -36,7 +41,7 @@
  const GWEI_INDONESIA_ETH = '1'; // https://www.polygongasstation.com/
  const GWEI_IDX_DEV_ETH = '1'; // https://www.polygongasstation.com/
  const GWEI_IDX_PROD_ETH = '1'; // https://www.polygongasstation.com/
- const GWEI_MATIC = '2'; // https://www.polygongasstation.com/
+ const GWEI_MATIC = '35'; // Amoy: tip (price - base fee) must be at least 25 gwei; base fee swings 0-30 - https://www.polygongasstation.com/
  const GWEI_JPM_TESTNET = '0'; // https://www.polygongasstation.com/
  const GWEI_ZKEVM = '1'; // https://www.polygongasstation.com/
  const GWEI_FANTOM = '5';
@@ -250,9 +255,17 @@
         var nonceTracker = new NonceTrackerSubprovider();
         wallet.engine._providers.unshift(nonceTracker);
         nonceTracker.setEngine(wallet.engine);
+        // The provider fetches every new block in the background; without a listener, one failed fetch (429 Too Many
+        // Requests, ECONNRESET) is an unhandled 'error' event that kills the whole script. Log it instead: the next
+        // block is fetched anyway, and the script's own calls still fail (and are retried) as before.
+        wallet.engine.on('error', (error) => console.warn(`Provider background error (ignored): ${error?.message ?? error}`));
         return wallet;
        },
-      gas: 19000000, // 19m
+      // 33m: truffle applies this to eth_call as well as to transactions. getWhitelist() over a 5k whitelist
+      // costs ~29.5m gas; below that the call runs out of gas and the node reports a bare "execution reverted"
+      // (ProviderError code 3, data '0x'). Amoy rejects transactions above 33,554,432 gas ("transaction gas
+      // limit too high", ProviderError -32000), so 50m broke every transaction.
+      gas: 33000000,
       gasPrice: web3.utils.toWei(GWEI_MATIC, 'gwei'),
       network_id: '80002',
       networkCheckTimeout: 90000,
@@ -376,6 +389,52 @@
       timeoutBlocks: 200,
     },
 
+    // B3 UAT Dev Private Chain
+    b3_private_dev: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          DEV_MNEMONIC,
+          '',
+          0,
+          5000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_PROD_ETH, 'gwei'),
+      network_id: '83001',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
+    // B3 PROD Private Chain
+    b3_private_prod: {
+      provider: function () {
+        var wallet = new HDWalletProvider(
+          require('./PROD_MNEMONIC.js').MNEMONIC,
+          '',
+          0,
+          5000,
+        );
+        var nonceTracker = new NonceTrackerSubprovider();
+        wallet.engine._providers.unshift(nonceTracker);
+        nonceTracker.setEngine(wallet.engine);
+        return wallet;
+       },
+      gas: 19000000, // 19m
+      gasPrice: web3.utils.toWei(GWEI_IDX_PROD_ETH, 'gwei'),
+      network_id: '83000',
+      networkCheckTimeout: 90000,
+      // confirmations: 1,
+      skipDryRun: false,
+      timeoutBlocks: 200,
+    },
+
     // JPM testnet
     jpm_testnet: {
       provider: function () {
@@ -435,9 +494,15 @@
          var nonceTracker = new NonceTrackerSubprovider();
          wallet.engine._providers.unshift(nonceTracker);
          nonceTracker.setEngine(wallet.engine);
+         // same as amoy_testnet: a failed background block fetch must not kill the script
+         wallet.engine.on('error', (error) => console.warn(`Provider background error (ignored): ${error?.message ?? error}`));
          return wallet;
        },
-       gas: 19000000, // 19m
+       // 33m: truffle applies this to eth_call as well as to transactions, and getWhitelist() over
+       // a 5k whitelist costs ~29.5m gas; below that the call runs out of gas and the node reports a bare
+       // "execution reverted" (ProviderError code 3, data '0x'). Amoy rejects transactions above
+       // 33,554,432 gas ("transaction gas limit too high"); mainnet is expected to have the same cap.
+       gas: 33000000,
        gasPrice: web3.utils.toWei(GWEI_MAINNET_137, 'gwei'),
        network_id: '137',
        networkCheckTimeout: 30000,

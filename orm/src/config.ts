@@ -6,6 +6,11 @@ function getConfig(scope: string, key: string) {
   return null;
 }
 
+/** 'mssql' (default) or 'postgres' -- set per environment via db_type in the .env file. */
+export function dbType(): string {
+  return (process.env.db_type || 'mssql').toLowerCase();
+}
+
 export default function sqlConfig(scope: string) {
   return {
     // https://www.npmjs.com/package/mssql#tedious

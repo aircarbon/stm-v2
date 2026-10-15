@@ -8,6 +8,7 @@
     "test": "test"
   },
   "scripts": {
+    "postinstall": "patch-package",
     "ganache": "INSTANCE_ID=local node ganache",
     "devInitSealContract": "node devInitSealContract",
     "test": "ISTEST=true truffle test",
@@ -60,6 +61,7 @@
     "mssql": "^6.3.1",
     "mustache": "^4.0.0",
     "node-emoji": "^1.10.0",
+    "patch-package": "^6.2.2",
     "pdf-from-html": "^0.1.2-beta.1",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",

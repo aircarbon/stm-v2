@@ -1,0 +1,20 @@
+diff --git a/node_modules/@trufflesuite/web3-provider-engine/subproviders/rpc.js b/node_modules/@trufflesuite/web3-provider-engine/subproviders/rpc.js
+index fca5e02..eb1cf1a 100644
+--- a/node_modules/@trufflesuite/web3-provider-engine/subproviders/rpc.js
++++ b/node_modules/@trufflesuite/web3-provider-engine/subproviders/rpc.js
+@@ -31,7 +31,14 @@ RpcSource.prototype.handleRequest = function(payload, next, end){
+     },
+     body: JSON.stringify(newPayload),
+     rejectUnauthorized: false,
+-    timeout: 20000,
++    // Raised from the upstream hard-coded 20000. Deploying from Dubai to the Brazilian
++    // private chain, p50 RPC latency is ~0.6s but the tail reaches ~20s, so the original
++    // ceiling was being hit by roughly 1 request in 130 -- fatal, since a single failed
++    // request aborts the whole migration. Override with RPC_TIMEOUT_MS.
++    timeout: Number(process.env.RPC_TIMEOUT_MS) || 120000,
++    // Reuse connections instead of a fresh TCP handshake per RPC call: saves a round
++    // trip each time and cuts the connection churn that was producing ECONNRESET.
++    forever: true,
+   }, function(err, res, body) {
+     if (err) return end(serializeError(err))
+ 

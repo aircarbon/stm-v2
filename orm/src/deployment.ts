@@ -298,7 +298,9 @@ export async function UpdateContractVersion({
     .input("host_name", sql.NVarChar, deployerHostName)
     .input("ip", sql.NVarChar, ip)
     .query(
-      `INSERT INTO [contract_function] VALUES \
+      `INSERT INTO [contract_function] \
+      ([network_id], [action], [function_name], [func_selector], [contract_addr], [linked_to_addr], [tx_hash], [init_addr], [calldata], [deployed_utc], [host_name], [ip]) \
+      VALUES \
       (@network_id, @action, @function_name, @func_selector, @contract_addr, @linked_to_addr, @tx_hash, @init_addr, @calldata, GETUTCDATE(), @host_name, @ip)`
     );
   console.log(
@@ -346,7 +348,9 @@ export async function UpdateContractVersion({
     .input("host_name", sql.NVarChar, deployerHostName)
     .input("ip", sql.NVarChar, ip)
     .query(
-      `INSERT INTO [contract_deployed] VALUES \
+      `INSERT INTO [contract_deployed] \
+      ([contract_name], [network_id], [addr], [linked_to_addr], [txHash], [deployed_utc], [version], [git_commit], [host_name], [ip]) \
+      VALUES \
       (@contract_name, @network_id, @addr, @linked_to_addr, @tx_hash, GETUTCDATE(), @version, @git_commit, @host_name, @ip)`
     );
   console.log(
@@ -397,7 +401,9 @@ export async function SaveDeployment({
     .input("txHash", sql.NVarChar, txHash)
     .input("symbol", sql.NVarChar, symbol)
     .query(
-      `INSERT INTO [contract] VALUES \
+      `INSERT INTO [contract] \
+      ([contract_enum], [network_id], [deployed_utc], [addr], [host_name], [ip_v4], [abi], [contract_ver], [contract_type], [txHash], [symbol]) \
+      VALUES \
       (@contract_enum, @network_id, GETUTCDATE(), @addr, @host_name, @ip_v4, @abi, @contractVer, @contractType, @txHash, @symbol)`
     );
   console.log(
