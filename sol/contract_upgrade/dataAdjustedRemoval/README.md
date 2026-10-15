@@ -109,6 +109,20 @@ node contract_upgrade/dataAdjustedRemoval/compareMigration.js -s='<SRC>' -a='<AD
 
 ## Notes
 
+- Freeze writes to the source contract before the first backup and keep them frozen through clearing and the final
+  comparison. The preflight reads are not an atomic snapshot and do not lock the contract.
+- Clearing checks that every planned account belongs to the selected entity and that token quantities and types
+  match. Burns contain at most 10 whole tokens and at most `2^63 - 1` units per transaction.
+- B3 networks require `B3_RPC_URL` in the process environment; Web3 calls with WebSocket mode also require
+  `B3_WS_URL`. Set these for the selected chain before running Truffle or Web3 scripts. Endpoints are not stored in
+  source. The production Truffle provider honors `PROD_MNEMONIC` before the mnemonic file.
 - On production, B3 is not entity 4: the ACX production backup has entities 1, 2, 3, 1000 and 10588919. Confirm the ID.
 - On UAT, tokens moved between entities: tokens the entity created but others hold stay; tokens it holds that others
   created get burned. On production there were no cross-entity transfers.
+
+## Local regression tests
+
+With Node.js 18 or later, run `npm run test:migration` from `sol/`. The tests use synthetic backups and in-memory
+Truffle facets. They check scope rejection before sending, int64 and token-count burn boundaries, dry runs and
+completed reruns, type-major fee restoration, large integer quantities, six-batch restore progress, and B3 provider
+configuration. They use no credentials or RPC connections and do not prove a live migration.

@@ -8,6 +8,7 @@ const argv = require('yargs-parser')(process.argv.slice(2), { string: ['s', 'ent
 
 const WITHDRAW = 1; // StructLib.FundWithdrawType.WITHDRAW
 const MAX_TOKENS_PER_BURN = 10;
+const INT64_MAX = (1n << 63n) - 1n;
 const READ_ATTEMPTS = 5;
 const READ_RETRY_MS = 3000;
 
@@ -149,6 +150,10 @@ async function compare(plan, entityId, ledgerFacet) {
   const plannedAccounts = [...plan.burns, ...plan.withdrawals].map((item) => item.account.toLowerCase());
   const liveAccounts = (await read(() => ledgerFacet.getEntityAddresses(entityId))).map((addr) => addr.toLowerCase());
   const accounts = [...new Set([...plannedAccounts, ...liveAccounts])];
+  const entityAccounts = new Set(liveAccounts);
+  for (const account of new Set(plannedAccounts)) {
+    if (!entityAccounts.has(account)) problems.push(`Planned account ${account} does not belong to entity ${entityId}`);
+  }
 
   const ledgers = new Map();
   for (const account of accounts) {
@@ -169,18 +174,33 @@ async function compare(plan, entityId, ledgerFacet) {
     for (const token of burn.tokens) {
       plannedStIds.add(token.stId);
       const live = ledger.tokens.get(token.stId);
+      if (BigInt(token.qty) <= 0n || BigInt(token.qty) > INT64_MAX) {
+        problems.push(`Token ${token.stId} has an invalid burn quantity ${token.qty}`);
+        continue;
+      }
       if (live) {
-        if (String(live.currentQty) === token.qty) pendingTokens.push(token);
-        else problems.push(`Token ${token.stId} on ${burn.account}: quantity ${live.currentQty}, planned ${token.qty}`);
+        if (String(live.currentQty) === token.qty && String(live.tokTypeId) === burn.tokTypeId) pendingTokens.push(token);
+        else problems.push(`Token ${token.stId} on ${burn.account}: quantity or type differs from the plan`);
         continue;
       }
       const global = await read(() => ledgerFacet.getSecToken(token.stId));
       if (BigInt(global.currentQty) === 0n) doneBurns++;
       else problems.push(`Token ${token.stId} left ${burn.account} without being burned`);
     }
-    for (let i = 0; i < pendingTokens.length; i += MAX_TOKENS_PER_BURN) {
-      pendingBurns.push({ ...burn, tokens: pendingTokens.slice(i, i + MAX_TOKENS_PER_BURN) });
+    // Keep whole tokens together, but bound both gas cost and the contract's int64 burnQty.
+    let chunk = [];
+    let chunkQty = 0n;
+    for (const token of pendingTokens) {
+      const qty = BigInt(token.qty);
+      if (chunk.length === MAX_TOKENS_PER_BURN || chunkQty + qty > INT64_MAX) {
+        pendingBurns.push({ ...burn, tokens: chunk });
+        chunk = [];
+        chunkQty = 0n;
+      }
+      chunk.push(token);
+      chunkQty += qty;
     }
+    if (chunk.length > 0) pendingBurns.push({ ...burn, tokens: chunk });
   }
 
   // currency: planned balance = to withdraw; zero = withdrawn

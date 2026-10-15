@@ -575,6 +575,10 @@ ${chalk.inverse(`$${(usdCost).toFixed(4)}`)} (@ $${GAS_USD} ETH[||BNB]/USD)`);
 
 function getTestContextWeb3(useWs) {
     const options = { keepAlive: true, withCredentials: false, timeout: 90000 };
+    if (['83000', '83001'].includes(String(process.env.WEB3_NETWORK_ID))) {
+        const key = useWs ? 'B3_WS_URL' : 'B3_RPC_URL';
+        if (!process.env[key]) throw new Error(`${key} is required for the B3 network`);
+    }
     
     const context =
 
@@ -766,8 +770,8 @@ function getTestContextWeb3(useWs) {
         : process.env.WEB3_NETWORK_ID == 83001 ? {
             web3: new Web3(
                 useWs ?
-                    '' :
-                    '',
+                    process.env.B3_WS_URL :
+                    process.env.B3_RPC_URL,
                 options
             ),
             ethereumTxChain: {
@@ -787,8 +791,8 @@ function getTestContextWeb3(useWs) {
         : process.env.WEB3_NETWORK_ID == 83000 ? {
             web3: new Web3(
                 useWs ?
-                    '' :
-                    '',
+                    process.env.B3_WS_URL :
+                    process.env.B3_RPC_URL,
                 options
             ),
             ethereumTxChain: {
