@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/node": "^14.17.12",
     "rimraf": "^3.0.2",
     "ts-node": "10.9.1",
@@ -28,6 +29,7 @@
     "prebuild": "rimraf build",
     "build:watch": "tsc -w --module commonjs",
     "build": "tsc",
+    "test:postgres": "npm run build && node --test test/postgres.test.js",
     "test": "jest --coverage --updateSnapshot"
   }
 }

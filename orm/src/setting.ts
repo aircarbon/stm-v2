@@ -37,7 +37,7 @@ export async function GetAvailableWhitelistAddress() {
   const sqlPool = await getPool('admin');
   const result = await sqlPool.request().input('config_key', sql.NVarChar(128), 'next_wl_index')
     .query(`SELECT * FROM [whitelist_addr]
-            WHERE id = (SELECT TOP 1 [config_value] FROM [global_config] WHERE config_key = @config_key)`);
+            WHERE id = (SELECT TOP 1 CAST([config_value] AS INT) FROM [global_config] WHERE config_key = @config_key)`);
   return result;
 }
 

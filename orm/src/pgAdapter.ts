@@ -100,7 +100,7 @@ export async function createPgPool(config: any) {
     idleTimeoutMillis: config.pool?.idleTimeoutMillis ?? 30000,
     connectionTimeoutMillis: config.connectionTimeout ?? 30000,
     // Azure Database for PostgreSQL requires TLS; set sql_ssl=false for a local server.
-    ssl: process.env.sql_ssl === 'false' ? false : { rejectUnauthorized: false },
+    ssl: process.env.sql_ssl === 'false' ? false : { rejectUnauthorized: true },
     // Set on the connection itself rather than via a 'connect' handler, which would
     // race with a query already in flight on that client.
     options: `-c search_path=${schema},public`,
