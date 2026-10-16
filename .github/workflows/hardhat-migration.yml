@@ -18,3 +18,19 @@ jobs:
           node-version: '24.21.0'
       - name: Offline recovery regressions (no RPC or database)
         run: node --test sol/contract_upgrade/test/*.test.js
+
+  compiler-parity:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hardhat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: hardhat/package-lock.json
+      - run: npm ci --ignore-scripts
+      - name: Typecheck, lint, offline tests and compiler parity (no transactions)
+        run: npm run check

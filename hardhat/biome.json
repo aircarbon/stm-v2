@@ -1,0 +1,15 @@
+{
+  "root": true,
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!contracts",
+      "!artifacts",
+      "!cache",
+      "!package-lock.json"
+    ]
+  },
+  "formatter": { "indentStyle": "space" },
+  "linter": { "enabled": true, "rules": { "preset": "recommended" } }
+}
