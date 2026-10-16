@@ -87,6 +87,7 @@ describe("bounded local recovery", () => {
           { id: "1", addr: a },
           { id: "1", addr: owners[0] },
           { id: "7", addr: owners[1] },
+          { id: "1", addr: wl[4] },
         ],
       ]);
       await send("sealContract", []);
@@ -159,9 +160,15 @@ describe("bounded local recovery", () => {
       await send("setFee_TokType", [0, 1, a, [31, 0, 0, 0, 0, false]]);
       for (let i = 0; i < 5; i++)
         await send("mintSecTokenBatch", [1, 17 + i, 1, a, zero, 0, [], []]);
+      await send("mintSecTokenBatch", [1, 23, 1, wl[4], zero, 0, [], []]);
       const scalar = await captureRecovery(proxy);
       const captured = await captureRecovery(proxy, 10);
       assert.deepEqual(captured.data, scalar.data);
+      assert.equal(
+        captured.data.ledgers[captured.data.ledgerOwners.indexOf(wl[4])].tokens
+          .length,
+        1,
+      );
       const hashes: string[] = [];
       for (let n = 0; n < 10; n++)
         hashes.push(await proxy.getLedgerHashcode(10, n));

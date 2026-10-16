@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   Contract,
   keccak256,
+  type ParamType,
   type Signer,
   toUtf8Bytes,
   ZeroAddress,
@@ -29,21 +30,22 @@ async function readBatches<T, R>(items: T[], read: (item: T) => Promise<R>) {
     result.push(...(await Promise.all(group.map(read))));
   return result;
 }
-function plain(value: AbiValue): AbiValue {
-  if (typeof value === "bigint") return value.toString();
-  if (value?.toObject) {
-    if (value.length === 0) return [];
-    try {
-      return plain(value.toObject());
-    } catch {
-      return Array.from(value).map(plain);
-    }
+function plain(value: AbiValue, type: ParamType): AbiValue {
+  if (type.baseType === "array") {
+    assert.ok(type.arrayChildren);
+    const child = type.arrayChildren;
+    return Array.from(value, (item) => plain(item, child));
   }
-  if (Array.isArray(value)) return value.map(plain);
-  if (value && typeof value === "object")
+  if (type.baseType === "tuple") {
+    assert.ok(type.components);
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, plain(v)]),
+      type.components.map((component, index) => [
+        component.name,
+        plain(value[index], component),
+      ]),
     );
+  }
+  if (typeof value === "bigint") return value.toString();
   return value;
 }
 const digest = (value: unknown) =>
@@ -134,13 +136,16 @@ export async function captureRecovery(
   assert.ok(hashMod === 1 || hashMod === 10);
   assert.equal(await proxy.getContractType(), 0n, "COMMODITY only");
   assert.equal(await proxy.getContractSeal(), true, "Capture a sealed source");
-  const whitelistAddresses = plain(await proxy["getWhitelist()"]());
-  const ledgerOwners = plain(await proxy.getLedgerOwners());
-  const entitiesWithFeeOwners = plain(
-    await proxy.getAllEntitiesWithFeeOwners(),
-  );
-  const ccyTypes = plain((await proxy.getCcyTypes()).ccyTypes);
-  const tokenTypes = plain((await proxy.getSecTokenTypes()).tokenTypes);
+  async function readValue(method: string, args: unknown[] = []) {
+    const fragment = proxy.interface.getFunction(method);
+    assert.ok(fragment && fragment.outputs.length === 1);
+    return plain(await proxy.getFunction(method)(...args), fragment.outputs[0]);
+  }
+  const whitelistAddresses = await readValue("getWhitelist()");
+  const ledgerOwners = await readValue("getLedgerOwners");
+  const entitiesWithFeeOwners = await readValue("getAllEntitiesWithFeeOwners");
+  const ccyTypes = (await readValue("getCcyTypes")).ccyTypes;
+  const tokenTypes = (await readValue("getSecTokenTypes")).tokenTypes;
   const ledgers = [];
   const ledgerOwnersFees = [];
   async function fees(
@@ -150,11 +155,11 @@ export async function captureRecovery(
     owner: string,
   ) {
     return readBatches(types, async (type) =>
-      plain(await proxy.getFee(kind, entity, type.id, owner)),
+      readValue("getFee", [kind, entity, type.id, owner]),
     );
   }
   for (const owner of ledgerOwners) {
-    ledgers.push(plain(await proxy.getLedgerEntry(owner)));
+    ledgers.push(await readValue("getLedgerEntry", [owner]));
     ledgerOwnersFees.push({
       currencies: await fees(0, ccyTypes, "0", owner),
       tokens: await fees(1, tokenTypes, "0", owner),
@@ -171,7 +176,7 @@ export async function captureRecovery(
     for (const type of types)
       output.push(
         ...(await readBatches(entitiesWithFeeOwners as Row[], async (entity) =>
-          plain(await proxy.getFee(kind, entity.id, type.id, ZeroAddress)),
+          readValue("getFee", [kind, entity.id, type.id, ZeroAddress]),
         )),
       );
   const maxBatch = await proxy.getSecTokenBatch_MaxId();
@@ -185,7 +190,7 @@ export async function captureRecovery(
   );
   batches.push(
     ...(await readBatches(batchIds, async (id) =>
-      plain(await proxy.getSecTokenBatch(id)),
+      readValue("getSecTokenBatch", [id]),
     )),
   );
   const owned = new Set(
@@ -196,7 +201,7 @@ export async function captureRecovery(
   ).filter((id) => !owned.has(String(id)));
   globalSecTokens.push(
     ...(await readBatches(tokenIds, async (id) =>
-      plain(await proxy.getSecToken(id)),
+      readValue("getSecToken", [id]),
     )),
   );
   const hashes: string[] = [];
@@ -208,7 +213,7 @@ export async function captureRecovery(
       format: "local-onchain-v1",
       ...(hashMod === 10 ? { hashMod: "10" } : {}),
       contractType: "0",
-      owners: plain(await proxy.getOwners()),
+      owners: await readValue("getOwners"),
       name: await proxy.name(),
       version: await proxy.version(),
       symbol: await proxy.symbol(),
@@ -217,9 +222,9 @@ export async function captureRecovery(
     },
     data: {
       entitiesWithFeeOwners,
-      accountEntities: plain(
-        await proxy.getAccountEntityBatch(whitelistAddresses),
-      ),
+      accountEntities: await readValue("getAccountEntityBatch", [
+        whitelistAddresses,
+      ]),
       whitelistAddresses,
       ledgerOwners,
       ledgers,
