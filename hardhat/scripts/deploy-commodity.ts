@@ -128,7 +128,15 @@ export async function deployCommodity(
   const cutInterface = await deploy("DiamondCutFacet");
   await deploy("DiamondProxy", [config.owners[0], addresses.DiamondCutFacet]);
   manifest.proxy = addresses.DiamondProxy;
-  for (const name of libraries) await deploy(name);
+  const libraryEvents: string[] = [];
+  for (const name of libraries) {
+    const abi = await deploy(name);
+    libraryEvents.push(
+      ...abi.fragments
+        .filter((fragment) => fragment.type === "event")
+        .map((fragment) => fragment.format("full")),
+    );
+  }
   const facetInterfaces = new Map<string, Interface>([
     ["DiamondCutFacet", cutInterface],
   ]);
@@ -188,7 +196,7 @@ export async function deployCommodity(
       )
       .map((fragment) => fragment.format("full")),
   );
-  manifest.abi = [...new Set(fragments)];
+  manifest.abi = [...new Set([...fragments, ...libraryEvents])];
   const proxy = new Contract(manifest.proxy, manifest.abi, signer);
   assert.deepEqual(Array.from(await proxy.getOwners()), config.owners);
   assert.equal(await proxy.name(), config.name);
