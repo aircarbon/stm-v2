@@ -12,9 +12,10 @@ npm ci --ignore-scripts
 npm run check
 ```
 
-`check` runs typecheck, Biome lint/format checks, offline tooling tests, compilation
-and independent solc-js parity. It does not create a chain or connect to a DB.
-The 1,024-account simulated network is reserved for later approved rehearsals.
+`check` runs typecheck, Biome lint/format checks, offline tooling tests, compilation,
+independent solc-js parity, and disposable-chain deployment tests. These tests use
+1,024 public synthetic accounts on an in-process Hardhat EVM and an in-memory
+PGlite database. They do not read operational keys or connect to a shared DB.
 
 The build copies the Solidity tree to ignored `contracts/` without changing
 source bytes. The current tree contains no preprocessor directives. A future
@@ -68,16 +69,37 @@ Read-only evidence collected on 2026-10-16:
   gas limit 140000000, base fee 63 wei, suggested gas price 30000000063 wei.
   This confirms the public chain, **not the deployed ACX UAT contract or its
   configured provider**. No ABI calls or signing were tested.
-- AWS inventory identified the IDX UAT private-chain instance. Its IP-based RPC
-  probe could not complete TLS. A verified hostname/access route is needed;
-  no certificate bypass or infrastructure change was attempted.
+- The supplied IDX UAT hostname passed TLS verification and returned HTTP 401
+  without authentication. `IDX_UAT_RPC_URL` is stored in Amp secrets, but is not
+  injected into this existing runner process. Authenticated chain-ID and fee
+  inspection remain pending. No certificate bypass was used.
+
+## Disposable deployment and reconciliation
+
+`npm run test:contracts` deploys the original COMMODITY diamond using the unchanged
+artifacts: 24 deployments and four sequential initialization cuts. The merged ABI
+preserves tuples, events and overloads, and excludes initializer entry points.
+`deployCommodity` checks all installed selectors, owners, name and version.
+
+`openLocalJournal` requires chain 31337 and the Hardhat metadata RPC. It holds a
+directory writer lock, saves signed transactions before broadcast, and reconciles
+by transaction hash on restart. Use one journal per disposable chain and deployer;
+do not reuse it after resetting the chain. Calls must be sequential. A crash may
+leave `writer.lock`; confirm that the prior writer is stopped before removing it.
+Never put real keys or operational transaction payloads in these test journals.
+
+The test forces a PostgreSQL constraint failure after mining, verifies atomic DB
+rollback, reopens the journal without changing the deployer nonce, and projects
+the manifest twice without duplicate records. It then replaces an application
+facet with the same compiled code, preserving owners and checking selector routing.
+This is a **local rehearsal**, not a shared-database adapter or UAT deployment tool.
+PGlite checks SQL transaction behavior; it does not prove the deployed DB schema,
+ORM connection settings, external ABI consumers or production concurrency behavior.
 
 ## Remaining approval gates
 
-The current stack delivers baseline preservation, compiler parity and read-only
-UAT preparation. Deployment/upgrade scripts, contract-suite ports, recovery
-ports and default-command cutover are **not implemented**. Before executing
-their tests, approve writes to a disposable local EVM and disposable local DB
-using synthetic accounts/data only. UAT writes remain a separate request, with
-an exact target, transaction plan and recovery procedure. Production writes,
+Synthetic writes to disposable local EVMs and databases are approved. UAT writes
+remain a separate request, with an exact target, transaction plan and recovery
+procedure. Contract-suite and recovery equivalence, real ORM/ABI consumer
+compatibility, and default-command cutover remain open gates. Production writes,
 Solidity upgrades and contract/data migrations remain out of scope.

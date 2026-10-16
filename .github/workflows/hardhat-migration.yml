@@ -32,5 +32,5 @@ jobs:
           cache: npm
           cache-dependency-path: hardhat/package-lock.json
       - run: npm ci --ignore-scripts
-      - name: Typecheck, lint, offline tests and compiler parity (no transactions)
+      - name: Typecheck, lint, parity and disposable local-chain/DB tests
         run: npm run check

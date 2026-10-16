@@ -5,6 +5,7 @@ import { uatProfiles } from "./scripts/uat.ts";
 
 export default defineConfig({
   plugins: [hardhatEthers, hardhatMocha],
+  paths: { tests: { mocha: "./test/contracts" } },
   solidity: {
     version: "0.8.5",
     preferWasm: true,
