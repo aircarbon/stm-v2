@@ -61,7 +61,15 @@ describe("bounded local recovery", () => {
       const proxy = new Contract(source.proxy, source.abi, wallet);
       const a = await accounts[10].getAddress(),
         b = await accounts[11].getAddress();
-      const wl = [b, owners[0], a, owners[1]];
+      const wl = [
+        b,
+        owners[0],
+        a,
+        owners[1],
+        ...(await Promise.all(
+          accounts.slice(12, 213).map((account) => account.getAddress()),
+        )),
+      ];
       async function send(method: string, args: unknown[]) {
         await (await proxy.getFunction(method)(...args)).wait();
       }
@@ -149,7 +157,15 @@ describe("bounded local recovery", () => {
           ]);
         }
       await send("setFee_TokType", [0, 1, a, [31, 0, 0, 0, 0, false]]);
-      const captured = await captureRecovery(proxy);
+      for (let i = 0; i < 5; i++)
+        await send("mintSecTokenBatch", [1, 17 + i, 1, a, zero, 0, [], []]);
+      const scalar = await captureRecovery(proxy);
+      const captured = await captureRecovery(proxy, 10);
+      assert.deepEqual(captured.data, scalar.data);
+      const hashes: string[] = [];
+      for (let n = 0; n < 10; n++)
+        hashes.push(await proxy.getLedgerHashcode(10, n));
+      assert.equal(captured.ledgerHash, hashes.sort().join(","));
       assert.ok(
         captured.data.globalSecTokens.length > 0,
         "Fully burned split token is off ledger",
@@ -227,13 +243,18 @@ describe("bounded local recovery", () => {
         join(directory, "target"),
       );
       assert.deepEqual(await captureWhitelist(restored), wlBackup);
-      assert.equal((await restored["getWhitelist()"]()).length, 4);
+      assert.equal((await restored["getWhitelist()"]()).length, wl.length);
       await ethers.provider.send("evm_revert", [isolation]);
       const before = await ethers.provider.send("eth_blockNumber", []);
       for (const invalid of [
         { ...backup, info: { ...backup.info, contractType: "1" } },
         { ...backup, info: { ...backup.info, contractType: "2" } },
         { ...backup, info: { ...backup.info, format: undefined } },
+        { ...backup, info: { ...backup.info, hashMod: "11" } },
+        {
+          ...backup,
+          ledgerHash: backup.ledgerHash.split(",").slice(1).join(","),
+        },
         { ...backup, ledgerHash: `0x${"11".repeat(32)}` },
         { ...backup, data: { ...backup.data, secTokenMintedQty: "bogus" } },
         { ...backup, data: { ...backup.data, accountEntities: [] } },
@@ -285,7 +306,12 @@ describe("bounded local recovery", () => {
       await assert.rejects(
         restoreRecovery(
           restored,
-          { ...backup, ledgerHash: `0x${"22".repeat(32)}` },
+          {
+            ...backup,
+            ledgerHash: Array(10)
+              .fill(`0x${"22".repeat(32)}`)
+              .join(","),
+          },
           journal,
           join(directory, "target"),
         ),
@@ -297,14 +323,14 @@ describe("bounded local recovery", () => {
         journal,
         join(directory, "target"),
       );
-      assert.deepEqual(await captureRecovery(restored), backup);
+      assert.deepEqual(await captureRecovery(restored, 10), backup);
       await restoreRecovery(
         restored,
         backup,
         journal,
         join(directory, "target"),
       );
-      assert.equal(await restored.getLedgerHashcode(1, 0), backup.ledgerHash);
+      assert.equal(await restored.getLedgerHashcode(1, 0), scalar.ledgerHash);
       // Real disposable PostgreSQL-compatible registry backup and fresh engine restore.
       const db = await createLocalDatabase();
       let archive: Blob;

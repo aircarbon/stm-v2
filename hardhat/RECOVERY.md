@@ -103,6 +103,28 @@ remains unproved. Old entity-free hash schemes may not match the modern target
 hash; such files fail preflight rather than receiving a fabricated replacement
 hash.
 
+## Large-source read and restore batches
+
+`captureRecovery(proxy, 10)` records `info.hashMod: "10"` and the ten sorted,
+comma-separated `getLedgerHashcode(10,n)` results, matching the frozen Truffle
+partition convention. The default remains one bytes32 hash. Restore validates
+the count and format and compares using the same partition mode. These hashes
+are not interchangeable. The caller must pin every RPC read to one block and
+set sufficient `eth_call` gas; increasing read gas does not send a transaction.
+
+Independent fee, batch and off-ledger token reads run in groups of at most 50.
+Restore uses 100-address whitelist groups, six token batches with the last batch
+ID, 20-ledger/token/fee groups, and 50-account entity assignment groups. The
+existing asymmetric fee and quantity test now crosses the whitelist and batch
+boundaries and compares both scalar and partitioned hashes after restore.
+
+Use new journal directories for this transaction grouping. Old signed journals
+are not rewritten or migrated. `planRecovery` exports the validated calldata
+plan, not a transaction sender; execution still requires the local-only restore
+guard or a separately reviewed network-specific executor. Batch counts bound
+size, not gas: stage the exact source and measure every transaction before any
+shared-chain rehearsal.
+
 ## Whitelist-only recovery
 
 `scripts/recovery-whitelist.ts` reads/writes the legacy shape
