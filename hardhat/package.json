@@ -1,0 +1,27 @@
+{
+  "name": "@aircarbon/stm-hardhat",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "build": "node scripts/prepare.ts && hardhat build",
+    "parity": "node scripts/parity.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "test": "node --test test/*.test.ts",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run parity"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@nomicfoundation/hardhat-ethers": "4.2.1",
+    "@nomicfoundation/hardhat-mocha": "4.0.1",
+    "@types/node": "24.10.1",
+    "ethers": "6.17.0",
+    "hardhat": "3.20.0",
+    "mocha": "12.0.3",
+    "solc": "0.8.5",
+    "typescript": "5.9.3"
+  }
+}
