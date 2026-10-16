@@ -1,6 +1,7 @@
 import hardhatEthers from "@nomicfoundation/hardhat-ethers";
 import hardhatMocha from "@nomicfoundation/hardhat-mocha";
-import { defineConfig } from "hardhat/config";
+import { configVariable, defineConfig } from "hardhat/config";
+import { uatProfiles } from "./scripts/uat.ts";
 
 export default defineConfig({
   plugins: [hardhatEthers, hardhatMocha],
@@ -16,6 +17,19 @@ export default defineConfig({
     },
   },
   networks: {
+    ...Object.fromEntries(
+      Object.entries(uatProfiles).map(([name, profile]) => [
+        name,
+        {
+          type: "http" as const,
+          chainType: "generic" as const,
+          chainId: profile.chainId,
+          url: configVariable(profile.urlVariable),
+          accounts: [],
+          timeout: 120000,
+        },
+      ]),
+    ),
     localRehearsal: {
       type: "edr-simulated",
       chainType: "l1",
