@@ -1,0 +1,289 @@
+[
+  {
+    "key": "deploy-DiamondCutFacet",
+    "hash": "0xb9318d18b66ede4e4f92d75c7ec8b267bd1e62965aa22b32100b939ac28d0a9e",
+    "block": 50314906,
+    "status": 1,
+    "address": "0x35BD1CD409CBA7c42Cd22d261a45B2C736d8C688"
+  },
+  {
+    "key": "deploy-DiamondProxy",
+    "hash": "0xe66b2a1aabf69169109417c090be9683730dc5b5b356a16c5ce408e8f62b20df",
+    "block": 50314911,
+    "status": 1,
+    "address": "0xbb308fAb8F0224c0F62f6fbcE4192C63d7Ff929d"
+  },
+  {
+    "key": "deploy-StructLib",
+    "hash": "0xd70b096d60922f75a3a6e70d6bd65534df200450be6bed20cefd75aa3cf6be54",
+    "block": 50314916,
+    "status": 1,
+    "address": "0xC8D30ecb599Bace146809a57A77f0EF3820A3d60"
+  },
+  {
+    "key": "deploy-LibMainStorage",
+    "hash": "0xcfbfc0bf73c8007da242c6c218923c6341b52f4f65b8c5811068a63a876b8c64",
+    "block": 50314921,
+    "status": 1,
+    "address": "0x8DB515A55131A7E5325A264bB78A29a16D932738"
+  },
+  {
+    "key": "deploy-ValidationLib",
+    "hash": "0xb645d97c7e772333cea9ed1ef4bed358297667ae835c78b0ebb743f0f85bf340",
+    "block": 50314926,
+    "status": 1,
+    "address": "0xb7866EC8857e5fFac3C61f6135bd8a65481A47fE"
+  },
+  {
+    "key": "deploy-CcyLib",
+    "hash": "0x99240f1ccc5aa53fb2e2b76572e342e88da18d40c557654424dbf95e2e2ce998",
+    "block": 50314931,
+    "status": 1,
+    "address": "0xE9Ec2A204189B708A909902E57F140571f258d7f"
+  },
+  {
+    "key": "deploy-LedgerLib",
+    "hash": "0xe57bbe669762492fb8dd9b0437985ca3e32912eec3d71676b37c872c080533d6",
+    "block": 50314936,
+    "status": 1,
+    "address": "0xe030FaC59f84A8BBa1EDB704Ad9c54980555d07d"
+  },
+  {
+    "key": "deploy-LoadLib",
+    "hash": "0xcffe75dd3aa20d06f0e71936ecfa25d624a606a45bc40261faecb62656e1f5a8",
+    "block": 50314941,
+    "status": 1,
+    "address": "0xC086717e285Fa8448A7A360eAED04b509706A19B"
+  },
+  {
+    "key": "deploy-SpotFeeLib",
+    "hash": "0xeeebe76b45d26860d75a32e589def04ee5289914ce3179960bc88f3534e40530",
+    "block": 50314946,
+    "status": 1,
+    "address": "0xd9c2Aa97BBA0359110f2c019965e516A3e302989"
+  },
+  {
+    "key": "deploy-TransferLib",
+    "hash": "0x5ece59e14c58eef34de9c9835b9d42cf292584d7ab7d24db4f02f029c14c6504",
+    "block": 50314951,
+    "status": 1,
+    "address": "0x1A2167534ac65EB86483AE09D5Ea45F933f14564"
+  },
+  {
+    "key": "deploy-TransferLibView",
+    "hash": "0x7589a59eb8da0d0fcd5c027750f87b65cde2db13de0671ddd5deb635d63076f4",
+    "block": 50314956,
+    "status": 1,
+    "address": "0x5B85A3D419045B83f909C519d4DC24C678397C8B"
+  },
+  {
+    "key": "deploy-Erc20Lib",
+    "hash": "0x324c6488d172a9b9711bc9f8085efe1f6d311c726f5929eb0e2181ddd0716bc3",
+    "block": 50314961,
+    "status": 1,
+    "address": "0x79DAd859BD72250725a739D641286e9d9d404571"
+  },
+  {
+    "key": "deploy-TokenLib",
+    "hash": "0x4f7dec986687fbe9ba917eb9562130a6e26d4b1f287d01707bdef4bb30ab7198",
+    "block": 50314966,
+    "status": 1,
+    "address": "0xE52fBa0464f3E84127cAf5D100a2D0a0d2c9A5c8"
+  },
+  {
+    "key": "deploy-DiamondLoupeFacet",
+    "hash": "0xfefcfddd6183be512f72e54f46c080e4d2505ac2d704cd9bb2bb8ee085cc0359",
+    "block": 50314971,
+    "status": 1,
+    "address": "0x2f2466E77569D0Eef6852c58dAaa9DeB03B51106"
+  },
+  {
+    "key": "deploy-CcyCollateralizableFacet",
+    "hash": "0x57bdf088792087da0271bcf48d937743ce9cc63f2f379e807723bd1e9078092d",
+    "block": 50314976,
+    "status": 1,
+    "address": "0x18C4E72AF10dc640ecefA246425967A9e25bf512"
+  },
+  {
+    "key": "deploy-DataLoadableFacet",
+    "hash": "0x67813e6fc24f004ea65fdad0f796fec40e7bca4c18d8360ea13f8bbb95cbba76",
+    "block": 50314981,
+    "status": 1,
+    "address": "0x84cD1D597A290d9F306375AF2c869720e0BC8071"
+  },
+  {
+    "key": "deploy-StBurnableFacet",
+    "hash": "0xac443a5ef48a3a70dc906b82bfad09ddd0be02eef2ac5883cb660a8f0157d4a4",
+    "block": 50314986,
+    "status": 1,
+    "address": "0x0E0aEE8C9Bd865846885f36d44C0d171a22190Db"
+  },
+  {
+    "key": "deploy-StFeesFacet",
+    "hash": "0x41b40d5036bd13c436fa511eb60edbc3ed63d3feb5d23b1a2a240882582bfbab",
+    "block": 50314991,
+    "status": 1,
+    "address": "0x5D77a353428F6f7491edD592F7dCCd3f1c4aE072"
+  },
+  {
+    "key": "deploy-StLedgerFacet",
+    "hash": "0x459fbb70671a30c91bfc426bd60a41053c758270b762c4eaf17e929c48895865",
+    "block": 50314996,
+    "status": 1,
+    "address": "0x42dC934198c32994fB72F905A6b17De585BAd3f1"
+  },
+  {
+    "key": "deploy-StMintableFacet",
+    "hash": "0xc63ba07b936fe9d981ec64649fec576aa8c34237c55c7a46069300b596535dda",
+    "block": 50315001,
+    "status": 1,
+    "address": "0xAB2DC51f79F4c19658EA2974e9D7d5028DB7828a"
+  },
+  {
+    "key": "deploy-StTransferableFacet",
+    "hash": "0x41b3dddd7ae9b107bd4dfeab6806bc6f1a251dee3a92721b4d339e39db89b686",
+    "block": 50315006,
+    "status": 1,
+    "address": "0x7349B30cEC7065D08D13EE021718291Ae19050B7"
+  },
+  {
+    "key": "cut-DiamondLoupeFacet-CcyCollateralizableFacet-DataLoadableFacet-StBurnableFacet-StFeesFacet-StLedgerFacet-StMintableFacet-StTransferableFacet",
+    "hash": "0x29381f0516d147838ef1a04fc993933f5e2bce6354effa830b03bd67f25c8a69",
+    "block": 50315011,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "deploy-OwnedFacet",
+    "hash": "0x6599fa26b838480bd801c57fe8e7274c5ec5f61b47735327f86df8b94299f4d8",
+    "block": 50315016,
+    "status": 1,
+    "address": "0x0c4C4583eABBA65c76bEF28A63777ba5ccc70d59"
+  },
+  {
+    "key": "cut-OwnedFacet",
+    "hash": "0xbea1c35f030c86f63f468b552015bf196a849f913f063d298c3bc8b3c34aaa50",
+    "block": 50315020,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "deploy-StErc20Facet",
+    "hash": "0xabf2e2b1658c2aeb781134a93b26c98554ee7a3aed15f771803ae94d4bb5b754",
+    "block": 50315025,
+    "status": 1,
+    "address": "0x6Bf4Ab0F709816523B584936843EA82a90175420"
+  },
+  {
+    "key": "cut-StErc20Facet",
+    "hash": "0xc777db792e1ec4fd01ced05df83b49dc6351473021fb41eab67bfaf7cd76f545",
+    "block": 50315031,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "deploy-StMasterFacet",
+    "hash": "0x79cd5f27be89c9842bde5643b85690077ebfb973448fbb2ba1ce9198cb9db7a1",
+    "block": 50315036,
+    "status": 1,
+    "address": "0x2e8c5693A533fB588d4F1a1201563a787F2d820C"
+  },
+  {
+    "key": "cut-StMasterFacet",
+    "hash": "0x908301a559524c243329a31ea1eef989f374db7c54cd3ebd53458b8eddf034be",
+    "block": 50315040,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-token-CET",
+    "hash": "0xefcc21a069a5c7175dec0cd26c8a1bb53aa5191347b73ddc9a30afc985a61dc0",
+    "block": 50315072,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-token-ANT",
+    "hash": "0xa2ba85ebd9d7f4a19dc6beb5999bd15cb0e67ebabce76a1513674166dc39d2a5",
+    "block": 50315077,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-token-GPT",
+    "hash": "0xcde0f294e9b7c3aaef61fbaf8ffcd878a2f87d8a2c15c6f00f8bace69151266b",
+    "block": 50315082,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-currency-USD",
+    "hash": "0xe8e601c760078def9b90e0072e9b0c3203e0e32788a20d89dd3d9284b4e44246",
+    "block": 50315087,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-currency-ETH",
+    "hash": "0xd2dc3664ff7b02517530e4488d2d3a61f708c90e1bf09b7f5b743fc1f1dfdc4c",
+    "block": 50315091,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-currency-BTC",
+    "hash": "0xce901c2ddd1ff4d6938fbe8f56f7da145a339309f2b6354e0ce02b6c7a4ad372",
+    "block": 50315096,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-entity",
+    "hash": "0x7e9c6c2eff95e39124fdcff05ac627ceedee6eeacb67f56c3aa1bf0a80fc1e94",
+    "block": 50315100,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-fee",
+    "hash": "0x54a4eb85cb7b806c110778e61d82d3539ee00d755acfd41b70834fcdbbe381ea",
+    "block": 50315104,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-owner-whitelist",
+    "hash": "0xd725b6eaab283975ee17e7661deece09236e5073642563d1dc35eb196cb0c9eb",
+    "block": 50315108,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-owner-entity",
+    "hash": "0x2db3dc73447234966d25427a3b3d6bf5c0ab2e47098510ca0dfa012f7e2307d0",
+    "block": 50315112,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-owner-ledger",
+    "hash": "0xebb41ca7fb1a5b88abb36226ad3453f26329ec2244a8a731cc8a15fa758d43fd",
+    "block": 50315117,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-whitelist",
+    "hash": "0xd59d3b3a4f2d9c926bf4a15779dae78a79b836ed4df8d58e56e6f3ce0ba6092b",
+    "block": 50315122,
+    "status": 1,
+    "address": null
+  },
+  {
+    "key": "setup-seal",
+    "hash": "0x986daf8ef09d0e516377ec6ab444c0f2bbe09e72e0c06d861f319a892581bfb5",
+    "block": 50315128,
+    "status": 1,
+    "address": null
+  }
+]
