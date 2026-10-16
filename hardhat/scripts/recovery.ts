@@ -17,6 +17,18 @@ import type { LocalJournal } from "./local-journal.ts";
 type AbiValue = any;
 type Row = Record<string, AbiValue>;
 export type RecoverySnapshot = { ledgerHash: string; info: Row; data: Row };
+function chunks<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size)
+    result.push(items.slice(i, i + size));
+  return result;
+}
+async function readBatches<T, R>(items: T[], read: (item: T) => Promise<R>) {
+  const result: R[] = [];
+  for (const group of chunks(items, 50))
+    result.push(...(await Promise.all(group.map(read))));
+  return result;
+}
 function plain(value: AbiValue): AbiValue {
   if (typeof value === "bigint") return value.toString();
   if (value?.toObject) {
@@ -49,6 +61,12 @@ export function normalizeLegacyRecovery(
   input: RecoverySnapshot,
   verifiedOnchainHash: string,
 ): RecoverySnapshot {
+  assert.ok(
+    input.info.hashMod === undefined ||
+      input.info.hashMod === "1" ||
+      input.info.hashMod === "10",
+    "Unsupported hash partition count",
+  );
   assert.ok(
     input.info.contractType === 0 || input.info.contractType === "0",
     "COMMODITY only; cashflow recovery was never supported",
@@ -104,13 +122,16 @@ export function normalizeLegacyRecovery(
       symbol: input.info.symbol,
       unit: input.info.unit,
       decimals: String(input.info.decimals),
+      ...(input.info.hashMod === "10" ? { hashMod: "10" } : {}),
     },
     data,
   };
 }
 export async function captureRecovery(
   proxy: Contract,
+  hashMod: 1 | 10 = 1,
 ): Promise<RecoverySnapshot> {
+  assert.ok(hashMod === 1 || hashMod === 10);
   assert.equal(await proxy.getContractType(), 0n, "COMMODITY only");
   assert.equal(await proxy.getContractSeal(), true, "Capture a sealed source");
   const whitelistAddresses = plain(await proxy["getWhitelist()"]());
@@ -128,10 +149,9 @@ export async function captureRecovery(
     entity: string,
     owner: string,
   ) {
-    const result = [];
-    for (const type of types)
-      result.push(plain(await proxy.getFee(kind, entity, type.id, owner)));
-    return result;
+    return readBatches(types, async (type) =>
+      plain(await proxy.getFee(kind, entity, type.id, owner)),
+    );
   }
   for (const owner of ledgerOwners) {
     ledgers.push(plain(await proxy.getLedgerEntry(owner)));
@@ -149,28 +169,44 @@ export async function captureRecovery(
     [1, tokenTypes, tokenFees],
   ] as const)
     for (const type of types)
-      for (const entity of entitiesWithFeeOwners)
-        output.push(
+      output.push(
+        ...(await readBatches(entitiesWithFeeOwners as Row[], async (entity) =>
           plain(await proxy.getFee(kind, entity.id, type.id, ZeroAddress)),
-        );
+        )),
+      );
   const maxBatch = await proxy.getSecTokenBatch_MaxId();
   const maxToken = await proxy.getSecToken_MaxId();
   assert.ok(
     maxBatch <= 10000n && maxToken <= 10000n,
     "Bounded capture: at most 10000 IDs",
   );
-  for (let id = 1n; id <= maxBatch; id++)
-    batches.push(plain(await proxy.getSecTokenBatch(id)));
+  const batchIds = Array.from({ length: Number(maxBatch) }, (_, i) =>
+    BigInt(i + 1),
+  );
+  batches.push(
+    ...(await readBatches(batchIds, async (id) =>
+      plain(await proxy.getSecTokenBatch(id)),
+    )),
+  );
   const owned = new Set(
     ledgers.flatMap((l) => l.tokens.map((t: Row) => t.stId)),
   );
-  for (let id = 1n; id <= maxToken; id++)
-    if (!owned.has(String(id)))
-      globalSecTokens.push(plain(await proxy.getSecToken(id)));
+  const tokenIds = Array.from({ length: Number(maxToken) }, (_, i) =>
+    BigInt(i + 1),
+  ).filter((id) => !owned.has(String(id)));
+  globalSecTokens.push(
+    ...(await readBatches(tokenIds, async (id) =>
+      plain(await proxy.getSecToken(id)),
+    )),
+  );
+  const hashes: string[] = [];
+  for (let n = 0; n < hashMod; n++)
+    hashes.push(await proxy.getLedgerHashcode(hashMod, n));
   return {
-    ledgerHash: await proxy.getLedgerHashcode(1, 0),
+    ledgerHash: hashes.sort().join(","),
     info: {
       format: "local-onchain-v1",
+      ...(hashMod === 10 ? { hashMod: "10" } : {}),
       contractType: "0",
       owners: plain(await proxy.getOwners()),
       name: await proxy.name(),
@@ -202,7 +238,9 @@ export async function captureRecovery(
   };
 }
 
-function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
+export function planRecovery(
+  snapshot: RecoverySnapshot,
+): [string, unknown[]][] {
   assert.equal(
     snapshot.info.contractType,
     "0",
@@ -213,7 +251,19 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
     "local-onchain-v1",
     "Legacy hash provenance and futures overrides are not certified; normalize with an independently verified onchain hash",
   );
-  assert.match(snapshot.ledgerHash, /^0x[0-9a-f]{64}$/i);
+  const hashMod = snapshot.info.hashMod ?? "1";
+  assert.ok(
+    hashMod === "1" || hashMod === "10",
+    "Unsupported hash partition count",
+  );
+  const hashes = snapshot.ledgerHash.split(",");
+  assert.equal(hashes.length, Number(hashMod));
+  for (const hash of hashes) assert.match(hash, /^0x[0-9a-f]{64}$/i);
+  assert.deepEqual(
+    hashes,
+    [...hashes].sort(),
+    "Canonical partition order required",
+  );
   const d = snapshot.data;
   assert.ok(
     uint(d.secTokenMintedCount) <= 10000n && d.batches.length <= 10000,
@@ -237,10 +287,11 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
     d.tokenTypes.every((t: Row) => uint(t.settlementType) === 1n),
     "Futures overrides cannot be recovered by LoadLib",
   );
-  const plan: [string, unknown[]][] = [
-    ["whitelistMany", [d.whitelistAddresses]],
-    ["createEntityBatch", [d.entitiesWithFeeOwners]],
-  ];
+  const plan: [string, unknown[]][] = [];
+  for (const group of chunks(d.whitelistAddresses, 100))
+    plan.push(["whitelistMany", [group]]);
+  for (const group of chunks(d.entitiesWithFeeOwners, 20))
+    plan.push(["createEntityBatch", [group]]);
   for (const [i, c] of d.ccyTypes.entries()) {
     assert.equal(uint(c.id), BigInt(i + 1));
     plan.push(["addCcyType", [c.name, c.unit, c.decimals]]);
@@ -252,12 +303,14 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
       [t.name, t.settlementType, t.ft, t.cashflowBaseAddr],
     ]);
   }
-  for (const [i, b] of d.batches.entries()) {
+  for (const [i, b] of d.batches.entries())
     assert.equal(uint(b.id), BigInt(i + 1));
-    plan.push(["loadSecTokenBatch", [[b], b.id]]);
-  }
+  for (const group of chunks(d.batches as Row[], 6))
+    plan.push(["loadSecTokenBatch", [group, group.at(-1)?.id]]);
   const assigned = new Set<string>();
   const tokens = new Set<string>();
+  const ledgerEntries: unknown[][] = [];
+  const loadedTokens: Row[] = [];
   for (const [i, owner] of d.ledgerOwners.entries()) {
     const index = d.whitelistAddresses.indexOf(owner);
     assert.ok(index >= 0, "Ledger owner must be whitelisted");
@@ -265,30 +318,34 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
     assert.ok(uint(entity) > 0n, "Ledger requires a nonzero entity");
     assigned.add(owner);
     const l = d.ledgers[i];
-    plan.push([
-      "createLedgerEntry",
-      [owner, l.ccys, l.spot_sumQtyMinted, l.spot_sumQtyBurned, entity],
+    ledgerEntries.push([
+      owner,
+      l.ccys,
+      l.spot_sumQtyMinted,
+      l.spot_sumQtyBurned,
+      entity,
     ]);
     for (const t of l.tokens) {
       assert.ok(!tokens.has(t.stId), "Duplicate token ID");
       tokens.add(t.stId);
-      plan.push(["addSecTokenBatch", [[{ ...t, ledgerEntryOwner: owner }]]]);
+      loadedTokens.push({ ...t, ledgerEntryOwner: owner });
     }
   }
+  for (const group of chunks(ledgerEntries, 20))
+    plan.push(["createLedgerEntryBatch", [group]]);
+  const assignments: Row[] = [];
   for (const [i, addr] of d.whitelistAddresses.entries())
     if (!assigned.has(addr) && uint(d.accountEntities[i]) > 0n)
-      plan.push([
-        "setAccountEntityBatch",
-        [[{ id: d.accountEntities[i], addr }]],
-      ]);
+      assignments.push({ id: d.accountEntities[i], addr });
+  for (const group of chunks(assignments, 50))
+    plan.push(["setAccountEntityBatch", [group]]);
   for (const t of d.globalSecTokens) {
     assert.ok(!tokens.has(t.stId), "Duplicate global token ID");
     tokens.add(t.stId);
-    plan.push([
-      "addSecTokenBatch",
-      [[{ ...t, ledgerEntryOwner: ZeroAddress }]],
-    ]);
+    loadedTokens.push({ ...t, ledgerEntryOwner: ZeroAddress });
   }
+  for (const group of chunks(loadedTokens, 20))
+    plan.push(["addSecTokenBatch", [group]]);
   plan.push([
     "setTokenTotals",
     [
@@ -303,16 +360,14 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
     [d.tokenTypes, d.tokenFees, "setFee_TokType"],
   ] as const) {
     assert.equal(fees.length, types.length * d.entitiesWithFeeOwners.length);
+    const feeRows: unknown[][] = [];
     for (const [i, type] of types.entries())
       for (const [j, entity] of d.entitiesWithFeeOwners.entries())
-        plan.push([
-          method,
-          [
-            entity.id,
-            type.id,
-            ZeroAddress,
-            fees[i * d.entitiesWithFeeOwners.length + j],
-          ],
+        feeRows.push([
+          entity.id,
+          type.id,
+          ZeroAddress,
+          fees[i * d.entitiesWithFeeOwners.length + j],
         ]);
     for (const [i, owner] of d.ledgerOwners.entries()) {
       const overrides =
@@ -324,9 +379,16 @@ function planRecovery(snapshot: RecoverySnapshot): [string, unknown[]][] {
         const fee = overrides[j];
         // SpotFeeLib derives fee-set flags from numeric fields. Avoid creating empty ledgers.
         if (Object.values(fee).some((v) => v !== "0" && v !== false))
-          plan.push([method, ["0", type.id, owner, fee]]);
+          feeRows.push(["0", type.id, owner, fee]);
       }
     }
+    for (const group of chunks(feeRows, 20))
+      plan.push([
+        `${method}Batch`,
+        method === "setFee_CcyType"
+          ? [group]
+          : [0, 1, 2, 3].map((column) => group.map((row) => row[column])),
+      ]);
   }
   plan.push(["sealContract", []]);
   return plan;
@@ -380,7 +442,7 @@ export async function restoreRecovery(
   }
   async function verify() {
     assert.deepEqual(
-      await captureRecovery(proxy),
+      await captureRecovery(proxy, snapshot.info.hashMod === "10" ? 10 : 1),
       snapshot,
       "Exact public recovery state mismatch",
     );
@@ -434,7 +496,7 @@ export async function restoreRecovery(
       for (const [method, args] of plan)
         await (await staged.getFunction(method)(...args)).wait();
       assert.deepEqual(
-        await captureRecovery(staged),
+        await captureRecovery(staged, snapshot.info.hashMod === "10" ? 10 : 1),
         snapshot,
         "Unsupported snapshot fields or ledger/hash mismatch in preflight",
       );
