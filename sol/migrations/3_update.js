@@ -235,9 +235,6 @@ module.exports = async function (deployer) {
     deployer.link(StructLib_c, OwnedFacet);
     deployer.link(StructLib_c, StMasterFacet);
 
-    // deploying new StMasterFacet
-    await deployOrGetDeployed('StMasterFacet', StMasterFacet);
-
     // deploying new CcyLib
     const CcyLib_c = await deployOrGetDeployed('CcyLib', CcyLib);
     deployer.link(CcyLib_c, CcyCollateralizableFacet);
@@ -254,6 +251,10 @@ module.exports = async function (deployer) {
     deployer.link(ValidationLib_c, StBurnableFacet);
     deployer.link(ValidationLib_c, TokenLib);
     deployer.link(ValidationLib_c, OwnedFacet);
+    deployer.link(ValidationLib_c, StMasterFacet);
+
+    // StMasterFacet now uses the same owner validation as the other facets.
+    await deployOrGetDeployed('StMasterFacet', StMasterFacet);
 
     // deploygin new OwnedFacet
     await deployOrGetDeployed('OwnedFacet', OwnedFacet);

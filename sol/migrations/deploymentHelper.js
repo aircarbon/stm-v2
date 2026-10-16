@@ -166,6 +166,7 @@ module.exports = {
             deployer.link(ValidationLib, StErc20Facet);
             deployer.link(ValidationLib, StFeesFacet);
             deployer.link(ValidationLib, StLedgerFacet);
+            deployer.link(ValidationLib, StMasterFacet);
             deployer.link(ValidationLib, StMintableFacet);
             deployer.link(ValidationLib, StTransferableFacet);
             deployer.link(ValidationLib, TokenLib);
