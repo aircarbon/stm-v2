@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node scripts/prepare.ts && hardhat build",
     "parity": "node scripts/parity.ts",
+    "inspect:uat": "node scripts/inspect-uat.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "test": "node --test test/*.test.ts",
