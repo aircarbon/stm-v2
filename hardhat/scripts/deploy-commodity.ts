@@ -65,7 +65,25 @@ export function selectors(abi: Interface) {
   return result;
 }
 
-export async function deployCommodity(
+type DeploymentArguments = [
+  ethers: HardhatEthers,
+  artifacts: ArtifactManager,
+  signer: Signer,
+  journal: LocalJournal,
+  config: CommodityConfig,
+];
+
+export function deployCommodity(...args: DeploymentArguments) {
+  return deployCommodityOnChain(31337, ...args);
+}
+
+// Separate entry point: the existing local deployment never accepts a network override.
+export function deployAmoyCommodity(...args: DeploymentArguments) {
+  return deployCommodityOnChain(80002, ...args);
+}
+
+async function deployCommodityOnChain(
+  chainId: 31337 | 80002,
   ethers: HardhatEthers,
   artifacts: ArtifactManager,
   signer: Signer,
@@ -74,8 +92,8 @@ export async function deployCommodity(
 ): Promise<Manifest> {
   assert.equal(
     (await ethers.provider.getNetwork()).chainId,
-    31337n,
-    "Local chain only",
+    BigInt(chainId),
+    "Wrong deployment chain",
   );
   assert.equal(
     config.owners.length,
@@ -90,7 +108,7 @@ export async function deployCommodity(
   const addresses: Record<string, string> = {};
   const manifest: Manifest = {
     config,
-    chainId: 31337,
+    chainId,
     proxy: "",
     contracts: [],
     functions: [],
