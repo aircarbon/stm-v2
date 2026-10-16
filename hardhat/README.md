@@ -96,6 +96,20 @@ This is a **local rehearsal**, not a shared-database adapter or UAT deployment t
 PGlite checks SQL transaction behavior; it does not prove the deployed DB schema,
 ORM connection settings, external ABI consumers or production concurrency behavior.
 
+## Contract lifecycle coverage
+
+The COMMODITY lifecycle test exercises whitelist order and both whitelist ABI
+overloads, entity assignment, sealing, exact bigint mint/fund/trade/burn balances,
+a fixed token fee, library event decoding, permission failures, and the int64 mint
+limit. It replaces `StLedgerFacet` and compares ledger hash, all populated ledgers,
+batch data, token IDs, owners, fees and seal state before and after the cut.
+
+This is focused coverage, not a port of every disabled legacy suite. The existing
+Solidity `sealContract()` has no owner check; the migration does not change it.
+Also, paginated `getWhitelist(pageNo, pageSize)` requires the entire requested
+slice to exist: it does not shorten the final page. Recovery callers must preserve
+that behavior until a separate contract change is approved.
+
 ## Remaining approval gates
 
 Synthetic writes to disposable local EVMs and databases are approved. UAT writes
